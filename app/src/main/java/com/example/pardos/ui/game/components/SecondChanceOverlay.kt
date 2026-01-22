@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -17,8 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.R
-import com.example.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.R
+import com.korkoor.pardos.ui.theme.GameTheme
 
 @Composable
 fun SecondChanceOverlay(

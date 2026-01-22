@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

@@ -1,10 +1,10 @@
-package com.example.pardos.domain.achievements
+package com.korkoor.pardos.domain.achievements
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.Color
-import com.example.pardos.domain.model.GameMode
-import com.example.pardos.R
+import com.korkoor.pardos.domain.model.GameMode
+import com.korkoor.pardos.R
 
 object gameAchievements {
     // Lista masiva de logros para el juego (80+ achievements)

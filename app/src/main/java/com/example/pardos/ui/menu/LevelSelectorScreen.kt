@@ -1,4 +1,4 @@
-package com.example.pardos.ui.menu
+package com.korkoor.pardos.ui.menu
 
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
@@ -28,9 +28,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.domain.model.LevelInfo
-import com.example.pardos.ui.game.menu.PicnicBackgroundOptimized
-import com.example.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.domain.model.LevelInfo
+import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
+import com.korkoor.pardos.ui.theme.GameTheme
 
 @Composable
 fun LevelSelectorScreen(

@@ -1,8 +1,8 @@
-package com.example.pardos.domain.achievements
+package com.korkoor.pardos.domain.achievements
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.example.pardos.domain.model.BoardState
+import com.korkoor.pardos.domain.model.BoardState
 
 /**
  * Representa un logro dentro del juego.

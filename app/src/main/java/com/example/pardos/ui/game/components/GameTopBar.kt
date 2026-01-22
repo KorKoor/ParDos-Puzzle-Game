@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,10 +21,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.example.pardos.R
+import com.korkoor.pardos.R
 
 // ✅ IMPORTANTE: Importamos el Enum que definimos en BoardDisplay
-import com.example.pardos.ui.game.components.ShapeType
+import com.korkoor.pardos.ui.game.components.ShapeType
 
 @Composable
 fun GameTopBar(

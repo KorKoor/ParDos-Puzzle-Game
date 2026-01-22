@@ -1,4 +1,4 @@
-package com.example.pardos.ui.theme
+package com.korkoor.pardos.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

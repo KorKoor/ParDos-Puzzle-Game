@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.Box
@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.example.pardos.domain.logic.Direction
+import com.korkoor.pardos.domain.logic.Direction
 import kotlin.math.roundToInt
 
 @Composable

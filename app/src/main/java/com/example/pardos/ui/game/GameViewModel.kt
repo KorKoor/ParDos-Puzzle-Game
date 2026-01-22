@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game
+package com.korkoor.pardos.ui.game
 
 import android.app.Application
 import android.content.Context
@@ -7,12 +7,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.lifecycle.*
 import androidx.room.Room
-import com.example.pardos.data.local.AppDatabase
-import com.example.pardos.domain.achievements.gameAchievements
-import com.example.pardos.domain.achievements.Achievement
-import com.example.pardos.domain.logic.*
-import com.example.pardos.domain.model.*
-import com.example.pardos.ui.game.logic.*
+import com.korkoor.pardos.data.local.AppDatabase
+import com.korkoor.pardos.domain.achievements.gameAchievements
+import com.korkoor.pardos.domain.achievements.Achievement
+import com.korkoor.pardos.domain.logic.*
+import com.korkoor.pardos.domain.model.*
+import com.korkoor.pardos.ui.game.logic.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay

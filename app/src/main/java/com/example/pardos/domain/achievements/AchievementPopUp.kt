@@ -1,4 +1,4 @@
-package com.example.pardos.domain.achievements
+package com.korkoor.pardos.domain.achievements
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,7 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.R
+import com.korkoor.pardos.R
 @Composable
 fun AchievementPopUp(achievement: Achievement) {
     // Eliminamos el Box fillMaxSize para que no bloquee los clics en el tablero

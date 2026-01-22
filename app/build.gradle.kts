@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.pardos"
+    namespace = "com.korkoor.pardos"
     compileSdk = 36 // ⚠️ Nota: compileSdk 36 aún no es estable estándar, 35 es el actual Android 15. Si te da error, bájalo a 35.
 
     defaultConfig {
-        applicationId = "com.example.pardos"
+        applicationId = "com.korkoor.pardos"
         minSdk = 24
         targetSdk = 36 // Igual aquí, ajustado a 35 para estabilidad
         versionCode = 2

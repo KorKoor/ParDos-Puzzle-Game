@@ -1,4 +1,4 @@
-package com.example.pardos.ui.menu
+package com.korkoor.pardos.ui.menu
 
 import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
@@ -34,9 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.ui.game.menu.PicnicBackgroundOptimized
-import com.example.pardos.ui.theme.ThemeViewModel
-import com.example.pardos.R
+import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
+import com.korkoor.pardos.ui.theme.ThemeViewModel
+import com.korkoor.pardos.R
 
 @Composable
 fun MenuScreen(

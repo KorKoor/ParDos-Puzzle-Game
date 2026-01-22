@@ -1,6 +1,6 @@
-package com.example.pardos.domain.model
+package com.korkoor.pardos.domain.model
 
-import com.example.pardos.R
+import com.korkoor.pardos.R
 import androidx.compose.ui.graphics.Color
 
 /**

@@ -1,4 +1,4 @@
-package com.example.pardos.ui.records
+package com.korkoor.pardos.ui.records
 
 import android.content.res.Configuration // ✅ Importado para orientación
 import androidx.compose.foundation.background
@@ -23,11 +23,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.domain.model.Record
-import com.example.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.domain.model.Record
+import com.korkoor.pardos.ui.theme.GameTheme
 import java.text.SimpleDateFormat
 import java.util.*
-import com.example.pardos.R
+import com.korkoor.pardos.R
 
 @Composable
 fun RecordsScreen(

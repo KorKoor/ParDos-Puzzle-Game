@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.menu
+package com.korkoor.pardos.ui.game.menu
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas

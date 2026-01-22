@@ -1,4 +1,4 @@
-package com.example.pardos
+package com.korkoor.pardos
 
 import org.junit.Test
 

@@ -1,6 +1,6 @@
-package com.example.pardos.ui.game.logic
+package com.korkoor.pardos.ui.game.logic
 
-import com.example.pardos.domain.model.GameMode
+import com.korkoor.pardos.domain.model.GameMode
 import kotlinx.coroutines.*
 
 class GameTimerManager(

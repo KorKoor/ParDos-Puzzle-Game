@@ -1,6 +1,6 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
-import com.example.pardos.R
+import com.korkoor.pardos.R
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -26,7 +26,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.ui.theme.GameTheme
 import kotlinx.coroutines.delay
 import android.content.res.Configuration
 

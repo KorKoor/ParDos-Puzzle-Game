@@ -1,4 +1,4 @@
-package com.example.pardos.ui.theme
+package com.korkoor.pardos.ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

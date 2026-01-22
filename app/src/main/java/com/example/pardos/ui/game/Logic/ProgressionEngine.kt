@@ -1,4 +1,4 @@
-package com.example.pardos.domain.logic
+package com.korkoor.pardos.domain.logic
 
 import kotlin.math.pow
 

@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.logic
+package com.korkoor.pardos.ui.game.logic
 
 import android.app.Activity
 import android.content.Context

@@ -1,7 +1,7 @@
-package com.example.pardos.data.local
+package com.korkoor.pardos.data.local
 
 import androidx.room.*
-import com.example.pardos.domain.model.Record // Importamos el modelo de dominio
+import com.korkoor.pardos.domain.model.Record // Importamos el modelo de dominio
 import kotlinx.coroutines.flow.Flow
 
 @Dao

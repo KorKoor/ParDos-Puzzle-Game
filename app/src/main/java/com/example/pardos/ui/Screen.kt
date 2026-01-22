@@ -1,4 +1,4 @@
-package com.example.pardos.ui
+package com.korkoor.pardos.ui
 
 sealed class Screen {
     object Menu : Screen()

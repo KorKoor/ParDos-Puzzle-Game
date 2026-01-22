@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.*
@@ -35,12 +35,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.example.pardos.R
-import com.example.pardos.domain.logic.Direction
-import com.example.pardos.domain.model.BoardState
-import com.example.pardos.domain.model.TileModel
-import com.example.pardos.ui.game.GameViewModel
-import com.example.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.R
+import com.korkoor.pardos.domain.logic.Direction
+import com.korkoor.pardos.domain.model.BoardState
+import com.korkoor.pardos.domain.model.TileModel
+import com.korkoor.pardos.ui.game.GameViewModel
+import com.korkoor.pardos.ui.theme.GameTheme
 import kotlin.math.abs
 
 // ============================================================================

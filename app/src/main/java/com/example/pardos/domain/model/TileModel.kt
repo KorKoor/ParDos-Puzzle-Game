@@ -1,4 +1,4 @@
-package com.example.pardos.domain.model
+package com.korkoor.pardos.domain.model
 
 import java.util.UUID
 

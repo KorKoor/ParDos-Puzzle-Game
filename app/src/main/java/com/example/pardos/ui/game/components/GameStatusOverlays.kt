@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game.components
+package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -15,7 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.domain.model.BoardState
+import com.korkoor.pardos.domain.model.BoardState
 
 /*@Composable
 fun GameStatusOverlays(

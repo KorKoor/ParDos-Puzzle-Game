@@ -1,4 +1,4 @@
-package com.example.pardos
+package com.korkoor.pardos
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -11,18 +11,18 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
-import com.example.pardos.domain.model.GameMode
-import com.example.pardos.domain.logic.ProgressionEngine
-import com.example.pardos.ui.game.AchievementsScreen
-import com.example.pardos.ui.game.GameScreen
-import com.example.pardos.ui.game.GameViewModel
-import com.example.pardos.ui.menu.CustomLevelScreen
-import com.example.pardos.ui.menu.MenuScreen
-import com.example.pardos.ui.menu.ModeSelectionScreen
-import com.example.pardos.ui.menu.LevelSelectorScreen
-import com.example.pardos.ui.records.RecordsScreen
-import com.example.pardos.ui.theme.PardosTheme
-import com.example.pardos.ui.theme.ThemeViewModel
+import com.korkoor.pardos.domain.model.GameMode
+import com.korkoor.pardos.domain.logic.ProgressionEngine
+import com.korkoor.pardos.ui.game.AchievementsScreen
+import com.korkoor.pardos.ui.game.GameScreen
+import com.korkoor.pardos.ui.game.GameViewModel
+import com.korkoor.pardos.ui.menu.CustomLevelScreen
+import com.korkoor.pardos.ui.menu.MenuScreen
+import com.korkoor.pardos.ui.menu.ModeSelectionScreen
+import com.korkoor.pardos.ui.menu.LevelSelectorScreen
+import com.korkoor.pardos.ui.records.RecordsScreen
+import com.korkoor.pardos.ui.theme.PardosTheme
+import com.korkoor.pardos.ui.theme.ThemeViewModel
 
 sealed class Screen {
     data object Menu : Screen()
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        com.example.pardos.ui.game.logic.AdManager.initialize(this)
+        com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {

@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game
+package com.korkoor.pardos.ui.game
 
 import android.content.res.Configuration
 import androidx.compose.foundation.background
@@ -24,10 +24,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.domain.achievements.gameAchievements
-import com.example.pardos.domain.achievements.Achievement
-import com.example.pardos.ui.theme.GameTheme
-import com.example.pardos.R
+import com.korkoor.pardos.domain.achievements.gameAchievements
+import com.korkoor.pardos.domain.achievements.Achievement
+import com.korkoor.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.R
 
 @Composable
 fun AchievementsScreen(

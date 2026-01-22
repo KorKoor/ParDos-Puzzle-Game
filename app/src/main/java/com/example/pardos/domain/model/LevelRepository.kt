@@ -1,7 +1,7 @@
-package com.example.pardos.domain.model
+package com.korkoor.pardos.domain.model
 
-import com.example.pardos.domain.logic.ProgressionEngine
-import com.example.pardos.domain.model.LevelInfo
+import com.korkoor.pardos.domain.logic.ProgressionEngine
+import com.korkoor.pardos.domain.model.LevelInfo
 
 object LevelRepository {
         fun getGeneratedLevels(): List<LevelInfo> {

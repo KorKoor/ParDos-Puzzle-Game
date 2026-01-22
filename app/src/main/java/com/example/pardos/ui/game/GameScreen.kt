@@ -1,6 +1,6 @@
 @file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 
-package com.example.pardos.ui.game
+package com.korkoor.pardos.ui.game
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
@@ -52,21 +52,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.pardos.R
-import com.example.pardos.domain.achievements.AchievementPopUp
-import com.example.pardos.domain.logic.Direction
-import com.example.pardos.domain.model.BoardState
-import com.example.pardos.domain.model.GameMode
-import com.example.pardos.ui.game.components.*
-import com.example.pardos.ui.game.menu.PicnicBackgroundOptimized
-import com.example.pardos.ui.theme.GameTheme
-import com.example.pardos.ui.theme.ThemeSelector
-import com.example.pardos.ui.theme.ThemeViewModel
+import com.korkoor.pardos.R
+import com.korkoor.pardos.domain.achievements.AchievementPopUp
+import com.korkoor.pardos.domain.logic.Direction
+import com.korkoor.pardos.domain.model.BoardState
+import com.korkoor.pardos.domain.model.GameMode
+import com.korkoor.pardos.ui.game.components.*
+import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
+import com.korkoor.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.ui.theme.ThemeSelector
+import com.korkoor.pardos.ui.theme.ThemeViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.pardos.ui.game.components.ShapeType
-import com.example.pardos.ui.game.components.getShape
-import com.example.pardos.ui.game.logic.AdManager
+import com.korkoor.pardos.ui.game.components.ShapeType
+import com.korkoor.pardos.ui.game.components.getShape
+import com.korkoor.pardos.ui.game.logic.AdManager
 import android.app.Activity
 
 // ✅ DEFINICIÓN DE ENUM AL INICIO PARA EVITAR ERRORES DE REFERENCIA
@@ -1253,10 +1253,10 @@ private class GameAudioManager(private val context: android.content.Context) {
 
     fun initialize() {
         try {
-            movePlayer = MediaPlayer.create(context, com.example.pardos.R.raw.move_pop)?.apply {
+            movePlayer = MediaPlayer.create(context, com.korkoor.pardos.R.raw.move_pop)?.apply {
                 setVolume(0.7f, 0.7f)
             }
-            victoryPlayer = MediaPlayer.create(context, com.example.pardos.R.raw.victory_sound)?.apply {
+            victoryPlayer = MediaPlayer.create(context, com.korkoor.pardos.R.raw.victory_sound)?.apply {
                 setVolume(0.8f, 0.8f)
             }
         } catch (e: Exception) {

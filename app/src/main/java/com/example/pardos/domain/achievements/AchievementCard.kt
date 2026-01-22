@@ -1,4 +1,4 @@
-package com.example.pardos.ui.game
+package com.korkoor.pardos.ui.game
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.pardos.domain.achievements.Achievement
+import com.korkoor.pardos.domain.achievements.Achievement
 /*
 @Composable
 fun AchievementCard(achievement: Achievement, isUnlocked: Boolean) {

@@ -1,4 +1,4 @@
-package com.example.pardos.domain.model
+package com.korkoor.pardos.domain.model
 
 /**enum class GameMode {
     /** Rush de niveles, desde 1 hasta X. No se guarda el progreso al cerrar. */

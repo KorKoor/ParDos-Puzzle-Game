@@ -1,6 +1,6 @@
-package com.example.pardos.domain.logic
+package com.korkoor.pardos.domain.logic
 
-import com.example.pardos.domain.model.TileModel
+import com.korkoor.pardos.domain.model.TileModel
 import java.util.UUID
 import kotlin.random.Random
 
