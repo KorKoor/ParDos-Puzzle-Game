@@ -103,6 +103,8 @@
     <string name="direction_left">Deslizar hacia la izquierda</string>
     <string name="direction_right">Deslizar hacia la derecha</string>
     <string name="close_game_desc">Cerrar partida actual</string>
+    <string name="mode_custom">Personalizado</string>
+    <string name="mode_custom_desc">Juega con tus propias reglas.</string>
 
     <string name="records_title">Historial de Récords</string>
     <string name="records_empty">Aún no tienes récords. ¡Empieza a jugar!</string>

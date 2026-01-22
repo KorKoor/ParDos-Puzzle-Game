@@ -175,10 +175,6 @@ data class BoardStateValidation(
         if (!isValid) throw IllegalStateException("Estado de tablero inválido:\n${errors.joinToString("\n")}")
     }
 }
-
-/**
- * Definición de los modos de juego y sus parámetros base.
- */
 enum class GameMode(
     val initialTarget: Int,
     val timeLimit: Long?
@@ -187,7 +183,10 @@ enum class GameMode(
     DESAFIO(128, 180L),
     ZEN(2048, null),
     RAPIDO(64, 60L),
-    TABLAS(0, 150L);
+    TABLAS(0, 150L),
+
+    // 🔥 NUEVO MODO AGREGADO (Arregla el bug del tablero 3x3)
+    CUSTOM(2048, null);
 
     // ✅ Propiedad para el nombre (ID de recurso)
     val nameResId: Int
@@ -197,6 +196,7 @@ enum class GameMode(
             ZEN -> R.string.mode_zen
             RAPIDO -> R.string.mode_fast
             TABLAS -> R.string.mode_tables
+            CUSTOM -> R.string.mode_custom // ⚠️ Asegúrate de crear este string
         }
 
     // ✅ Propiedad para la descripción (ID de recurso)
@@ -207,6 +207,7 @@ enum class GameMode(
             ZEN -> R.string.mode_zen_desc
             RAPIDO -> R.string.mode_fast_desc
             TABLAS -> R.string.mode_tables_desc
+            CUSTOM -> R.string.mode_custom_desc // ⚠️ Asegúrate de crear este string
         }
 
     val color: Color
@@ -216,5 +217,6 @@ enum class GameMode(
             ZEN -> Color(0xFF6C63FF)
             RAPIDO -> Color(0xFFF4A261)
             TABLAS -> Color(0xFF3D405B)
+            CUSTOM -> Color(0xFF2A9D8F) // Un tono Turquesa/Cian para el modo Custom
         }
 }

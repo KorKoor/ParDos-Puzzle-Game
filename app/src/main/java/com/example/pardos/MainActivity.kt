@@ -11,8 +11,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.example.pardos.domain.model.GameMode
 import com.example.pardos.domain.logic.ProgressionEngine
 import com.example.pardos.ui.game.AchievementsScreen
@@ -21,7 +19,7 @@ import com.example.pardos.ui.game.GameViewModel
 import com.example.pardos.ui.menu.CustomLevelScreen
 import com.example.pardos.ui.menu.MenuScreen
 import com.example.pardos.ui.menu.ModeSelectionScreen
-import com.example.pardos.ui.menu.LevelSelectorScreen // Asegúrate de importar tu nueva pantalla
+import com.example.pardos.ui.menu.LevelSelectorScreen
 import com.example.pardos.ui.records.RecordsScreen
 import com.example.pardos.ui.theme.PardosTheme
 import com.example.pardos.ui.theme.ThemeViewModel
@@ -43,7 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        com.example.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
@@ -80,10 +78,8 @@ class MainActivity : ComponentActivity() {
                             Screen.ModeSelection -> ModeSelectionScreen(
                                 onModeSelected = { mode ->
                                     if (mode == GameMode.CLASICO) {
-                                        // 🚀 Si es Clásico (Campaña), vamos al selector de niveles
                                         currentScreen = Screen.LevelSelector
                                     } else {
-                                        // 🎮 Para otros modos, iniciamos directo
                                         gameViewModel.startNewGame(mode)
                                         currentScreen = Screen.Game
                                     }
@@ -101,6 +97,7 @@ class MainActivity : ComponentActivity() {
                                         target = selectedLevel.target,
                                         difficulty = selectedLevel.difficultyName,
                                         level = selectedLevel.id
+                                        // Aquí no ponemos isCustom=true porque queremos que cuente como campaña (probablemente)
                                     )
                                     currentScreen = Screen.Game
                                 },
@@ -115,7 +112,16 @@ class MainActivity : ComponentActivity() {
 
                             Screen.CustomLevel -> CustomLevelScreen(
                                 onStartCustom = { size, targetVal, allowPowerUps, difficulty ->
-                                    gameViewModel.setupCustomGame(size, targetVal, allowPowerUps, difficulty)
+                                    // 🔥🔥 AQUÍ ESTABA EL ERROR 🔥🔥
+                                    // Tienes que pasar 'isCustom = true' para que el ViewModel sepa
+                                    // que debe cambiar el modo a GameMode.CUSTOM.
+                                    gameViewModel.setupCustomGame(
+                                        size = size,
+                                        target = targetVal,
+                                        allowPowerUps = allowPowerUps,
+                                        difficulty = difficulty,
+                                        isCustom = true // 👈 ¡ESTA LÍNEA ARREGLA EL BUG!
+                                    )
                                     currentScreen = Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu },
@@ -137,7 +143,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // Lógica de retroceso inteligente
                 BackHandler(enabled = currentScreen != Screen.Menu) {
                     currentScreen = when (currentScreen) {
                         Screen.LevelSelector -> Screen.ModeSelection

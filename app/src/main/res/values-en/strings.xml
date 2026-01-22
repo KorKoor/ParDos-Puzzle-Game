@@ -16,6 +16,8 @@
     <string name="mode_selection_subtitle">GAME MODE</string>
     <string name="mode_selection_title">Choose your pace</string>
     <string name="mode_footer_hint">Your progress is saved automatically</string>
+    <string name="mode_custom">Custom Mode</string>
+    <string name="mode_custom_desc">Play by your own Rules.</string>
 
     <string name="mode_classic">Campaign</string>
     <string name="mode_campaign_title">CAMPAIGN MODE</string>

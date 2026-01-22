@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.example.pardos.R
+
+// ✅ IMPORTANTE: Importamos el Enum que definimos en BoardDisplay
+import com.example.pardos.ui.game.components.ShapeType
+
 @Composable
 fun GameTopBar(
     selectedShapeType: String,
@@ -39,11 +42,13 @@ fun GameTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.weight(1f)) {
+            // Pasamos la forma seleccionada actual
             ShapeSelector(selectedShapeType, onShapeSelected)
         }
 
         Spacer(modifier = Modifier.width(6.dp))
 
+        // Botón de Salir
         Surface(
             color = Color(0xFFE07A5F).copy(alpha = 0.15f),
             shape = CircleShape,
@@ -64,7 +69,6 @@ fun GameTopBar(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    // ✅ Traducción para accesibilidad
                     contentDescription = stringResource(R.string.close_game),
                     tint = Color(0xFFE07A5F),
                     modifier = Modifier.size(24.dp)
@@ -78,8 +82,9 @@ fun GameTopBar(
 private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    // ✅ Lista de IDs internos (no se traducen, se usan para la lógica)
-    val shapes = listOf("Square", "Rhombus", "Triangle", "Hexagon")
+    // ✅ CORRECCIÓN: Usamos 'ShapeType.entries' para obtener la lista real de formas.
+    // Esto asegura que los nombres ("Cuadrado", "Hexágono") coincidan exactamente con BoardDisplay.
+    val shapes = ShapeType.entries
 
     Box {
         Surface(
@@ -101,9 +106,9 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
                 )
                 Spacer(Modifier.width(10.dp))
 
-                // ✅ Traducimos el nombre de la forma actual
+                // Mostramos el nombre actual
                 Text(
-                    text = getShapeTranslation(current).uppercase(),
+                    text = current.uppercase(),
                     fontWeight = FontWeight.ExtraBold,
                     color = Color(0xFF3D405B),
                     fontSize = 12.sp,
@@ -127,38 +132,29 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
                 .background(Color.White, RoundedCornerShape(20.dp))
                 .padding(4.dp)
         ) {
-            shapes.forEach { shape ->
+            shapes.forEach { shapeEnum ->
+                val shapeName = shapeEnum.displayName // "Cuadrado", "Hexágono", etc.
+
                 DropdownMenuItem(
                     text = {
                         Text(
-                            text = getShapeTranslation(shape), // ✅ Traducido en la lista
-                            color = if (current == shape) Color(0xFF81B29A) else Color(0xFF3D405B),
-                            fontWeight = if (current == shape) FontWeight.Black else FontWeight.Medium
+                            text = shapeName,
+                            color = if (current == shapeName) Color(0xFF81B29A) else Color(0xFF3D405B),
+                            fontWeight = if (current == shapeName) FontWeight.Black else FontWeight.Medium
                         )
                     },
                     leadingIcon = {
-                        if (current == shape) {
+                        if (current == shapeName) {
                             Box(Modifier.size(6.dp).background(Color(0xFF81B29A), CircleShape))
                         }
                     },
                     onClick = {
-                        onShapeSelected(shape)
+                        // ✅ ENVIAMOS EL NOMBRE CORRECTO AL VIEWMODEL/SCREEN
+                        onShapeSelected(shapeName)
                         expanded = false
                     }
                 )
             }
         }
-    }
-}
-
-// ✅ Función auxiliar para mapear el ID de la forma a su StringResource
-@Composable
-private fun getShapeTranslation(shape: String): String {
-    return when (shape) {
-        "Square" -> stringResource(R.string.shape_square)
-        "Rhombus" -> stringResource(R.string.shape_rhombus)
-        "Triangle" -> stringResource(R.string.shape_triangle)
-        "Hexagon" -> stringResource(R.string.shape_hexagon)
-        else -> shape
     }
 }

@@ -22,12 +22,11 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.random.Random
 
-private const val KEY_STARS_PREFIX = "stars_level_"
 private const val COOLDOWN_MS = 15 * 60 * 1000L // 15 minutos
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 1. ESTADOS DE COMPOSE (MutableState)
+    // 1. ESTADOS DE COMPOSE
     var showLevelSummary by mutableStateOf(false)
         private set
 
@@ -49,14 +48,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var lastCleanTime by mutableLongStateOf(0L)
     var lastMergeTime by mutableLongStateOf(0L)
 
-    // 2. CONSTANTES Y PREFERENCIAS
+    // 2. PREFERENCIAS
     private val prefs = application.getSharedPreferences("pardos_storage", Context.MODE_PRIVATE)
     private val KEY_LAST_LEVEL = "last_reached_level"
     private val KEY_TABLES_LEVEL = "last_reached_tables_level"
     private val KEY_LAST_UNLOCKED = "last_unlocked_level"
     private val KEY_SAVED_SCORE = "saved_score_level"
 
-    // 3. ESTADOS DE FLUJO (StateFlow)
+    // 3. ESTADOS DE FLUJO
     private val _currentTimeProvider = MutableStateFlow(System.currentTimeMillis())
     val currentTimeProvider: StateFlow<Long> = _currentTimeProvider
 
@@ -66,23 +65,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _unlockedAchievements = MutableStateFlow<Set<String>>(emptySet())
     val unlockedAchievements: StateFlow<Set<String>> = _unlockedAchievements
 
-    // 4. LÓGICA INICIAL Y MOTORES
-    private val savedLevel = prefs.getInt(KEY_LAST_LEVEL, 1)
-    private val initialTarget = ProgressionEngine.calculateTargetForLevel(savedLevel)
-    private val initialSize = ProgressionEngine.calculateBoardSize(initialTarget)
-
+    // 4. ESTADO INICIAL
     private val _boardState = MutableStateFlow(
         BoardState(
-            currentLevel = savedLevel,
-            levelLimit = initialTarget,
-            boardSize = initialSize,
+            currentLevel = 1,
+            levelLimit = 64,
+            boardSize = 3,
             tiles = emptyList(),
             gameMode = GameMode.CLASICO
         )
     )
     val boardState = _boardState.asStateFlow()
 
-    private var gameEngine = GameEngine(boardSize = initialSize)
+    private var gameEngine = GameEngine(boardSize = 3)
     private var isMoving = false
     private var timerJob: Job? = null
 
@@ -115,6 +110,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     init {
         loadLevelsWithProgress()
 
+        // Reloj Global
         viewModelScope.launch {
             while (true) {
                 delay(1000)
@@ -122,6 +118,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // Cargar Logros
         viewModelScope.launch {
             val unlockedSet = mutableSetOf<String>()
             gameAchievements.all.forEach { achievement ->
@@ -132,19 +129,42 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _unlockedAchievements.value = unlockedSet
         }
 
+        // Inicio inicial
         startNewGame(GameMode.CLASICO)
     }
 
-    // --- FUNCIONES DE APOYO INICIAL ---
+    // --- FUNCIONES DE APOYO ---
 
+    // 🔥 NUEVA FUNCIÓN: Llamada desde GameScreen para forzar la recarga correcta
+    fun refreshCurrentLevelDifficulty() {
+        if (currentMode == GameMode.CLASICO) {
+            val savedLevel = prefs.getInt(KEY_LAST_LEVEL, 1)
+            // Calculamos cuál DEBERÍA ser la meta
+            val expectedTarget = ProgressionEngine.calculateTargetForLevel(savedLevel)
+
+            // Si el nivel actual no coincide O la meta está mal (ej. 64 en nivel alto), recargamos
+            if (_boardState.value.currentLevel != savedLevel || _boardState.value.levelLimit != expectedTarget) {
+                Log.d("GAME_FIX", "Recalculando dificultad... Nivel $savedLevel")
+                startNewGame(GameMode.CLASICO)
+            }
+        }
+    }
+
+    // 🔥 CORRECCIÓN AQUÍ: Ahora leemos BestTime y BestMoves
     private fun loadLevelsWithProgress() {
         val baseLevels = LevelRepository.getGeneratedLevels()
         val unlockedUntil = prefs.getInt(KEY_LAST_UNLOCKED, 1)
 
         val updatedLevels = baseLevels.map { level ->
             val stars = prefs.getInt("stars_level_${level.id}", 0)
+            // Leemos el mejor tiempo y movimientos guardados
+            val bestTime = prefs.getLong("best_time_level_${level.id}", 0L)
+            val bestMoves = prefs.getInt("best_moves_level_${level.id}", 0)
+
             level.copy(
                 starsEarned = stars,
+                bestTime = bestTime,   // Pasamos el dato al objeto
+                bestMoves = bestMoves, // Pasamos el dato al objeto
                 isLocked = level.id > unlockedUntil
             )
         }
@@ -182,7 +202,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().remove(KEY_SAVED_SCORE).apply()
     }
 
-    // --- LÓGICA DE JUEGO ---
+    // --- LÓGICA DE JUEGO PRINCIPAL ---
     fun startNewGame(mode: GameMode) {
         currentMode = mode
 
@@ -190,12 +210,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val tablesLevel = prefs.getInt(KEY_TABLES_LEVEL, 1)
             currentMultiplierBase = (3..9).random()
 
-            val logicMultiplier = when {
-                tablesLevel <= 2 -> 8
-                tablesLevel <= 4 -> 16
-                else -> 32
-            }
-
+            val logicMultiplier = if (tablesLevel <= 2) 8 else if (tablesLevel <= 4) 16 else 32
             val targetForTables = currentMultiplierBase * logicMultiplier
 
             setupCustomGame(
@@ -209,24 +224,23 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         } else {
             currentMultiplierBase = 2
 
+            // 1. LEER NIVEL GUARDADO
             val levelToStart = if (mode == GameMode.CLASICO) {
                 prefs.getInt(KEY_LAST_LEVEL, 1)
             } else {
                 1
             }
 
-            val savedScore = if (mode == GameMode.CLASICO) {
-                prefs.getInt(KEY_SAVED_SCORE, 0)
-            } else {
-                0
-            }
+            // 2. RECUPERAR SCORE
+            val savedScore = if (mode == GameMode.CLASICO) prefs.getInt(KEY_SAVED_SCORE, 0) else 0
 
-            val target = ProgressionEngine.calculateTargetForLevel(levelToStart)
-            val size = ProgressionEngine.calculateBoardSize(target)
+            // 3. CALCULAR OBJETIVO CORRECTO
+            val correctTarget = ProgressionEngine.calculateTargetForLevel(levelToStart)
+            val correctSize = ProgressionEngine.calculateBoardSize(correctTarget)
 
             setupCustomGame(
-                size = size,
-                target = target,
+                size = correctSize,
+                target = correctTarget,
                 allowPowerUps = true,
                 difficulty = if (mode == GameMode.DESAFIO || mode == GameMode.RAPIDO) "Normal" else "Zen",
                 level = levelToStart,
@@ -242,7 +256,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         allowPowerUps: Boolean = true,
         difficulty: String = "Zen",
         level: Int = 1,
-        initialScore: Int = 0
+        initialScore: Int = 0,
+        // 🔥 1. NUEVO PARAMETRO: Para forzar que sepa que es custom desde la navegación
+        isCustom: Boolean = false
     ) {
         timerJob?.cancel()
         timerManager.stop()
@@ -259,7 +275,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             else -> null
         }
 
-        val determinedMode = if (timeLimitSeconds != null) GameMode.DESAFIO else currentMode
+        // 🔥 2. LÓGICA DE MODO MEJORADA:
+        // Si isCustom es true, forzamos que la base sea CUSTOM, no CLASICO.
+        val baseMode = if (isCustom) GameMode.CUSTOM else currentMode
+
+        val determinedMode = if (timeLimitSeconds != null) GameMode.DESAFIO else baseMode
+
+        // 🔥 3. FIX CRÍTICO: Actualizamos la variable global del ViewModel
+        // Esto evita que el validador piense que sigues en CLASICO.
+        this.currentMode = determinedMode
 
         _boardState.update {
             it.copy(
@@ -276,17 +300,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 maxTime = timeLimitSeconds,
                 elapsedTime = timeLimitSeconds ?: 0L,
                 showTutorialHand = (level == 1 && initialScore == 0),
-                secondChanceUsed = false // ✅ Reiniciamos el estado de segunda oportunidad al empezar juego nuevo
+                secondChanceUsed = false
             )
         }
 
         spawnInitialTiles(level)
 
         timeLimitSeconds?.let { limit ->
-            timerManager.startTimer(
-                mode = determinedMode,
-                initialTime = limit
-            )
+            timerManager.startTimer(mode = determinedMode, initialTime = limit)
         }
 
         startLevelTimer()
@@ -388,9 +409,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val timeRemainingOrElapsed = state.elapsedTime
 
             if (totalLimit > 0) {
+                // Modo Desafío (Cuenta regresiva)
                 finalStars = ProgressionEngine.calculateStars(timeRemainingOrElapsed, totalLimit)
                 finalTimeUsed = totalLimit - timeRemainingOrElapsed
             } else {
+                // Modo Zen (Cronómetro normal): El tiempo usado es lo que marca el reloj
                 finalStars = 3
                 finalTimeUsed = timeRemainingOrElapsed
             }
@@ -406,6 +429,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (finalStars > 0) {
+            // 🔥 AQUÍ SE GUARDAN LAS ESTADÍSTICAS
             saveLevelProgress(
                 level = _boardState.value.currentLevel,
                 stars = finalStars,
@@ -415,7 +439,6 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             stateForAchievements?.let { checkAchievements(it) }
             saveRecord()
-
             prefs.edit().remove(KEY_SAVED_SCORE).apply()
         }
 
@@ -455,29 +478,38 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // 🔥 CORRECCIÓN AQUÍ: Lógica robusta para guardar Mejor Tiempo y Movimientos
     private fun saveLevelProgress(level: Int, stars: Int, finalTime: Long, finalMoves: Int) {
-        if (stars <= 0) return
-
         val editor = prefs.edit()
 
+        // 1. Guardar Estrellas (Si mejoramos)
         val starKey = "stars_level_$level"
         val previousStars = prefs.getInt(starKey, 0)
         if (stars > previousStars) {
             editor.putInt(starKey, stars)
         }
 
+        // 2. Guardar Mejor Tiempo (Si es menor es mejor, pero ignoramos 0 inicial)
         val timeKey = "best_time_level_$level"
-        val prevTime = prefs.getLong(timeKey, Long.MAX_VALUE)
-        if (finalTime < prevTime && finalTime > 0) {
+        val prevTime = prefs.getLong(timeKey, Long.MAX_VALUE) // Usamos MAX_VALUE si no existe
+
+        // Corrección: Si prevTime es 0 (error legacy), lo tratamos como MAX_VALUE
+        val validPrevTime = if (prevTime == 0L) Long.MAX_VALUE else prevTime
+
+        if (finalTime > 0 && finalTime < validPrevTime) {
             editor.putLong(timeKey, finalTime)
         }
 
+        // 3. Guardar Mejores Movimientos (Si es menor es mejor)
         val movesKey = "best_moves_level_$level"
         val prevMoves = prefs.getInt(movesKey, Int.MAX_VALUE)
-        if (finalMoves < prevMoves) {
+        val validPrevMoves = if (prevMoves == 0) Int.MAX_VALUE else prevMoves
+
+        if (finalMoves > 0 && finalMoves < validPrevMoves) {
             editor.putInt(movesKey, finalMoves)
         }
 
+        // 4. Desbloquear siguiente nivel
         val currentMaxUnlocked = prefs.getInt("last_unlocked_level", 1)
         if (level == currentMaxUnlocked) {
             editor.putInt("last_unlocked_level", level + 1)
@@ -485,17 +517,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         editor.apply()
 
-        _levels.update { currentList ->
-            currentList.map { lvl ->
-                when (lvl.id) {
-                    level -> lvl.copy(
-                        starsEarned = if (stars > lvl.starsEarned) stars else lvl.starsEarned
-                    )
-                    level + 1 -> lvl.copy(isLocked = false)
-                    else -> lvl
-                }
-            }
-        }
+        // IMPORTANTE: Recargamos la lista en memoria para que el menú se actualice al instante
+        loadLevelsWithProgress()
     }
 
     fun getBestStats(level: Int): Pair<Int, Long> {
@@ -506,10 +529,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun retryLevel() {
         val levelToRetry = _boardState.value.currentLevel
-        val currentTarget = _boardState.value.levelLimit
-        val currentSize = _boardState.value.boardSize
-        val currentMode = _boardState.value.gameMode
         val arePowerUpsAllowed = _boardState.value.allowPowerUps
+
+        // Recalculamos parámetros por si acaso
+        val target = ProgressionEngine.calculateTargetForLevel(levelToRetry)
+        val size = ProgressionEngine.calculateBoardSize(target)
 
         showLevelSummary = false
         isMoving = false
@@ -518,34 +542,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().remove(KEY_SAVED_SCORE).apply()
 
         setupCustomGame(
-            size = currentSize,
-            target = currentTarget,
+            size = size,
+            target = target,
             allowPowerUps = arePowerUpsAllowed,
             difficulty = if (currentMode == GameMode.DESAFIO) "Normal" else "Zen",
             level = levelToRetry,
             initialScore = 0
         )
-
         startLevelTimer()
     }
 
     private fun checkAchievements(manualState: BoardState? = null) {
         val currentState = manualState ?: _boardState.value
-
         if (currentState.tiles.isEmpty() && currentState.score == 0) return
 
         gameAchievements.all.forEach { achievement ->
             val key = "ach_${achievement.id}"
-            val isAlreadyUnlocked = prefs.getBoolean(key, false)
-
-            if (!isAlreadyUnlocked && achievement.condition(currentState)) {
+            if (!prefs.getBoolean(key, false) && achievement.condition(currentState)) {
                 prefs.edit().putBoolean(key, true).apply()
-
                 viewModelScope.launch {
                     _unlockedAchievements.update { it + achievement.id }
-
                     activeAchievementPopup = achievement
-                    Log.d("ACHIEVEMENT", "¡Desbloqueado: ${achievement.id}!")
                     delay(4000)
                     activeAchievementPopup = null
                 }
@@ -581,7 +598,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.edit().remove(KEY_SAVED_SCORE).apply()
             }
 
-            val newTarget = ProgressionEngine.calculateNextTarget(currentState.levelLimit)
+            // Calculamos los parámetros del SIGUIENTE nivel dinámicamente
+            val newTarget = ProgressionEngine.calculateTargetForLevel(nextLv)
             val newSize = ProgressionEngine.calculateBoardSize(newTarget)
 
             delay(300)
@@ -598,44 +616,33 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val currentState = _boardState.value
         viewModelScope.launch {
             try {
-                val context = getApplication<Application>().applicationContext
-
                 val modeNameForDb = when (currentMode) {
                     GameMode.TABLAS -> "$currentMultiplierBase"
                     else -> currentMode.name
                 }
-
                 val newRecord = Record(
                     score = currentState.score,
                     level = currentState.currentLevel,
                     mode = modeNameForDb,
                     date = System.currentTimeMillis()
                 )
-
                 recordDao.insertRecord(newRecord)
-                Log.d("DB_SUCCESS", "Récord guardado: $modeNameForDb - Score: ${currentState.score}")
-
             } catch (e: Exception) {
-                Log.e("DATABASE_ERROR", "Error al guardar récord en ${currentMode.name}", e)
+                Log.e("DATABASE_ERROR", "Error al guardar récord", e)
             }
         }
     }
 
-
     private fun spawnInitialTiles(level: Int) {
         val prob = ProgressionEngine.calculateFourProbability(level)
-        val t1 = gameEngine.spawnTile(emptyList(), fourProbability = prob, multiplier = currentMultiplierBase)
-        val t2 = gameEngine.spawnTile(listOfNotNull(t1), fourProbability = prob, multiplier = currentMultiplierBase)
-
+        val t1 = gameEngine.spawnTile(emptyList(), prob, currentMultiplierBase)
+        val t2 = gameEngine.spawnTile(listOfNotNull(t1), prob, currentMultiplierBase)
         _boardState.update { it.copy(tiles = listOfNotNull(t1, t2)) }
     }
 
-    fun onLevelCompleted() {
-        checkAchievements()
-    }
+    fun onLevelCompleted() { checkAchievements() }
 
     private val _ticker = MutableStateFlow(System.currentTimeMillis())
-
     init {
         viewModelScope.launch {
             while (true) {
@@ -645,19 +652,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-// --- FUNCIONES DE TIEMPO ---
-
     fun getRemainingTime(lastUseTime: Long, now: Long): String {
         if (lastUseTime == 0L) return ""
-
         val elapsed = now - lastUseTime
         val remaining = COOLDOWN_MS - elapsed
-
         if (remaining <= 0) return ""
-
         val minutes = (remaining / 1000) / 60
         val seconds = (remaining / 1000) % 60
-
         return "%02d:%02d".format(minutes, seconds)
     }
 
@@ -672,25 +673,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (type == "MERGE") lastMergeTime = 0L
     }
 
-// --- LÓGICA DE PODERES ---
-
     fun useCleanPowerUp() {
         val currentTiles = _boardState.value.tiles
         if (currentTiles.isEmpty()) return
-
         val topTiles = currentTiles.sortedByDescending { it.value }.take(3)
-
         _boardState.update { it.copy(tiles = topTiles) }
         lastCleanTime = System.currentTimeMillis()
     }
 
     fun useMergePowerUp() {
         val currentTiles = _boardState.value.tiles
-
-        val pair = currentTiles.groupBy { it.value }
-            .values
-            .firstOrNull { it.size >= 2 }
-
+        val pair = currentTiles.groupBy { it.value }.values.firstOrNull { it.size >= 2 }
         pair?.let {
             executeManualMerge(it[0], it[1])
             lastMergeTime = System.currentTimeMillis()
@@ -702,118 +695,71 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val list = state.tiles.toMutableList()
             val t1 = list.find { it.id == first.id }
             val t2 = list.find { it.id == second.id }
-
             if (t1 != null && t2 != null) {
                 val newValue = t2.value * 2
                 list.remove(t1)
                 list.remove(t2)
                 list.add(t2.copy(value = newValue))
-
                 state.copy(tiles = list, score = state.score + newValue)
             } else state
         }
         checkGameState(_boardState.value.tiles)
     }
 
-// --- LÓGICA DE COMBO ---
-
     private var comboJob: Job? = null
-
     fun registerMerge() {
         comboJob?.cancel()
         _comboCount.value += 1
-
         comboJob = viewModelScope.launch {
             delay(2000)
             _comboCount.value = 1
         }
     }
-    fun onWatchAdClicked(type: String) {
+
+    // 🔥🔥 CAMBIO CLAVE: YA NO ES watchAdForPowerUp
+    // Esta función se llama SOLO cuando el anuncio terminó con éxito
+    fun grantAdReward(type: String) {
         viewModelScope.launch {
-            Log.d("AD_SIMULATOR", "Iniciando anuncio para $type...")
-            delay(3000)
-            resetPowerUpCooldown(type)
-            Log.d("AD_SIMULATOR", "Anuncio terminado. $type disponible.")
-        }
-    }
-
-    fun watchAdForPowerUp(type: String) {
-        if (loadingAdType != null) return
-
-        viewModelScope.launch {
-            loadingAdType = type
-
-            android.util.Log.d("AD_DEBUG", "Iniciando simulador de anuncio para: $type")
-            delay(3000)
-
             when (type) {
                 "CLEAN" -> resetPowerUpCooldown("CLEAN")
                 "MERGE" -> resetPowerUpCooldown("MERGE")
                 "REVIVE" -> {
-                    // 🔥 CORRECCIÓN CRÍTICA DE REVIVIR (NO BORRAR TODO)
+                    // Lógica de revivir (Mantenemos tu lógica original exacta)
                     val currentTiles = _boardState.value.tiles
-
-                    // Estrategia: Mantener el 50% de las fichas con mayor valor
-                    // Si el tablero tiene 16 fichas, mantenemos las 8 mejores.
                     val tilesToKeepCount = (currentTiles.size / 2).coerceAtLeast(2)
                     val cleanedTiles = currentTiles.sortedByDescending { it.value }.take(tilesToKeepCount)
 
-                    // Seguridad: Si por alguna razón quedó vacío (no debería), generamos 2 nuevas
                     val finalTiles = if (cleanedTiles.isEmpty()) {
                         val prob = ProgressionEngine.calculateFourProbability(_boardState.value.currentLevel)
                         val t1 = gameEngine.spawnTile(emptyList(), prob, currentMultiplierBase)
                         val t2 = gameEngine.spawnTile(listOfNotNull(t1), prob, currentMultiplierBase)
                         listOfNotNull(t1, t2)
-                    } else {
-                        cleanedTiles
-                    }
+                    } else { cleanedTiles }
 
                     _boardState.update { currentState ->
-                        currentState.copy(
-                            tiles = finalTiles,
-                            isGameOver = false,
-                            secondChanceUsed = true, // Esto es correcto, solo 1 vez por juego
-                            showTutorialHand = true
-                        )
+                        currentState.copy(tiles = finalTiles, isGameOver = false, secondChanceUsed = true, showTutorialHand = true)
                     }
                     startLevelTimer()
-                    android.util.Log.d("AD_DEBUG", "Jugador revivido. Tablero limpiado parcialmente.")
                 }
             }
-
-            loadingAdType = null
-            android.util.Log.d("AD_DEBUG", "Anuncio terminado. $type procesado.")
         }
     }
+
     fun setupDailyChallenge() {
         val calendar = Calendar.getInstance()
-        val dateSeed = calendar.get(Calendar.YEAR) * 10000 +
-                (calendar.get(Calendar.MONTH) + 1) * 100 +
-                calendar.get(Calendar.DAY_OF_MONTH)
-
+        val dateSeed = calendar.get(Calendar.YEAR) * 10000 + (calendar.get(Calendar.MONTH) + 1) * 100 + calendar.get(Calendar.DAY_OF_MONTH)
         val randomWithSeed = Random(dateSeed.toLong())
-
         val dailySize = if (randomWithSeed.nextInt(100) % 2 == 0) 4 else 5
-
         val dailyTarget = when (calendar.get(Calendar.DAY_OF_WEEK)) {
             Calendar.SUNDAY, Calendar.SATURDAY -> 2048
             else -> 1024
         }
-
         currentMode = GameMode.DESAFIO
-
-        setupCustomGame(
-            size = dailySize,
-            target = dailyTarget,
-            allowPowerUps = false,
-            difficulty = "Normal",
-            level = 1
-        )
+        setupCustomGame(size = dailySize, target = dailyTarget, allowPowerUps = false, difficulty = "Normal", level = 1)
     }
 
     private fun hasBoardChanged(old: List<TileModel>, new: List<TileModel>): Boolean {
         if (old.size != new.size) return true
-        return old.sortedBy { it.id }.map { it.row to it.col to it.value } !=
-                new.sortedBy { it.id }.map { it.row to it.col to it.value }
+        return old.sortedBy { it.id }.map { it.row to it.col to it.value } != new.sortedBy { it.id }.map { it.row to it.col to it.value }
     }
 }

@@ -28,43 +28,6 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-
-fun getShape(type: String): Shape {
-    // Normalizamos para que no importe si es "Rombo", "ROMBO" o "rombo "
-    return when (type.trim().lowercase()) {
-        "rombo" -> GenericShape { size, _ ->
-            val w = size.width
-            val h = size.height
-            moveTo(w / 2f, 0f)
-            lineTo(w, h / 2f)
-            lineTo(w / 2f, h)
-            lineTo(0f, h / 2f)
-            close()
-        }
-        "triangulo", "triángulo" -> GenericShape { size, _ ->
-            val w = size.width
-            val h = size.height
-            moveTo(w / 2f, h * 0.15f)
-            lineTo(w * 0.9f, h * 0.85f)
-            lineTo(w * 0.1f, h * 0.85f)
-            close()
-        }
-        "hexagono", "hexágono" -> GenericShape { size, _ ->
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            val radius = size.width / 2f
-            for (i in 0 until 6) {
-                val angle = i * 2.0 * kotlin.math.PI / 6.0 - kotlin.math.PI / 2.0
-                val x = cx + radius * kotlin.math.cos(angle).toFloat()
-                val y = cy + radius * kotlin.math.sin(angle).toFloat()
-                if (i == 0) moveTo(x, y) else lineTo(x, y)
-            }
-            close()
-        }
-        else -> RoundedCornerShape(12.dp) // "Cuadrado"
-    }
-}
-
 @Composable
 fun EpicFusionFlash(active: Boolean) {
     // Usamos un trigger basado en el cambio de 'active'

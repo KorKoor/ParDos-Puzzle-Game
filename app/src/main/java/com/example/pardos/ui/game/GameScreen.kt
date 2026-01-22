@@ -64,39 +64,12 @@ import com.example.pardos.ui.theme.ThemeSelector
 import com.example.pardos.ui.theme.ThemeViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.pardos.ui.game.components.ShapeType
+import com.example.pardos.ui.game.components.getShape
+import com.example.pardos.ui.game.logic.AdManager
+import android.app.Activity
 
 // ✅ DEFINICIÓN DE ENUM AL INICIO PARA EVITAR ERRORES DE REFERENCIA
-enum class ShapeType(val displayName: String) {
-    SQUARE("Cuadrado"),
-    CIRCLE("Círculo"),
-    TRIANGLE("Triángulo"),
-    DIAMOND("Diamante");
-
-    companion object {
-        fun fromDisplayName(name: String): ShapeType =
-            entries.find { it.displayName == name } ?: SQUARE
-    }
-}
-
-// ✅ FUNCIÓN DE UTILIDAD PARA OBTENER LA FORMA
-fun getShape(shapeName: String): Shape {
-    return when (ShapeType.fromDisplayName(shapeName)) {
-        ShapeType.CIRCLE -> CircleShape
-        ShapeType.SQUARE -> RoundedCornerShape(12.dp)
-        ShapeType.TRIANGLE -> TriangleShape
-        ShapeType.DIAMOND -> RoundedCornerShape(8.dp)
-        else -> RoundedCornerShape(12.dp) // Rama else por seguridad
-    }
-}
-
-// ✅ FORMA PERSONALIZADA (TRIÁNGULO)
-val TriangleShape = GenericShape { size, _ ->
-    moveTo(size.width / 2f, 0f)
-    lineTo(size.width, size.height)
-    lineTo(0f, size.height)
-    close()
-}
-
 @SuppressLint("UnusedContentLambdaTargetStateParameter", "UnusedBoxWithConstraintsScope")
 @Composable
 fun GameScreen(
@@ -109,6 +82,7 @@ fun GameScreen(
     val currentTheme = themeViewModel.currentTheme
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
+    val activity = context as? Activity
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -125,7 +99,9 @@ fun GameScreen(
             displayedLevel = state.currentLevel
         }
     }
-
+    LaunchedEffect(Unit) {
+        viewModel.refreshCurrentLevelDifficulty()
+    }
     val audioManager = remember { GameAudioManager(context) }
     val bgGradient = remember(currentTheme) { Brush.verticalGradient(colors = currentTheme.colors) }
     val isTimeLow = state.maxTime != null && state.elapsedTime <= 10L
@@ -281,7 +257,7 @@ fun GameScreen(
                             Spacer(Modifier.height(24.dp))
 
                             if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                PowerUpSection(viewModel, haptic)
+                                PowerUpSection(viewModel, haptic, activity)
                             }
                         }
                     }
@@ -380,7 +356,7 @@ fun GameScreen(
                                 GameFooter(state = state)
 
                                 if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                    PowerUpSection(viewModel, haptic, Modifier.fillMaxWidth())
+                                    PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth())
                                 }
                             }
                         }
@@ -423,7 +399,11 @@ fun GameScreen(
                 SecondChanceOverlay(
                     onUseSecondChance = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        viewModel.watchAdForPowerUp("REVIVE")
+                        activity?.let { act ->
+                            AdManager.showRewardedAd(act) {
+                                viewModel.grantAdReward("REVIVE")
+                            }
+                        }
                     },
                     onCancel = { viewModel.retryLevel() },
                     currentTheme = currentTheme
@@ -480,9 +460,8 @@ fun GameScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // ✅ CORRECCIÓN: USAR TEXTO FIJO SI NO EXISTE EL RECURSO
                         Text(
-                            text = "COLORES", // Reemplazo de R.string.colors_label para evitar error
+                            text = "COLORES",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF3D405B).copy(alpha = 0.6f)
@@ -492,9 +471,8 @@ fun GameScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // ✅ CORRECCIÓN: USAR TEXTO FIJO SI NO EXISTE EL RECURSO
                         Text(
-                            text = "FORMAS", // Reemplazo de R.string.shapes_label para evitar error
+                            text = "FORMAS",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF3D405B).copy(alpha = 0.6f)
@@ -654,7 +632,7 @@ fun BouncingText(
 }
 
 @Composable
-fun PowerUpSection(viewModel: GameViewModel, haptic: HapticFeedback, modifier: Modifier = Modifier) {
+fun PowerUpSection(viewModel: GameViewModel, haptic: HapticFeedback, activity: Activity?, modifier: Modifier = Modifier) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
     PowerUpBar(
         viewModel = viewModel,
@@ -663,7 +641,11 @@ fun PowerUpSection(viewModel: GameViewModel, haptic: HapticFeedback, modifier: M
             if (viewModel.isPowerUpAvailable(viewModel.lastCleanTime, currentTime)) {
                 viewModel.useCleanPowerUp()
             } else {
-                viewModel.watchAdForPowerUp("CLEAN")
+                activity?.let { act ->
+                    AdManager.showRewardedAd(act) {
+                        viewModel.grantAdReward("CLEAN")
+                    }
+                }
             }
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         },
@@ -671,7 +653,11 @@ fun PowerUpSection(viewModel: GameViewModel, haptic: HapticFeedback, modifier: M
             if (viewModel.isPowerUpAvailable(viewModel.lastMergeTime, currentTime)) {
                 viewModel.useMergePowerUp()
             } else {
-                viewModel.watchAdForPowerUp("MERGE")
+                activity?.let { act ->
+                    AdManager.showRewardedAd(act) {
+                        viewModel.grantAdReward("MERGE")
+                    }
+                }
             }
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         }
@@ -967,8 +953,8 @@ private fun TimerDisplay(
     seconds: Long,
     isLowTime: Boolean,
     modifier: Modifier = Modifier,
-    accentColor: Color = Color(0xFFE07A5F), // Color por defecto si no se pasa
-    textColor: Color = Color(0xFF3D405B)    // Color por defecto si no se pasa
+    accentColor: Color = Color(0xFFE07A5F),
+    textColor: Color = Color(0xFF3D405B)
 ) {
     // Animación de color: Rojo si es tiempo bajo, gris oscuro si es normal
     val animatedTextColor by animateColorAsState(

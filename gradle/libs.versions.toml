@@ -13,6 +13,7 @@ ui = "1.10.1"
 uiGraphics = "1.10.1"
 runtime = "1.10.1"
 interpolator = "1.0.0"
+playServicesAdsApi = "24.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -34,6 +35,7 @@ androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "uiGraphics" }
 androidx-compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 androidx-interpolator = { group = "androidx.interpolator", name = "interpolator", version.ref = "interpolator" }
+play-services-ads-api = { group = "com.google.android.gms", name = "play-services-ads-api", version.ref = "playServicesAdsApi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
