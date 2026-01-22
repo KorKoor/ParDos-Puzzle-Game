@@ -1,0 +1,295 @@
+<resources>
+    <string name="app_name" translatable="false">ParDos</string>
+    <string name="back">Atrás</string>
+    <string name="close_game">Cerrar juego</string>
+    <string name="ready">LISTO</string>
+    <string name="version_info">VERSIÓN 2.0 • 2026</string>
+
+    <string name="menu_slogan">SUMA Y RELÁJATE</string>
+    <string name="menu_play">JUGAR</string>
+    <string name="menu_customize">PERSONALIZAR</string>
+    <string name="menu_records">RÉCORDS</string>
+    <string name="menu_achievements">LOGROS</string>
+    <string name="menu_daily_challenge">RETO DIARIO</string>
+    <string name="menu_version_info">VERSIÓN 2.0 • 2026</string>
+
+    <string name="mode_selection_subtitle">MODO DE JUEGO</string>
+    <string name="mode_selection_title">Elige tu ritmo</string>
+    <string name="mode_footer_hint">Tu progreso se guarda automáticamente</string>
+
+    <string name="mode_classic">Campaña</string>
+    <string name="mode_campaign_title">MODO CAMPAÑA</string>
+    <string name="mode_campaign_desc">Supera 2,400 niveles diseñados a mano. Gana estrellas y desbloquea nuevos retos.</string>
+
+    <string name="mode_tables">Multi-Mates</string>
+    <string name="mode_tables_title">MULTI-MATES</string>
+    <string name="mode_tables_desc">Funde fichas con tablas de multiplicar (3 al 9). ¡Agilidad mental extrema!</string>
+    <string name="mode_tables_with_value">Tablas (del %1$d)</string>
+
+    <string name="mode_challenge">Desafío</string>
+    <string name="mode_challenge_title">DESAFÍO</string>
+    <string name="mode_challenge_desc">Partidas rápidas bajo presión. Vence al reloj y rompe tus propios récords.</string>
+
+    <string name="mode_zen">Zen</string>
+    <string name="mode_zen_title">MODO ZEN</string>
+    <string name="mode_zen_desc">Sin límites ni estrés. Relájate fusionando fichas en un tablero infinito.</string>
+
+    <string name="mode_fast">Rápido</string>
+    <string name="mode_fast_desc">Completa niveles rápidamente contra el reloj</string>
+
+    <string name="level_label">NIVEL %1$d</string>
+    <string name="goal_label">OBJETIVO: FICHA %1$d  •  TABLERO %2$dx%2$d</string>
+    <string name="moves_label">Movimientos</string>
+    <string name="points_label">Puntos</string>
+    <string name="time_label">Tiempo</string>
+    <string name="time_remaining">TIEMPO RESTANTE</string>
+    <string name="hurry_up">¡DALE RÁPIDO!</string>
+    <string name="combo_multiplier">×%1$d</string>
+    <string name="timer_format">%1$d:%2$02d</string>
+    <string name="tutorial_swipe">Desliza para mover las fichas</string>
+
+    <string name="clean_powerup">LIMPIAR</string>
+    <string name="merge_powerup">FUSIÓN</string>
+    <string name="ad_label">ANUNCIO</string>
+    <string name="ad_loading">Cargando anuncio...</string>
+    <string name="preparing_revive">PREPARANDO SEGUNDA OPORTUNIDAD...</string>
+    <string name="second_chance_title">¿Una oportunidad más?</string>
+
+    <string name="board_full">¡TABLERO LLENO!</string>
+    <string name="no_moves">No quedan más movimientos posibles.</string>
+    <string name="retry">REINTENTAR</string>
+    <string name="victory_mastered">¡DOMINADO!</string>
+    <string name="victory_well_done">¡BIEN HECHO!</string>
+    <string name="next_button">SIGUIENTE</string>
+    <string name="personal_records">RÉCORDS PERSONALES</string>
+    <string name="records_combined_format">🏆 %1$d Movs  •  ⏱️ %2$s</string>
+    <string name="objective_title">Objetivo</string>
+    <string name="records_subtitle">Tus mejores movimientos registrados</string>
+    <string name="back_to_menu">VOLVER AL MENÚ</string>
+    <string name="records_level">Nivel %1$d</string>
+    <string name="max_tile_label">Máxima Ficha</string>
+    <string name="ach_collection_title">Colección completada</string>
+    <string name="second_chance_desc">Limpiarás las fichas pequeñas para seguir sumando.</string>
+    <string name="continue_game_button">CONTINUAR JUEGO</string>
+    <string name="retry_level_button">NO, REINTENTAR NIVEL</string>
+
+
+    <string name="custom_subtitle">PERSONALIZAR</string>
+    <string name="custom_title">Tu Partida Ideal</string>
+    <string name="section_board_size">TAMAÑO DEL TABLERO</string>
+    <string name="section_target_tile">FICHA OBJETIVO</string>
+    <string name="section_game_rules">REGLAS DE JUEGO</string>
+    <string name="section_time_pressure">PRESIÓN DE TIEMPO</string>
+    <string name="powerups_active">Power-Ups activos</string>
+    <string name="start_game_button">INICIAR PARTIDA</string>
+    <string name="diff_zen">Zen</string>
+    <string name="diff_normal">Normal</string>
+    <string name="diff_pro">Pro</string>
+
+    <string name="visual_style">ESTILO VISUAL</string>
+    <string name="shape_square">Cuadrado</string>
+    <string name="shape_rhombus">Rombo</string>
+    <string name="shape_triangle">Triángulo</string>
+    <string name="shape_hexagon">Hexágono</string>
+
+    <string name="exit_dialog_title">¿Deseas salir?</string>
+    <string name="exit_dialog_message">Tu progreso en este nivel se perderá. ¿Estás seguro de que quieres volver al menú?</string>
+    <string name="exit_dialog_confirm">SÍ, SALIR</string>
+    <string name="exit_dialog_dismiss">CONTINUAR JUGANDO</string>
+
+    <string name="board_desc">Tablero de juego de %1$d por %2$d</string>
+    <string name="direction_up">Deslizar hacia arriba</string>
+    <string name="direction_down">Deslizar hacia abajo</string>
+    <string name="direction_left">Deslizar hacia la izquierda</string>
+    <string name="direction_right">Deslizar hacia la derecha</string>
+    <string name="close_game_desc">Cerrar partida actual</string>
+
+    <string name="records_title">Historial de Récords</string>
+    <string name="records_empty">Aún no tienes récords. ¡Empieza a jugar!</string>
+    <string name="score_format">Puntaje: %1$d</string>
+    <string name="date_format">Fecha: %1$s</string>
+    <string name="mode_classic_desc">Supera niveles diseñados a mano y progresa en el mapa.</string>
+
+    <string name="ach_first_steps_title">Primeros Pasos</string>
+    <string name="ach_first_steps_desc">Alcanza la ficha 64 por primera vez.</string>
+    <string name="ach_master_title">Maestro Pardos</string>
+    <string name="ach_master_desc">Consigue 3 estrellas en un nivel de dificultad Pro.</string>
+    <string name="achievement_unlocked">¡LOGRO DESBLOQUEADO!</string>
+
+    <string name="ach_first_win_title">Primer Paso</string>
+    <string name="ach_first_win_desc">Completa tu primer nivel.</string>
+    <string name="ach_warmup_title">Calentando Motores</string>
+    <string name="ach_warmup_desc">Alcanza el nivel 3.</string>
+    <string name="ach_level_100_title">Centenario</string>
+    <string name="ach_level_100_desc">Alcanza el nivel 100.</string>
+
+    <string name="ach_tile_2048_title">¡2048 Alcanzado!</string>
+    <string name="ach_tile_2048_desc">Crea la legendaria ficha de 2048.</string>
+
+    <string name="ach_speedrun_title">Relámpago</string>
+    <string name="ach_speedrun_desc">Gana un nivel en menos de 50 movimientos.</string>
+
+    <string name="ach_corner_king_title">Rey de las Esquinas</string>
+    <string name="ach_corner_king_desc">Ten fichas en las 4 esquinas del tablero.</string>
+    <string name="ach_level_5_title">Mano Caliente</string>
+    <string name="ach_level_5_desc">Alcanza el nivel 5.</string>
+    <string name="ach_level_10_title">Doble Dígito</string>
+    <string name="ach_level_10_desc">Alcanza el nivel 10.</string>
+    <string name="ach_level_15_title">Persistente</string>
+    <string name="ach_level_15_desc">Alcanza el nivel 15.</string>
+    <string name="ach_level_20_title">Veterano</string>
+    <string name="ach_level_20_desc">Alcanza el nivel 20.</string>
+    <string name="ach_level_25_title">Cuarto de Siglo</string>
+    <string name="ach_level_25_desc">Alcanza el nivel 25.</string>
+    <string name="ach_level_30_title">Camino a la Gloria</string>
+    <string name="ach_level_30_desc">Alcanza el nivel 30.</string>
+    <string name="ach_level_40_title">Experto Confirmado</string>
+    <string name="ach_level_40_desc">Alcanza el nivel 40.</string>
+    <string name="ach_level_50_title">Leyenda</string>
+    <string name="ach_level_50_desc">Alcanza el nivel 50.</string>
+    <string name="ach_level_75_title">Trascendental</string>
+    <string name="ach_level_75_desc">Alcanza el nivel 75.</string>
+
+    <string name="ach_tile_16_title">Dulces Dieciséis</string>
+    <string name="ach_tile_16_desc">Crea una ficha de 16.</string>
+    <string name="ach_tile_32_title">Treinta y Dos</string>
+    <string name="ach_tile_32_desc">Crea una ficha de 32.</string>
+    <string name="ach_tile_64_title">Sesenta y Cuatro</string>
+    <string name="ach_tile_64_desc">Crea una ficha de 64.</string>
+    <string name="ach_tile_128_title">Centenar Plus</string>
+    <string name="ach_tile_128_desc">Crea una ficha de 128.</string>
+    <string name="ach_tile_256_title">Doble Centenar</string>
+    <string name="ach_tile_256_desc">Crea una ficha de 256.</string>
+    <string name="ach_tile_512_title">Quinientos Doce</string>
+    <string name="ach_tile_512_desc">Crea una ficha de 512.</string>
+    <string name="ach_tile_1024_title">Mil Veinticuatro</string>
+    <string name="ach_tile_1024_desc">Crea una ficha de 1024.</string>
+    <string name="ach_tile_4096_title">Más Allá</string>
+    <string name="ach_tile_4096_desc">Crea una ficha de 4096.</string>
+    <string name="ach_tile_8192_title">Estratosférico</string>
+    <string name="ach_tile_8192_desc">Crea una ficha de 8192.</string>
+
+    <string name="ach_speed_40_title">Veloz</string>
+    <string name="ach_speed_40_desc">Gana un nivel en menos de 40 movimientos.</string>
+    <string name="ach_speed_30_title">Rápido Como el Viento</string>
+    <string name="ach_speed_30_desc">Gana un nivel en menos de 30 movimientos.</string>
+    <string name="ach_speed_20_title">Supersónico</string>
+    <string name="ach_speed_20_desc">Gana un nivel en menos de 20 movimientos.</string>
+    <string name="ach_speed_15_title">Eficiencia Máxima</string>
+    <string name="ach_speed_15_desc">Gana un nivel en menos de 15 movimientos.</string>
+    <string name="ach_speed_10_title">Perfección Absoluta</string>
+    <string name="ach_speed_10_desc">Gana un nivel en menos de 10 movimientos.</string>
+
+    <string name="ach_time_60_title">Minuto de Oro</string>
+    <string name="ach_time_60_desc">Completa un nivel en menos de 60 segundos.</string>
+    <string name="ach_time_45_title">Tres Cuartos</string>
+    <string name="ach_time_45_desc">Completa un nivel en menos de 45 segundos.</string>
+    <string name="ach_time_30_title">Medio Minuto</string>
+    <string name="ach_time_30_desc">Completa un nivel en menos de 30 segundos.</string>
+    <string name="ach_time_15_title">Flash</string>
+    <string name="ach_time_15_desc">Completa un nivel en menos de 15 segundos.</string>
+
+    <string name="ach_century_title">Centurión</string>
+    <string name="ach_century_desc">Haz 100 movimientos en una sola partida.</string>
+    <string name="ach_moves_150_title">Sesquicentenario</string>
+    <string name="ach_moves_150_desc">Haz 150 movimientos en una sola partida.</string>
+    <string name="ach_moves_200_title">Bicentenario</string>
+    <string name="ach_moves_200_desc">Haz 200 movimientos en una sola partida.</string>
+    <string name="ach_moves_300_title">Tricentenario</string>
+    <string name="ach_moves_300_desc">Haz 300 movimientos en una sola partida.</string>
+    <string name="ach_moves_500_title">Imparable</string>
+    <string name="ach_moves_500_desc">Haz 500 movimientos en una sola partida.</string>
+    <string name="ach_time_5min_title">Cinco Minutos</string>
+    <string name="ach_time_5min_desc">Juega durante 5 minutos seguidos.</string>
+    <string name="ach_time_10min_title">Decálogo Temporal</string>
+    <string name="ach_time_10min_desc">Juega durante 10 minutos seguidos.</string>
+    <string name="ach_time_20min_title">Veinte Minutos</string>
+    <string name="ach_time_20min_desc">Juega durante 20 minutos seguidos.</string>
+    <string name="ach_time_30min_title">Media Hora</string>
+    <string name="ach_time_30min_desc">Juega durante 30 minutos seguidos.</string>
+
+    <string name="ach_score_500_title">Medio Millar</string>
+    <string name="ach_score_500_desc">Alcanza 500 puntos.</string>
+    <string name="ach_score_1k_title">Primer Millar</string>
+    <string name="ach_score_1k_desc">Alcanza 1,000 puntos.</string>
+    <string name="ach_score_2500_title">Dos Mil Quinientos</string>
+    <string name="ach_score_2500_desc">Alcanza 2,500 puntos.</string>
+    <string name="ach_score_5k_title">Cinco Mil</string>
+    <string name="ach_score_5k_desc">Alcanza 5,000 puntos.</string>
+    <string name="ach_score_7500_title">Siete Mil Quinientos</string>
+    <string name="ach_score_7500_desc">Alcanza 7,500 puntos.</string>
+    <string name="ach_score_10k_title">Diez Mil Maestro</string>
+    <string name="ach_score_10k_desc">Alcanza 10,000 puntos.</string>
+    <string name="ach_score_15k_title">Quince Mil</string>
+    <string name="ach_score_15k_desc">Alcanza 15,000 puntos.</string>
+    <string name="ach_score_25k_title">Veinticinco Mil</string>
+    <string name="ach_score_25k_desc">Alcanza 25,000 puntos.</string>
+    <string name="ach_score_50k_title">Cincuenta Mil</string>
+    <string name="ach_score_50k_desc">Alcanza 50,000 puntos.</string>
+    <string name="ach_score_100k_title">Cien Mil Legendario</string>
+    <string name="ach_score_100k_desc">Alcanza 100,000 puntos.</string>
+
+    <string name="ach_combo_3_title">Triple Combo</string>
+    <string name="ach_combo_3_desc">Consigue un combo de 3 fusiones.</string>
+    <string name="ach_combo_5_title">Penta Combo</string>
+    <string name="ach_combo_5_desc">Consigue un combo de 5 fusiones.</string>
+    <string name="ach_combo_7_title">Hepta Combo</string>
+    <string name="ach_combo_7_desc">Consigue un combo de 7 fusiones.</string>
+    <string name="ach_combo_10_title">Deca Combo</string>
+    <string name="ach_combo_10_desc">Consigue un combo de 10 fusiones.</string>
+    <string name="ach_combo_15_title">Mega Combo</string>
+    <string name="ach_combo_15_desc">Consigue un combo de 15 fusiones.</string>
+    <string name="ach_combo_20_title">Ultra Combo</string>
+    <string name="ach_combo_20_desc">Consigue un combo de 20 fusiones.</string>
+    <string name="ach_combo_30_title">Hyper Combo</string>
+    <string name="ach_combo_30_desc">Consigue un combo de 30 fusiones.</string>
+
+    <string name="ach_full_board_title">Tablero Lleno</string>
+    <string name="ach_full_board_desc">Llena todo el tablero sin perder.</string>
+    <string name="ach_minimal_tiles_title">Minimalista</string>
+    <string name="ach_minimal_tiles_desc">Gana con menos de 5 fichas en el tablero.</string>
+    <string name="ach_clutch_victory_title">Victoria In Extremis</string>
+    <string name="ach_clutch_victory_desc">Gana con solo 1 espacio vacío.</string>
+    <string name="ach_close_call_title">Por los Pelos</string>
+    <string name="ach_close_call_desc">Gana con 2 espacios vacíos o menos.</string>
+    <string name="ach_efficiency_king_title">Rey de la Eficiencia</string>
+    <string name="ach_efficiency_king_desc">Completa un nivel sin movimientos desperdiciados.</string>
+
+    <string name="ach_classic_beginner_title">Clásico Nivel 5</string>
+    <string name="ach_classic_beginner_desc">Alcanza nivel 5 en modo Clásico.</string>
+    <string name="ach_classic_intermediate_title">Clásico Nivel 10</string>
+    <string name="ach_classic_intermediate_desc">Alcanza nivel 10 en modo Clásico.</string>
+    <string name="ach_classic_master_title">Maestro Clásico</string>
+    <string name="ach_classic_master_desc">Alcanza nivel 20 en modo Clásico.</string>
+    <string name="ach_challenge_completed_title">Desafío Superado</string>
+    <string name="ach_challenge_completed_desc">Completa un nivel en modo Desafío.</string>
+    <string name="ach_challenge_level_5_title">Desafío Nivel 5</string>
+    <string name="ach_challenge_level_5_desc">Alcanza nivel 5 en modo Desafío.</string>
+    <string name="ach_zen_master_title">Maestro Zen</string>
+    <string name="ach_zen_master_desc">Alcanza nivel 5 en modo Zen.</string>
+    <string name="ach_zen_enlightened_title">Iluminado</string>
+    <string name="ach_zen_enlightened_desc">Alcanza nivel 10 en modo Zen.</string>
+    <string name="ach_rapid_fire_title">Fuego Rápido</string>
+    <string name="ach_rapid_fire_desc">Completa 3 niveles en modo Rápido.</string>
+    <string name="ach_speed_demon_title">Demonio de Velocidad</string>
+    <string name="ach_speed_demon_desc">Alcanza nivel 10 en modo Rápido.</string>
+
+    <string name="ach_lucky_seven_title">Siete de la Suerte</string>
+    <string name="ach_lucky_seven_desc">Completa exactamente en el nivel 7.</string>
+    <string name="ach_thirteen_title">Trece Escalofriante</string>
+    <string name="ach_thirteen_desc">Alcanza el nivel 13.</string>
+    <string name="ach_double_double_title">Doble Doble</string>
+    <string name="ach_double_double_desc">Ten dos pares de fichas del mismo valor.</string>
+    <string name="ach_quad_squad_title">Escuadrón Cuádruple</string>
+    <string name="ach_quad_squad_desc">Ten 4 fichas del mismo valor simultáneamente.</string>
+    <string name="ach_power_of_two_title">Potencia de Dos</string>
+    <string name="ach_power_of_two_desc">Ten solo fichas que sean potencias de 2 puras.</string>
+    <string name="ach_symmetry_title">Simetría Perfecta</string>
+    <string name="ach_symmetry_desc">Ten el tablero con simetría horizontal.</string>
+    <string name="ach_center_piece_title">Pieza Central</string>
+    <string name="ach_center_piece_desc">Crea tu ficha más alta en el centro del tablero.</string>
+    <string name="ach_edge_lord_title">Señor de los Bordes</string>
+    <string name="ach_edge_lord_desc">Ten todas las fichas en los bordes del tablero.</string>
+    <string name="ach_fibonacci_title">Fibonacci Fan</string>
+    <string name="ach_fibonacci_desc">Ten fichas con valores de la secuencia Fibonacci.</string>
+</resources>

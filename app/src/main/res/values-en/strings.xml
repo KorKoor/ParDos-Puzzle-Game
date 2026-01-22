@@ -1,0 +1,294 @@
+<resources>
+    <string name="app_name" translatable="false">ParDos</string>
+    <string name="back">Back</string>
+    <string name="close_game">Close Game</string>
+    <string name="ready">READY</string>
+    <string name="version_info">VERSION 2.0 • 2026</string>
+
+    <string name="menu_slogan">SUM AND RELAX</string>
+    <string name="menu_play">PLAY</string>
+    <string name="menu_customize">CUSTOMIZE</string>
+    <string name="menu_records">RECORDS</string>
+    <string name="menu_achievements">AWARDS</string>
+    <string name="menu_daily_challenge">DAILY CHALLENGE</string>
+    <string name="menu_version_info">VERSION 2.0 • 2026</string>
+
+    <string name="mode_selection_subtitle">GAME MODE</string>
+    <string name="mode_selection_title">Choose your pace</string>
+    <string name="mode_footer_hint">Your progress is saved automatically</string>
+
+    <string name="mode_classic">Campaign</string>
+    <string name="mode_campaign_title">CAMPAIGN MODE</string>
+    <string name="mode_campaign_desc">Beat 2,400 handcrafted levels. Earn stars and unlock new challenges.</string>
+
+    <string name="mode_tables">Math Mania</string>
+    <string name="mode_tables_title">MATH MANIA</string>
+    <string name="mode_tables_desc">Merge tiles using multiplication tables (3 to 9). Extreme mental agility!</string>
+    <string name="mode_tables_with_value">Tables (of %1$d)</string>
+
+    <string name="mode_challenge">Challenge</string>
+    <string name="mode_challenge_title">CHALLENGE</string>
+    <string name="mode_challenge_desc">Fast-paced games under pressure. Beat the clock and break your own records.</string>
+
+    <string name="mode_zen">Zen</string>
+    <string name="mode_zen_title">ZEN MODE</string>
+    <string name="mode_zen_desc">No limits, no stress. Relax by merging tiles on an infinite board.</string>
+
+    <string name="mode_fast">Fast</string>
+    <string name="mode_fast_desc">Complete levels quickly against the clock</string>
+
+    <string name="level_label">LEVEL %1$d</string>
+    <string name="goal_label">GOAL: TILE %1$d  •  BOARD %2$dx%2$d</string>
+    <string name="moves_label">Moves</string>
+    <string name="points_label">Points</string>
+    <string name="time_label">Time</string>
+    <string name="time_remaining">TIME REMAINING</string>
+    <string name="hurry_up">HURRY UP!</string>
+    <string name="combo_multiplier">×%1$d</string>
+    <string name="timer_format">%1$d:%2$02d</string>
+    <string name="tutorial_swipe">Swipe to move the tiles</string>
+
+    <string name="clean_powerup">CLEAN</string>
+    <string name="merge_powerup">MERGE</string>
+    <string name="ad_label">AD</string>
+    <string name="ad_loading">Loading ad...</string>
+    <string name="preparing_revive">PREPARING SECOND CHANCE...</string>
+    <string name="second_chance_title">One more chance?</string>
+
+    <string name="board_full">BOARD FULL!</string>
+    <string name="no_moves">No more moves possible.</string>
+    <string name="retry">RETRY</string>
+    <string name="victory_mastered">MASTERED!</string>
+    <string name="victory_well_done">WELL DONE!</string>
+    <string name="next_button">NEXT</string>
+    <string name="personal_records">PERSONAL RECORDS</string>
+    <string name="records_combined_format">🏆 %1$d Moves  •  ⏱️ %2$s</string>
+    <string name="objective_title">Goal</string>
+    <string name="records_subtitle">Your best recorded moves</string>
+    <string name="ach_collection_title">Collection completed</string>
+    <string name="second_chance_desc">Small tiles will be cleared so you can keep merging.</string>
+    <string name="continue_game_button">CONTINUE GAME</string>
+    <string name="retry_level_button">NO, RETRY LEVEL</string>
+    <string name="back_to_menu">BACK TO MENU</string>
+    <string name="records_level">Level %1$d</string>
+    <string name="max_tile_label">Max Tile</string>
+
+    <string name="custom_subtitle">CUSTOMIZE</string>
+    <string name="custom_title">Your Perfect Match</string>
+    <string name="section_board_size">BOARD SIZE</string>
+    <string name="section_target_tile">TARGET TILE</string>
+    <string name="section_game_rules">GAME RULES</string>
+    <string name="section_time_pressure">TIME PRESSURE</string>
+    <string name="powerups_active">Active Power-Ups</string>
+    <string name="start_game_button">START GAME</string>
+    <string name="diff_zen">Zen</string>
+    <string name="diff_normal">Normal</string>
+    <string name="diff_pro">Pro</string>
+
+    <string name="visual_style">VISUAL STYLE</string>
+    <string name="shape_square">Square</string>
+    <string name="shape_rhombus">Rhombus</string>
+    <string name="shape_triangle">Triangle</string>
+    <string name="shape_hexagon">Hexagon</string>
+
+    <string name="exit_dialog_title">Exit game?</string>
+    <string name="exit_dialog_message">Your current progress in this level will be lost. Are you sure you want to return to the menu?</string>
+    <string name="exit_dialog_confirm">YES, EXIT</string>
+    <string name="exit_dialog_dismiss">KEEP PLAYING</string>
+
+    <string name="board_desc">%1$d by %2$d game board</string>
+    <string name="direction_up">Swipe up</string>
+    <string name="direction_down">Swipe down</string>
+    <string name="direction_left">Swipe left</string>
+    <string name="direction_right">Swipe right</string>
+    <string name="close_game_desc">Close current game</string>
+
+    <string name="records_title">Personal Records</string>
+    <string name="records_empty">No records yet. Start playing!</string>
+    <string name="score_format">Score: %1$d</string>
+    <string name="date_format">Date: %1$s</string>
+    <string name="mode_classic_desc">Beat handcrafted levels and progress through the map.</string>
+
+    <string name="ach_first_steps_title">First Steps</string>
+    <string name="ach_first_steps_desc">Reach the 64 tile for the first time.</string>
+    <string name="ach_master_title">Pardos Master</string>
+    <string name="ach_master_desc">Get 3 stars on a Pro difficulty level.</string>
+    <string name="achievement_unlocked">ACHIEVEMENT UNLOCKED!</string>
+
+    <string name="ach_first_win_title">First Step</string>
+    <string name="ach_first_win_desc">Complete your first level.</string>
+    <string name="ach_warmup_title">Warming Up</string>
+    <string name="ach_warmup_desc">Reach level 3.</string>
+    <string name="ach_level_100_title">Centenary</string>
+    <string name="ach_level_100_desc">Reach level 100.</string>
+
+    <string name="ach_tile_2048_title">2048 Reached!</string>
+    <string name="ach_tile_2048_desc">Create the legendary 2048 tile.</string>
+
+    <string name="ach_speedrun_title">Lightning</string>
+    <string name="ach_speedrun_desc">Win a level in less than 50 moves.</string>
+
+    <string name="ach_corner_king_title">Corner King</string>
+    <string name="ach_corner_king_desc">Have tiles in all 4 corners of the board.</string>
+    <string name="ach_level_5_title">Hot Hand</string>
+    <string name="ach_level_5_desc">Reach level 5.</string>
+    <string name="ach_level_10_title">Double Digits</string>
+    <string name="ach_level_10_desc">Reach level 10.</string>
+    <string name="ach_level_15_title">Persistent</string>
+    <string name="ach_level_15_desc">Reach level 15.</string>
+    <string name="ach_level_20_title">Veteran</string>
+    <string name="ach_level_20_desc">Reach level 20.</string>
+    <string name="ach_level_25_title">Quarter Century</string>
+    <string name="ach_level_25_desc">Reach level 25.</string>
+    <string name="ach_level_30_title">Path to Glory</string>
+    <string name="ach_level_30_desc">Reach level 30.</string>
+    <string name="ach_level_40_title">Confirmed Expert</string>
+    <string name="ach_level_40_desc">Reach level 40.</string>
+    <string name="ach_level_50_title">Legend</string>
+    <string name="ach_level_50_desc">Reach level 50.</string>
+    <string name="ach_level_75_title">Transcendental</string>
+    <string name="ach_level_75_desc">Reach level 75.</string>
+
+    <string name="ach_tile_16_title">Sweet Sixteen</string>
+    <string name="ach_tile_16_desc">Create a 16 tile.</string>
+    <string name="ach_tile_32_title">Thirty-Two</string>
+    <string name="ach_tile_32_desc">Create a 32 tile.</string>
+    <string name="ach_tile_64_title">Sixty-Four</string>
+    <string name="ach_tile_64_desc">Create a 64 tile.</string>
+    <string name="ach_tile_128_title">Hundred Plus</string>
+    <string name="ach_tile_128_desc">Create a 128 tile.</string>
+    <string name="ach_tile_256_title">Double Hundred</string>
+    <string name="ach_tile_256_desc">Create a 256 tile.</string>
+    <string name="ach_tile_512_title">Five Twelve</string>
+    <string name="ach_tile_512_desc">Create a 512 tile.</string>
+    <string name="ach_tile_1024_title">Ten Twenty-Four</string>
+    <string name="ach_tile_1024_desc">Create a 1024 tile.</string>
+    <string name="ach_tile_4096_title">Beyond</string>
+    <string name="ach_tile_4096_desc">Create a 4096 tile.</string>
+    <string name="ach_tile_8192_title">Stratospheric</string>
+    <string name="ach_tile_8192_desc">Create an 8192 tile.</string>
+
+    <string name="ach_speed_40_title">Speedy</string>
+    <string name="ach_speed_40_desc">Win a level in less than 40 moves.</string>
+    <string name="ach_speed_30_title">Fast as the Wind</string>
+    <string name="ach_speed_30_desc">Win a level in less than 30 moves.</string>
+    <string name="ach_speed_20_title">Supersonic</string>
+    <string name="ach_speed_20_desc">Win a level in less than 20 moves.</string>
+    <string name="ach_speed_15_title">Maximum Efficiency</string>
+    <string name="ach_speed_15_desc">Win a level in less than 15 moves.</string>
+    <string name="ach_speed_10_title">Absolute Perfection</string>
+    <string name="ach_speed_10_desc">Win a level in less than 10 moves.</string>
+
+    <string name="ach_time_60_title">Golden Minute</string>
+    <string name="ach_time_60_desc">Complete a level in less than 60 seconds.</string>
+    <string name="ach_time_45_title">Three Quarters</string>
+    <string name="ach_time_45_desc">Complete a level in less than 45 seconds.</string>
+    <string name="ach_time_30_title">Half a Minute</string>
+    <string name="ach_time_30_desc">Complete a level in less than 30 seconds.</string>
+    <string name="ach_time_15_title">Flash</string>
+    <string name="ach_time_15_desc">Complete a level in less than 15 seconds.</string>
+
+    <string name="ach_century_title">Centurion</string>
+    <string name="ach_century_desc">Make 100 moves in a single game.</string>
+    <string name="ach_moves_150_title">Sesquicentennial</string>
+    <string name="ach_moves_150_desc">Make 150 moves in a single game.</string>
+    <string name="ach_moves_200_title">Bicentennial</string>
+    <string name="ach_moves_200_desc">Make 200 moves in a single game.</string>
+    <string name="ach_moves_300_title">Tercentennial</string>
+    <string name="ach_moves_300_desc">Make 300 moves in a single game.</string>
+    <string name="ach_moves_500_title">Unstoppable</string>
+    <string name="ach_moves_500_desc">Make 500 moves in a single game.</string>
+    <string name="ach_time_5min_title">Five Minutes</string>
+    <string name="ach_time_5min_desc">Play for 5 consecutive minutes.</string>
+    <string name="ach_time_10min_title">Time Decalogue</string>
+    <string name="ach_time_10min_desc">Play for 10 consecutive minutes.</string>
+    <string name="ach_time_20min_title">Twenty Minutes</string>
+    <string name="ach_time_20min_desc">Play for 20 consecutive minutes.</string>
+    <string name="ach_time_30min_title">Half Hour</string>
+    <string name="ach_time_30min_desc">Play for 30 consecutive minutes.</string>
+
+    <string name="ach_score_500_title">Half Thousand</string>
+    <string name="ach_score_500_desc">Reach 500 points.</string>
+    <string name="ach_score_1k_title">First Thousand</string>
+    <string name="ach_score_1k_desc">Reach 1,000 points.</string>
+    <string name="ach_score_2500_title">Two Thousand Five Hundred</string>
+    <string name="ach_score_2500_desc">Reach 2,500 points.</string>
+    <string name="ach_score_5k_title">Five Thousand</string>
+    <string name="ach_score_5k_desc">Reach 5,000 points.</string>
+    <string name="ach_score_7500_title">Seven Thousand Five Hundred</string>
+    <string name="ach_score_7500_desc">Reach 7,500 points.</string>
+    <string name="ach_score_10k_title">Ten Thousand Master</string>
+    <string name="ach_score_10k_desc">Reach 10,000 points.</string>
+    <string name="ach_score_15k_title">Fifteen Thousand</string>
+    <string name="ach_score_15k_desc">Reach 15,000 points.</string>
+    <string name="ach_score_25k_title">Twenty-Five Thousand</string>
+    <string name="ach_score_25k_desc">Reach 25,000 points.</string>
+    <string name="ach_score_50k_title">Fifty Thousand</string>
+    <string name="ach_score_50k_desc">Reach 50,000 points.</string>
+    <string name="ach_score_100k_title">Hundred Thousand Legend</string>
+    <string name="ach_score_100k_desc">Reach 100,000 points.</string>
+
+    <string name="ach_combo_3_title">Triple Combo</string>
+    <string name="ach_combo_3_desc">Get a 3-merge combo.</string>
+    <string name="ach_combo_5_title">Penta Combo</string>
+    <string name="ach_combo_5_desc">Get a 5-merge combo.</string>
+    <string name="ach_combo_7_title">Hepta Combo</string>
+    <string name="ach_combo_7_desc">Get a 7-merge combo.</string>
+    <string name="ach_combo_10_title">Deca Combo</string>
+    <string name="ach_combo_10_desc">Get a 10-merge combo.</string>
+    <string name="ach_combo_15_title">Mega Combo</string>
+    <string name="ach_combo_15_desc">Get a 15-merge combo.</string>
+    <string name="ach_combo_20_title">Ultra Combo</string>
+    <string name="ach_combo_20_desc">Get a 20-merge combo.</string>
+    <string name="ach_combo_30_title">Hyper Combo</string>
+    <string name="ach_combo_30_desc">Get a 30-merge combo.</string>
+
+    <string name="ach_full_board_title">Full Board</string>
+    <string name="ach_full_board_desc">Fill the entire board without losing.</string>
+    <string name="ach_minimal_tiles_title">Minimalist</string>
+    <string name="ach_minimal_tiles_desc">Win with fewer than 5 tiles on the board.</string>
+    <string name="ach_clutch_victory_title">Clutch Victory</string>
+    <string name="ach_clutch_victory_desc">Win with only 1 empty space.</string>
+    <string name="ach_close_call_title">Close Call</string>
+    <string name="ach_close_call_desc">Win with 2 empty spaces or fewer.</string>
+    <string name="ach_efficiency_king_title">Efficiency King</string>
+    <string name="ach_efficiency_king_desc">Complete a level with no wasted moves.</string>
+
+    <string name="ach_classic_beginner_title">Classic Level 5</string>
+    <string name="ach_classic_beginner_desc">Reach level 5 in Classic mode.</string>
+    <string name="ach_classic_intermediate_title">Classic Level 10</string>
+    <string name="ach_classic_intermediate_desc">Reach level 10 in Classic mode.</string>
+    <string name="ach_classic_master_title">Classic Master</string>
+    <string name="ach_classic_master_desc">Reach level 20 in Classic mode.</string>
+    <string name="ach_challenge_completed_title">Challenge Beat</string>
+    <string name="ach_challenge_completed_desc">Complete a level in Challenge mode.</string>
+    <string name="ach_challenge_level_5_title">Challenge Level 5</string>
+    <string name="ach_challenge_level_5_desc">Reach level 5 in Challenge mode.</string>
+    <string name="ach_zen_master_title">Zen Master</string>
+    <string name="ach_zen_master_desc">Reach level 5 in Zen mode.</string>
+    <string name="ach_zen_enlightened_title">Enlightened</string>
+    <string name="ach_zen_enlightened_desc">Reach level 10 in Zen mode.</string>
+    <string name="ach_rapid_fire_title">Rapid Fire</string>
+    <string name="ach_rapid_fire_desc">Complete 3 levels in Rapid mode.</string>
+    <string name="ach_speed_demon_title">Speed Demon</string>
+    <string name="ach_speed_demon_desc">Reach level 10 in Rapid mode.</string>
+
+    <string name="ach_lucky_seven_title">Lucky Seven</string>
+    <string name="ach_lucky_seven_desc">Complete exactly at level 7.</string>
+    <string name="ach_thirteen_title">Spooky Thirteen</string>
+    <string name="ach_thirteen_desc">Reach level 13.</string>
+    <string name="ach_double_double_title">Double Double</string>
+    <string name="ach_double_double_desc">Have two pairs of tiles of the same value.</string>
+    <string name="ach_quad_squad_title">Quad Squad</string>
+    <string name="ach_quad_squad_desc">Have 4 tiles of the same value at once.</string>
+    <string name="ach_power_of_two_title">Power of Two</string>
+    <string name="ach_power_of_two_desc">Have only tiles that are pure powers of 2.</string>
+    <string name="ach_symmetry_title">Perfect Symmetry</string>
+    <string name="ach_symmetry_desc">Have the board with horizontal symmetry.</string>
+    <string name="ach_center_piece_title">Center Piece</string>
+    <string name="ach_center_piece_desc">Create your highest tile in the center of the board.</string>
+    <string name="ach_edge_lord_title">Edge Lord</string>
+    <string name="ach_edge_lord_desc">Have all tiles on the edges of the board.</string>
+    <string name="ach_fibonacci_title">Fibonacci Fan</string>
+    <string name="ach_fibonacci_desc">Have tiles with values from the Fibonacci sequence.</string>
+</resources>
