@@ -1,10 +1,9 @@
 package com.korkoor.pardos.ui.menu
 
 import android.content.res.Configuration
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,31 +12,30 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.DialogProperties
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
 import com.korkoor.pardos.ui.theme.ThemeViewModel
+import com.korkoor.pardos.ui.theme.GameTheme
 import com.korkoor.pardos.R
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MenuScreen(
     onPlayClick: () -> Unit,
@@ -55,11 +53,15 @@ fun MenuScreen(
     val bgColor = currentTheme.colors.first().copy(alpha = 0.98f)
     val textColor = currentTheme.mainTextColor
 
+    // Estado para controlar la visibilidad del diálogo de apoyo
+    var showSupportDialog by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(bgColor)
     ) {
+        // Fondo de patrón picnic aesthetic
         PicnicBackgroundOptimized(currentTheme.accentColor.copy(alpha = 0.06f))
 
         if (isLandscape) {
@@ -71,7 +73,7 @@ fun MenuScreen(
                     .padding(horizontal = 40.dp, vertical = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Lado Izquierdo: Título y Slogan
+                // Lado Izquierdo: Branding y Soporte
                 Column(
                     modifier = Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -86,9 +88,14 @@ fun MenuScreen(
                         color = textColor.copy(alpha = 0.4f),
                         letterSpacing = 4.sp
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Botón de corazón flotante para apoyar
+                    SupportHeartButton(currentTheme.accentColor) { showSupportDialog = true }
                 }
 
-                // Lado Derecho: Botones en rejilla
+                // Lado Derecho: Panel de botones
                 Column(
                     modifier = Modifier.weight(1.2f),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -197,7 +204,12 @@ fun MenuScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(0.8f))
+                Spacer(modifier = Modifier.weight(0.5f))
+
+                // Botón de corazón en la parte inferior (Portrait)
+                SupportHeartButton(currentTheme.accentColor) { showSupportDialog = true }
+
+                Spacer(modifier = Modifier.weight(0.3f))
 
                 Text(
                     text = stringResource(R.string.menu_version_info),
@@ -208,8 +220,146 @@ fun MenuScreen(
                 )
             }
         }
+
+        // --- DIÁLOGO DE APOYO ---
+        if (showSupportDialog) {
+            AlertDialog(
+                onDismissRequest = { showSupportDialog = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+                content = {
+                    SupportCreatorContent(
+                        currentTheme = currentTheme,
+                        onDismiss = { showSupportDialog = false }
+                    )
+                }
+            )
+        }
     }
 }
+
+// ============================================================================
+// COMPONENTES DEL DIÁLOGO DE APOYO
+// ============================================================================
+
+@Composable
+fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth(0.85f)
+            .wrapContentHeight(),
+        shape = RoundedCornerShape(32.dp),
+        color = Color.White.copy(alpha = 0.98f),
+        shadowElevation = 24.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "HECHO CON ❤️ POR KOR (CARLOS) :)",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                color = currentTheme.accentColor
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            Text(
+                text = "ParDos es un proyecto independiente creado para relajarte. Si te gusta, considera apoyarme para seguir mejorando el juego sin publicidad intrusiva.",
+                textAlign = TextAlign.Center,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 18.sp,
+                color = Color(0xFF3D405B).copy(alpha = 0.7f)
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            // Botón Instagram (Sustituye por tu link real)
+            Button(
+                onClick = { uriHandler.openUri("https://www.instagram.com/kourkoour/") },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE1306C))
+            ) {
+                Text("SÍGUEME EN INSTAGRAM", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Botón Ko-fi / Donación (Sustituye por tu link real)
+            Button(
+                onClick = { uriHandler.openUri("https://ko-fi.com/korkor0209") },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor)
+            ) {
+                Text("INVÍTAME UN CAFÉ ☕", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("CERRAR", color = Color.Gray, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun SupportHeartButton(color: Color, onClick: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "heartPulse"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = onClick
+        )
+    ) {
+        Surface(
+            modifier = Modifier.size(44.dp).scale(scale),
+            shape = CircleShape,
+            color = color.copy(alpha = 0.1f),
+            border = BorderStroke(1.dp, color.copy(alpha = 0.2f))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Apoyar",
+                    tint = color,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = "APOYAR",
+            fontSize = 8.sp,
+            fontWeight = FontWeight.Black,
+            color = color.copy(alpha = 0.6f),
+            letterSpacing = 1.sp
+        )
+    }
+}
+
+// ============================================================================
+// TUS COMPONENTES ORIGINALES
+// ============================================================================
 
 @Composable
 fun AestheticMenuButton(

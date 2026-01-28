@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.camera.ar" tools:node="remove" />
+    <uses-feature android:name="com.google.ar.core.min_apk_version" tools:node="remove"/>
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -12,10 +20,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:hardwareAccelerated="true"
-        android:theme="@style/Theme.ParDos">
+        android:theme="@style/Theme.ParDos"
+        tools:replace="android:allowBackup,android:icon,android:label,android:roundIcon,android:theme">
+
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3851960142449906~8749596168"/>
+
+        <meta-data
+            android:name="com.google.ar.core"
+            tools:node="remove" />
 
         <activity
             android:name=".MainActivity"

@@ -49,7 +49,12 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Menu) }
                 val currentTheme = themeViewModel.currentTheme
 
-                // Observamos datos del ViewModel
+                LaunchedEffect(gameViewModel.dailyChallengeThemeIndex) {
+                    gameViewModel.dailyChallengeThemeIndex?.let { index ->
+                        themeViewModel.selectThemeByIndex(index)
+                    }
+                }
+
                 val allLevels by gameViewModel.levels.collectAsState()
                 val savedRecords by gameViewModel.allRecords.collectAsState(initial = emptyList())
                 val unlockedIds by gameViewModel.unlockedAchievements.collectAsState()
@@ -57,23 +62,24 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AnimatedContent(
                         targetState = currentScreen,
-                        transitionSpec = {
-                            fadeIn() togetherWith fadeOut()
-                        },
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
                         label = "MainNavigation"
                     ) { target ->
                         when (target) {
-                            Screen.Menu -> MenuScreen(
-                                onPlayClick = { currentScreen = Screen.ModeSelection },
-                                onCustomClick = { currentScreen = Screen.CustomLevel },
-                                onRecordsClick = { currentScreen = Screen.Records },
-                                onAchievementsClick = { currentScreen = Screen.Achievements },
-                                onDailyChallengeClick = {
-                                    gameViewModel.setupDailyChallenge()
-                                    currentScreen = Screen.Game
-                                },
-                                themeViewModel = themeViewModel
-                            )
+                            Screen.Menu -> {
+                                SideEffect { gameViewModel.resetGameSession() }
+                                MenuScreen(
+                                    onPlayClick = { currentScreen = Screen.ModeSelection },
+                                    onCustomClick = { currentScreen = Screen.CustomLevel },
+                                    onRecordsClick = { currentScreen = Screen.Records },
+                                    onAchievementsClick = { currentScreen = Screen.Achievements },
+                                    onDailyChallengeClick = {
+                                        gameViewModel.setupDailyChallenge()
+                                        currentScreen = Screen.Game
+                                    },
+                                    themeViewModel = themeViewModel
+                                )
+                            }
 
                             Screen.ModeSelection -> ModeSelectionScreen(
                                 onModeSelected = { mode ->
@@ -92,12 +98,14 @@ class MainActivity : ComponentActivity() {
                                 levels = allLevels,
                                 currentTheme = currentTheme,
                                 onLevelSelected = { selectedLevel ->
+                                    // 🔥🔥 CORRECCIÓN: Al seleccionar un nivel, le decimos al ViewModel
+                                    // que configure ese nivel Específico, sin forzar el máximo.
+                                    // Y no ponemos 'isCustom=true' porque es parte de la campaña.
                                     gameViewModel.setupCustomGame(
                                         size = ProgressionEngine.calculateBoardSize(selectedLevel.target),
                                         target = selectedLevel.target,
                                         difficulty = selectedLevel.difficultyName,
                                         level = selectedLevel.id
-                                        // Aquí no ponemos isCustom=true porque queremos que cuente como campaña (probablemente)
                                     )
                                     currentScreen = Screen.Game
                                 },
@@ -107,20 +115,20 @@ class MainActivity : ComponentActivity() {
                             Screen.Game -> GameScreen(
                                 viewModel = gameViewModel,
                                 themeViewModel = themeViewModel,
-                                onBackToMenu = { currentScreen = Screen.Menu }
+                                onBackToMenu = {
+                                    gameViewModel.resetGameSession()
+                                    currentScreen = Screen.Menu
+                                }
                             )
 
                             Screen.CustomLevel -> CustomLevelScreen(
                                 onStartCustom = { size, targetVal, allowPowerUps, difficulty ->
-                                    // 🔥🔥 AQUÍ ESTABA EL ERROR 🔥🔥
-                                    // Tienes que pasar 'isCustom = true' para que el ViewModel sepa
-                                    // que debe cambiar el modo a GameMode.CUSTOM.
                                     gameViewModel.setupCustomGame(
                                         size = size,
                                         target = targetVal,
                                         allowPowerUps = allowPowerUps,
                                         difficulty = difficulty,
-                                        isCustom = true // 👈 ¡ESTA LÍNEA ARREGLA EL BUG!
+                                        isCustom = true
                                     )
                                     currentScreen = Screen.Game
                                 },
@@ -144,10 +152,13 @@ class MainActivity : ComponentActivity() {
                 }
 
                 BackHandler(enabled = currentScreen != Screen.Menu) {
-                    currentScreen = when (currentScreen) {
-                        Screen.LevelSelector -> Screen.ModeSelection
-                        Screen.Game -> Screen.ModeSelection
-                        else -> Screen.Menu
+                    when (currentScreen) {
+                        Screen.Game -> {
+                            gameViewModel.resetGameSession()
+                            currentScreen = Screen.ModeSelection
+                        }
+                        Screen.LevelSelector -> currentScreen = Screen.ModeSelection
+                        else -> currentScreen = Screen.Menu
                     }
                 }
             }

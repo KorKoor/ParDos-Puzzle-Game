@@ -2,7 +2,9 @@
 
 package com.korkoor.pardos.ui.game
 
+import FloatingScore
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.res.Configuration
 import android.media.MediaPlayer
 import androidx.activity.compose.BackHandler
@@ -15,7 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,6 +30,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
@@ -38,7 +40,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedback
@@ -49,27 +50,28 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.pardos.ui.game.components.SakuraBackgroundAnimation
 import com.korkoor.pardos.R
 import com.korkoor.pardos.domain.achievements.AchievementPopUp
 import com.korkoor.pardos.domain.logic.Direction
 import com.korkoor.pardos.domain.model.BoardState
 import com.korkoor.pardos.domain.model.GameMode
 import com.korkoor.pardos.ui.game.components.*
+import com.korkoor.pardos.ui.game.logic.AdManager
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
 import com.korkoor.pardos.ui.theme.GameTheme
 import com.korkoor.pardos.ui.theme.ThemeSelector
 import com.korkoor.pardos.ui.theme.ThemeViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.korkoor.pardos.ui.game.components.ShapeType
-import com.korkoor.pardos.ui.game.components.getShape
-import com.korkoor.pardos.ui.game.logic.AdManager
-import android.app.Activity
 
 // ✅ DEFINICIÓN DE ENUM AL INICIO PARA EVITAR ERRORES DE REFERENCIA
+// Asegúrate de que ShapeType esté definido en este paquete o impórtalo correctamente si está en otro archivo.
+
 @SuppressLint("UnusedContentLambdaTargetStateParameter", "UnusedBoxWithConstraintsScope")
 @Composable
 fun GameScreen(
@@ -87,11 +89,13 @@ fun GameScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    // Estado para la forma seleccionada
     var selectedShapeType by rememberSaveable { mutableStateOf("Cuadrado") }
 
     var showExitDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
 
+    // Evita retroceso visual en el nivel mostrado
     var displayedLevel by remember { mutableIntStateOf(state.currentLevel) }
 
     LaunchedEffect(state.currentLevel) {
@@ -99,9 +103,12 @@ fun GameScreen(
             displayedLevel = state.currentLevel
         }
     }
+
+    // Refrescar dificultad al iniciar
     LaunchedEffect(Unit) {
         viewModel.refreshCurrentLevelDifficulty()
     }
+
     val audioManager = remember { GameAudioManager(context) }
     val bgGradient = remember(currentTheme) { Brush.verticalGradient(colors = currentTheme.colors) }
     val isTimeLow = state.maxTime != null && state.elapsedTime <= 10L
@@ -127,21 +134,27 @@ fun GameScreen(
 
     Box(modifier = modifier.fillMaxSize().background(bgGradient)) {
 
+        // 1. Fondo Estático
+        PicnicBackgroundOptimized(
+            color = if (isTimeLow) Color(0xFFE07A5F).copy(alpha = 0.15f)
+            else currentTheme.accentColor.copy(alpha = 0.05f)
+        )
+
+        // 🌸 2. EFECTO SAKURA
+        SakuraBackgroundAnimation(density = 0.5f)
+
+        // 3. Contenido del Juego (Con Blur dinámico)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .blur(blurRadius)
         ) {
-            PicnicBackgroundOptimized(
-                color = if (isTimeLow) Color(0xFFE07A5F).copy(alpha = 0.15f)
-                else currentTheme.accentColor.copy(alpha = 0.05f)
-            )
-
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val maxHeight = maxHeight
                 val maxWidth = maxWidth
 
                 if (isLandscape) {
+                    // --- MODO HORIZONTAL (LANDSCAPE) MEJORADO ---
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
@@ -149,6 +162,7 @@ fun GameScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // COLUMNA IZQUIERDA: Menú y Header
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -187,6 +201,7 @@ fun GameScreen(
                             }
                         }
 
+                        // COLUMNA CENTRAL: Tablero
                         Box(
                             modifier = Modifier
                                 .weight(1.8f)
@@ -222,6 +237,7 @@ fun GameScreen(
                             }
                         }
 
+                        // COLUMNA DERECHA: Estadísticas y PowerUps
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -263,6 +279,7 @@ fun GameScreen(
                     }
 
                 } else {
+                    // --- MODO VERTICAL (PORTRAIT) ---
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -365,6 +382,8 @@ fun GameScreen(
             }
         }
 
+        // --- OVERLAYS Y POPUPS ---
+
         if (state.isLevelCompleted) VictoryConfetti()
 
         AnimatedVisibility(
@@ -460,6 +479,7 @@ fun GameScreen(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
+                        // SOLO MOSTRAMOS EL SELECTOR DE COLORES (TEMAS)
                         Text(
                             text = "COLORES",
                             fontSize = 11.sp,
@@ -468,23 +488,6 @@ fun GameScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         ThemeSelector(viewModel = themeViewModel)
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            text = "FORMAS",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF3D405B).copy(alpha = 0.6f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        ShapeSelector(
-                            selectedShape = selectedShapeType,
-                            onShapeSelected = { newShape ->
-                                selectedShapeType = newShape
-                            }
-                        )
 
                         Spacer(modifier = Modifier.height(32.dp))
 
@@ -510,99 +513,48 @@ fun GameScreen(
 }
 
 // -----------------------------------------------------------------------------
-// COMPONENTES AUXILIARES (DEFINIDOS FUERA DE GAMESCREEN PARA VISIBILIDAD)
+// COMPONENTES AUXILIARES
 // -----------------------------------------------------------------------------
 
+// ✨ NUEVO: COMPONENTE DE TEXTO FLOTANTE PARA PUNTAJES
 @Composable
-fun ShapeSelector(
-    selectedShape: String,
-    onShapeSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+fun FloatingScore(
+    score: FloatingScoreModel,
+    tileSize: Dp,
+    onFinished: (String) -> Unit
 ) {
-    val haptic = LocalHapticFeedback.current
-    val shapes = ShapeType.entries
+    val animState = remember { Animatable(0f) }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        shapes.forEach { shapeEnum ->
-            val isSelected = shapeEnum.displayName == selectedShape
-
-            ShapeOptionItem(
-                shapeType = shapeEnum,
-                isSelected = isSelected,
-                onClick = {
-                    if (!isSelected) {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onShapeSelected(shapeEnum.displayName)
-                    }
-                }
-            )
-        }
+    LaunchedEffect(score.id) {
+        animState.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+        )
+        onFinished(score.id)
     }
-}
 
-@Composable
-private fun ShapeOptionItem(
-    shapeType: ShapeType,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.2f else 1f,
-        animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium),
-        label = "scale"
-    )
+    val floatUpDistance = 80.dp
+    val currentOffset = tileSize * 0.2f - (floatUpDistance * animState.value)
+    val currentAlpha = 1f - animState.value
+    val currentScale = 0.5f + (animState.value * 0.5f)
 
-    val containerColor by animateColorAsState(
-        targetValue = if (isSelected) Color(0xFFE07A5F).copy(alpha = 0.1f) else Color.Transparent,
-        label = "bg"
-    )
+    val xPos = (tileSize * score.col) + (tileSize / 3)
+    val yPos = (tileSize * score.row) + (tileSize / 2)
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Text(
+        text = "+${score.value}",
+        color = Color(0xFF3D405B).copy(alpha = currentAlpha),
+        fontSize = 24.sp,
+        fontWeight = FontWeight.ExtraBold,
         modifier = Modifier
-            .scale(scale)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
-            .background(containerColor)
-            .padding(8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .shadow(
-                    elevation = if (isSelected) 6.dp else 0.dp,
-                    shape = getShape(shapeType.displayName),
-                    spotColor = Color(0xFFE07A5F),
-                    ambientColor = Color(0xFFE07A5F)
-                )
-                .rotate(if (shapeType == ShapeType.DIAMOND) 45f else 0f)
-                .background(
-                    color = if (isSelected) Color(0xFFE07A5F) else Color(0xFF3D405B).copy(alpha = 0.4f),
-                    shape = getShape(shapeType.displayName)
-                )
-                .border(
-                    width = 2.dp,
-                    color = if (isSelected) Color.White else Color.Transparent,
-                    shape = getShape(shapeType.displayName)
-                )
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = shapeType.displayName,
-            fontSize = 9.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color(0xFFE07A5F) else Color(0xFF3D405B).copy(alpha = 0.5f)
-        )
-    }
+            .offset(x = xPos, y = yPos + currentOffset)
+            .scale(currentScale)
+            .alpha(currentAlpha)
+    )
 }
+
+// (ShapeSelector y ShapeOptionItem se eliminaron de aquí porque ya no se usan en este archivo para el menú,
+// pero si los usas en GameTopBar, asegúrate de que sigan existiendo en components)
 
 @Composable
 fun BouncingText(
@@ -1072,6 +1024,7 @@ private fun TimeDisplay(
     }
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun GameBoard(
     state: BoardState,
@@ -1108,6 +1061,22 @@ private fun GameBoard(
                 onMoveSound = onMoveSound,
                 modifier = Modifier.fillMaxSize()
             )
+        }
+
+        // 🔥 NUEVA CAPA DE PUNTOS FLOTANTES
+        // Se dibuja encima del tablero pero dentro del área de juego
+        viewModel.floatingScores.forEach { score ->
+            key(score.id) {
+                // Obtenemos el ancho de cada celda aproximado (asumiendo que BoardDisplay llena el Box)
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val tileSize = maxWidth / state.boardSize
+                    FloatingScore(
+                        score = score,
+                        tileSize = tileSize,
+                        onFinished = { id -> viewModel.removeFloatingScore(id) }
+                    )
+                }
+            }
         }
     }
 }

@@ -1,3 +1,5 @@
+@file:Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+
 package com.korkoor.pardos.ui.theme
 
 import androidx.compose.foundation.background
@@ -7,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
@@ -25,16 +26,23 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 
 class ThemeViewModel : ViewModel() {
+    // El tema que se está mostrando actualmente
     var currentTheme by mutableStateOf<GameTheme>(GameTheme.Zen)
         private set
 
+    // El objetivo del nivel actual (para lógica de desbloqueo)
     var currentLevelTarget by mutableIntStateOf(0)
         private set
 
+    /**
+     * Se llama al iniciar cualquier nivel.
+     * Actualiza el objetivo actual y ajusta el tema automáticamente si es necesario.
+     */
     fun updateLevel(targetValue: Int) {
         currentLevelTarget = targetValue
 
-        // Al entrar a un nivel, se pone el tema que le toca automáticamente
+        // LÓGICA ORIGINAL: Al entrar a un nivel, se pone el tema que le toca automáticamente
+        // basado en el nivel más alto desbloqueado para ese target.
         val targetTheme = GameTheme.allThemes
             .filterNotNull()
             .filter { theme -> targetValue >= theme.minLevel }
@@ -45,10 +53,25 @@ class ThemeViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Permite cambiar el tema desde el menú de selección manual.
+     */
     fun selectThemeManual(theme: GameTheme?) {
-        // 🛡️ SEGURIDAD: Solo permite cambiar manualmente si el nivel actual es suficiente para ese tema
+        // 🛡️ SEGURIDAD ORIGINAL: Solo permite cambiar manualmente si el nivel actual es suficiente
         if (theme != null && currentLevelTarget >= theme.minLevel) {
             currentTheme = theme
+        }
+    }
+
+    /**
+     * 🔥 NUEVA FUNCIÓN: selectThemeByIndex
+     * Usada por el MainActivity para el Reto Diario.
+     * Permite forzar un tema específico por su posición en la lista.
+     */
+    fun selectThemeByIndex(index: Int) {
+        val themes = GameTheme.allThemes.filterNotNull()
+        themes.getOrNull(index)?.let { selected ->
+            currentTheme = selected
         }
     }
 }
@@ -109,6 +132,7 @@ fun ThemeSelector(viewModel: ThemeViewModel) {
                     color = Color(0xFF3D405B).copy(alpha = if (isUnlocked) 1f else 0.4f),
                     fontSize = 10.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     maxLines = 1
                 )
             }

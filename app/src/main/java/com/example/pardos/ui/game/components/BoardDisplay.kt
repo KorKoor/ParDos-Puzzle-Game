@@ -1,10 +1,10 @@
 package com.korkoor.pardos.ui.game.components
 
+import FloatingScore
 import android.annotation.SuppressLint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
@@ -28,8 +29,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -39,6 +38,7 @@ import com.korkoor.pardos.R
 import com.korkoor.pardos.domain.logic.Direction
 import com.korkoor.pardos.domain.model.BoardState
 import com.korkoor.pardos.domain.model.TileModel
+import com.korkoor.pardos.ui.game.FloatingScore
 import com.korkoor.pardos.ui.game.GameViewModel
 import com.korkoor.pardos.ui.theme.GameTheme
 import kotlin.math.abs
@@ -65,7 +65,7 @@ fun getShape(shapeName: String): Shape {
         ShapeType.CIRCLE -> CircleShape
         ShapeType.SQUARE -> RoundedCornerShape(26.dp)
         ShapeType.TRIANGLE -> SoftTriangleShape
-        ShapeType.DIAMOND -> RoundedCornerShape(20.dp)
+        ShapeType.DIAMOND -> RoundedCornerShape(18.dp) // Radio suave para el rombo
         ShapeType.OCTAGON -> SoftOctagonShape
     }
 }
@@ -129,9 +129,10 @@ fun BoardDisplay(
     val spacing = if (gridSize >= 5) 6.dp else 10.dp
     val cornerRadius = 40.dp
 
-    val boardDesc = stringResource(R.string.board_desc, gridSize, gridSize)
+    val isDiamond = shapeType == "Diamante"
 
-    key(gridSize) {
+    // Clave para recomponer si cambia el tamaño o la forma
+    key(gridSize, shapeType) {
         Surface(
             modifier = modifier
                 .fillMaxSize()
@@ -164,6 +165,7 @@ fun BoardDisplay(
                 val tileSize = maxWidth / gridSize
 
                 // 1. CAPA FONDO (HUECOS)
+                // Ahora los huecos rotan si es modo diamante, solucionando el bug visual
                 Box(Modifier.fillMaxSize()) {
                     repeat(gridSize) { row ->
                         repeat(gridSize) { col ->
@@ -172,10 +174,16 @@ fun BoardDisplay(
                                     .size(tileSize)
                                     .offset(x = tileSize * col, y = tileSize * row)
                                     .padding(spacing)
-                                    .clip(boardShape)
+                                    .graphicsLayer {
+                                        if (isDiamond) {
+                                            rotationZ = 45f
+                                            scaleX = 0.72f
+                                            scaleY = 0.72f
+                                        }
+                                        this.shape = boardShape
+                                        clip = true
+                                    }
                                     .background(currentTheme.mainTextColor.copy(alpha = 0.06f))
-                                    .rotate(if (shapeType == "Diamante") 45f else 0f)
-                                    .scale(if (shapeType == "Diamante") 0.70f else 1f)
                             )
                         }
                     }
@@ -194,7 +202,23 @@ fun BoardDisplay(
                     }
                 }
 
-                // 3. INDICADOR DIRECCIÓN
+                // 🔥 NUEVA CAPA DE PUNTOS FLOTANTES
+                // Se dibuja encima del tablero pero dentro del área de juego
+                viewModel.floatingScores.forEach { score ->
+                    key(score.id) {
+                        // Obtenemos el ancho de cada celda aproximado (asumiendo que BoardDisplay llena el Box)
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            // val tileSize = maxWidth / state.boardSize
+                            FloatingScore(
+                                score = score,
+                                tileSize = tileSize,
+                                onFinished = { id -> viewModel.removeFloatingScore(id) }
+                            )
+                        }
+                    }
+                }
+
+                // 3. INDICADOR DIRECCIÓN (Flecha visual al arrastrar)
                 DirectionIndicator(
                     direction = dragState.currentDirection,
                     modifier = Modifier.align(Alignment.Center),
@@ -213,20 +237,23 @@ private fun AnimatedTile(
     shapeName: String,
     currentTheme: GameTheme
 ) {
-    // ✨ ANIMACIÓN "JELLY"
+    // --- ANIMACIÓN "JELLY" (Squash & Stretch) ---
+    // Cuando la ficha cambia de valor (fusión) o se crea, hace un rebote.
     val scaleAnim = remember { Animatable(0f) }
     LaunchedEffect(tile.value) {
-        if (scaleAnim.value > 0f) {
-            scaleAnim.snapTo(1.35f)
-            scaleAnim.animateTo(1f, spring(dampingRatio = 0.4f, stiffness = 400f))
-        } else {
-            scaleAnim.animateTo(1f, spring(dampingRatio = 0.6f, stiffness = 600f))
-        }
+        // Efecto de pop más exagerado para valores altos
+        val targetScale = if (tile.value > 128) 1.2f else 1.15f
+        scaleAnim.snapTo(targetScale)
+        scaleAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f)
+        )
     }
 
-    val moveSpec = spring<Dp>(dampingRatio = 0.65f, stiffness = 450f)
-    val animX by animateDpAsState(tileSize * tile.col, moveSpec, "x")
-    val animY by animateDpAsState(tileSize * tile.row, moveSpec, "y")
+    // Movimiento suave de la ficha
+    val moveSpec = spring<Dp>(dampingRatio = 0.75f, stiffness = 400f)
+    val animX by animateDpAsState(tileSize * tile.col, moveSpec, label = "x")
+    val animY by animateDpAsState(tileSize * tile.row, moveSpec, label = "y")
 
     val shape = getShape(shapeName)
     val isDiamond = shapeName == "Diamante"
@@ -238,83 +265,88 @@ private fun AnimatedTile(
             .size(tileSize)
             .offset(animX, animY)
             .padding(spacing)
+            // 🔥 FIX SOMBRA Y ROTACIÓN:
+            // Usamos graphicsLayer para aplicar la rotación AL CONTENEDOR completo.
+            // Esto hace que la sombra se genere con la forma rotada correcta.
             .graphicsLayer {
-                scaleX = scaleAnim.value
-                scaleY = scaleAnim.value
-                shadowElevation = if (tile.value > 128) 8.dp.toPx() else 4.dp.toPx()
+                val baseScale = if (isDiamond) 0.72f else 1f
+                scaleX = scaleAnim.value * baseScale
+                scaleY = scaleAnim.value * baseScale
+
+                if (isDiamond) {
+                    rotationZ = 45f
+                }
+
+                // Elevación dinámica: las fichas más grandes "flotan" más alto
+                shadowElevation = if (tile.value >= 128) 8.dp.toPx() else 3.dp.toPx()
                 this.shape = shape
                 clip = true
-
-                // 🔥 FIX DEL ERROR DE COMPILACIÓN:
-                // Usamos .hashCode() para asegurarnos de que sea un número antes de usar %
-                rotationZ = (scaleAnim.value - 1f) * (if (tile.id.hashCode() % 2 == 0) 4f else -4f)
             }
-            .zIndex(tile.value.toFloat()),
-        contentAlignment = Alignment.Center
+            .background(backgroundColor)
     ) {
-        // ✨ VISUAL "CANDY" (Gomita brillante)
+        // --- EFECTO GLOSS (Brillo de caramelo) ---
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .rotate(if (isDiamond) 45f else 0f)
-                .scale(if (isDiamond) 0.70f else 1f)
-                .background(backgroundColor)
-        ) {
-            // GLOSS (Brillo superior)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.3f),
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.05f)
-                            ),
-                            start = Offset(0f, 0f),
-                            end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                        )
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.25f),
+                            Color.Transparent
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(100f, 100f)
                     )
-            )
-
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "${tile.value}",
-                    fontSize = if (tile.value > 1000) 18.sp else 26.sp,
-                    fontWeight = FontWeight.Black,
-                    color = textColor,
-                    modifier = Modifier.rotate(if (isDiamond) -45f else 0f)
                 )
-            }
+        )
+
+        // Texto del número
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "${tile.value}",
+                fontSize = if (tile.value > 1000) 20.sp else 28.sp,
+                fontWeight = FontWeight.Black,
+                color = textColor,
+                // Si la ficha está rotada (diamante), contra-rotamos el texto para que se lea recto
+                modifier = Modifier.rotate(if (isDiamond) -45f else 0f)
+            )
         }
     }
 }
 
-// --- UTILIDADES DE COLOR ---
+// --- UTILIDADES DE COLOR (Paleta Café Pastel Aesthetic) ---
 @Composable
 fun getTileColor(value: Int, theme: GameTheme): Color {
+    // Usamos el color de acento para fichas "Legendarias"
     if (value >= 4096) return theme.accentColor
+
+    // Paleta "Coffee Shop" (Tonos pastel, cremas y cafés suaves)
     return when (value) {
-        2 -> Color(0xFFFAF9F6)
-        4 -> Color(0xFFF4EBD9)
-        8 -> Color(0xFFEBE0CC)
-        16 -> Color(0xFFE6D2B5)
-        32 -> Color(0xFFE0C49F)
-        64 -> Color(0xFFDAB68B)
-        128 -> Color(0xFFE8D5B5)
-        256 -> Color(0xFFE2C9A1)
-        512 -> Color(0xFFDDB685)
-        1024 -> Color(0xFFD6A476)
-        2048 -> Color(0xFFCC8B65)
+        2 -> Color(0xFFEEE4DA)      // Leche / Crema (Igual, base limpia)
+        4 -> Color(0xFFEFE0C9)      // Vainilla Suave
+        8 -> Color(0xFFEBCDAA)      // Latte Claro
+        16 -> Color(0xFFE6B89C)     // Durazno / Café con leche muy claro
+        32 -> Color(0xFFDDA684)     // Cappuccino suave
+        64 -> Color(0xFFD49372)     // Canela / Terracota suave
+        128 -> Color(0xFFECC271)    // Dorado Miel (Brillante pero pastel)
+        256 -> Color(0xFFEBC662)    // Caramelo Claro
+        512 -> Color(0xFFE9C052)    // Mostaza Dorada
+        1024 -> Color(0xFFE7B843)   // Toffee
+        2048 -> Color(0xFFE5B032)   // Oro Viejo
         else -> theme.accentColor
     }
 }
 
 @Composable
 fun getTileTextColor(value: Int): Color {
-    val coffeeText = Color(0xFF5D534A)
-    val creamText = Color(0xFFFAF9F6)
-    return if (value < 1024) coffeeText else creamText
+    val darkText = Color(0xFF776E65) // Gris pardo oscuro (para fondos claros)
+    val lightText = Color(0xFFF9F6F2) // Blanco crema (para fondos oscuros/intensos)
+
+    // Los números 2 y 4 son muy claros, el resto ya tiene suficiente contraste para texto blanco
+    return if (value < 8) darkText else lightText
 }
 
 @Composable
@@ -322,15 +354,19 @@ private fun DirectionIndicator(direction: Direction?, modifier: Modifier, color:
     AnimatedVisibility(
         visible = direction != null,
         modifier = modifier,
-        enter = fadeIn() + scaleIn(spring(dampingRatio = 0.4f)),
-        exit = fadeOut() + scaleOut(targetScale = 1.2f)
+        enter = fadeIn() + scaleIn(spring(dampingRatio = 0.5f)),
+        exit = fadeOut() + scaleOut(targetScale = 1.5f)
     ) {
         val rot = when (direction) {
-            Direction.UP -> -90f; Direction.DOWN -> 90f; Direction.LEFT -> 180f; Direction.RIGHT -> 0f; else -> 0f
+            Direction.UP -> -90f
+            Direction.DOWN -> 90f
+            Direction.LEFT -> 180f
+            Direction.RIGHT -> 0f
+            else -> 0f
         }
         Box(
             modifier = Modifier
-                .size(110.dp)
+                .size(100.dp)
                 .rotate(rot)
                 .background(color.copy(alpha = 0.2f), CircleShape),
             contentAlignment = Alignment.Center
@@ -339,27 +375,92 @@ private fun DirectionIndicator(direction: Direction?, modifier: Modifier, color:
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(55.dp)
+                modifier = Modifier.size(48.dp)
             )
         }
     }
 }
 
+// ✨ NUEVO: COMPONENTE DE TEXTO FLOTANTE PARA PUNTAJES
+@Composable
+fun FloatingScore(
+    score: com.korkoor.pardos.ui.game.components.FloatingScoreModel, // Asegúrate de importar tu modelo
+    tileSize: Dp,
+    onFinished: (String) -> Unit
+) {
+    val animState = remember { Animatable(0f) }
+
+    LaunchedEffect(score.id) {
+        animState.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+        )
+        onFinished(score.id)
+    }
+
+    val floatUpDistance = 80.dp
+    val currentOffset = tileSize * 0.2f - (floatUpDistance * animState.value)
+    val currentAlpha = 1f - animState.value
+    val currentScale = 0.5f + (animState.value * 0.5f)
+
+    val xPos = (tileSize * score.col) + (tileSize / 3)
+    val yPos = (tileSize * score.row) + (tileSize / 2)
+
+    Text(
+        text = "+${score.value}",
+        color = Color(0xFF3D405B).copy(alpha = currentAlpha),
+        fontSize = 24.sp,
+        fontWeight = FontWeight.ExtraBold,
+        modifier = Modifier
+            .offset(x = xPos, y = yPos + currentOffset)
+            .scale(currentScale)
+            .alpha(currentAlpha)
+    )
+}
+
+// Definición simple del modelo si no quieres crear un archivo separado
+data class FloatingScoreModel(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val value: Int,
+    val col: Int,
+    val row: Int,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
 private class DragGestureState {
     var totalDragX by mutableStateOf(0f); var totalDragY by mutableStateOf(0f)
     var hasMoved by mutableStateOf(false); var currentDirection by mutableStateOf<Direction?>(null)
-    fun reset() { totalDragX = 0f; totalDragY = 0f; hasMoved = false; currentDirection = null }
+
+    fun reset() {
+        totalDragX = 0f; totalDragY = 0f
+        hasMoved = false; currentDirection = null
+    }
+
     fun complete() { currentDirection = null }
+
     fun handleDrag(dragAmount: Offset, onMove: (Direction) -> Unit) {
         if (hasMoved) return
-        totalDragX += dragAmount.x; totalDragY += dragAmount.y
-        if (abs(totalDragX) > 15f || abs(totalDragY) > 15f) {
+        totalDragX += dragAmount.x
+        totalDragY += dragAmount.y
+
+        val sensitivity = 15f // Sensibilidad mínima para detectar intención
+        val threshold = 50f   // Distancia para ejecutar el movimiento
+
+        // Detectar dirección visualmente antes de ejecutar
+        if (abs(totalDragX) > sensitivity || abs(totalDragY) > sensitivity) {
             currentDirection = if (abs(totalDragX) > abs(totalDragY)) {
                 if (totalDragX > 0) Direction.RIGHT else Direction.LEFT
-            } else { if (totalDragY > 0) Direction.DOWN else Direction.UP }
+            } else {
+                if (totalDragY > 0) Direction.DOWN else Direction.UP
+            }
         }
-        if (abs(totalDragX) > 50f || abs(totalDragY) > 50f) {
-            currentDirection?.let { onMove(it); hasMoved = true }
+
+        // Ejecutar movimiento
+        if (abs(totalDragX) > threshold || abs(totalDragY) > threshold) {
+            currentDirection?.let {
+                onMove(it)
+                hasMoved = true
+            }
         }
     }
 }
