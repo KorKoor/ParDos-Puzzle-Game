@@ -10,12 +10,11 @@ class GameEngine(val boardSize: Int) {
 
     /**
      * Mueve y combina las fichas.
-     * @param multiplier: El valor base (2 para clásico, 3-9 para tablas).
      */
     fun move(
         tiles: List<TileModel>,
         direction: Direction,
-        multiplier: Int = 2 // 🔹 Valor por defecto 2 para no romper lo anterior
+        multiplier: Int = 2
     ): Pair<List<TileModel>, Int> {
         val grouped = when (direction) {
             Direction.LEFT, Direction.RIGHT -> tiles.groupBy { it.row }
@@ -27,7 +26,6 @@ class GameEngine(val boardSize: Int) {
 
         for (i in 0 until boardSize) {
             val line = grouped[i] ?: emptyList()
-            // Pasamos el multiplier a processLine
             val (mergedLine, score) = processLine(line, direction, multiplier)
 
             val finalLine = mergedLine.map { tile ->
@@ -64,9 +62,8 @@ class GameEngine(val boardSize: Int) {
             val current = sorted[i]
             val next = sorted.getOrNull(i + 1)
 
-            // Lógica de fusión dinámica basada en el multiplier
             if (next != null && current.value == next.value) {
-                val newValue = current.value * 2 // Sigue siendo x2 porque sumamos dos iguales (3+3=6, 6+6=12)
+                val newValue = current.value * 2
                 scoreGained += newValue
                 result.add(current.copy(value = newValue, isMerged = true))
                 skipIndexes.add(i + 1)
@@ -93,12 +90,13 @@ class GameEngine(val boardSize: Int) {
     }
 
     /**
-     * Genera una nueva ficha basada en la tabla actual.
+     * 🔥 SÚPER BALANCE: Genera una ficha con un valor específico decidido por el motor.
+     * Esta función resuelve los errores de "Unresolved reference" en el GameViewModel.
      */
-    fun spawnTile(
+    fun spawnTileWithSpecificValue(
         currentTiles: List<TileModel>,
-        fourProbability: Double = 0.1,
-        multiplier: Int = 2 // 🔹 Inyectamos la base de la tabla
+        value: Int,
+        multiplier: Int = 2
     ): TileModel? {
         val occupiedPositions = currentTiles.map { it.row to it.col }.toSet()
         val emptyPositions = mutableListOf<Pair<Int, Int>>()
@@ -112,16 +110,25 @@ class GameEngine(val boardSize: Int) {
         }
 
         return emptyPositions.randomOrNull()?.let { (r, c) ->
-            // Si multiplier es 7, saldrá un 7 (o un 14 con poca probabilidad)
-            val spawnValue = if (Math.random() < (1.0 - fourProbability)) multiplier else multiplier * 2
-
             TileModel(
                 id = UUID.randomUUID().toString(),
-                value = spawnValue,
+                value = value, // El valor ya viene balanceado (2, 4, 8, 16)
                 row = r,
                 col = c
             )
         }
+    }
+
+    /**
+     * Mantenemos spawnTile original por compatibilidad, pero redirigiendo a la lógica base.
+     */
+    fun spawnTile(
+        currentTiles: List<TileModel>,
+        fourProbability: Double = 0.1,
+        multiplier: Int = 2
+    ): TileModel? {
+        val spawnValue = if (Random.nextDouble() < (1.0 - fourProbability)) multiplier else multiplier * 2
+        return spawnTileWithSpecificValue(currentTiles, spawnValue, multiplier)
     }
 
     fun isGameOver(tiles: List<TileModel>): Boolean {

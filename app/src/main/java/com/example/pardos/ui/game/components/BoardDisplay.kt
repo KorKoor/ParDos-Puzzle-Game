@@ -1,6 +1,5 @@
 package com.korkoor.pardos.ui.game.components
 
-import FloatingScore
 import android.annotation.SuppressLint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -17,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -28,23 +26,19 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
-import com.korkoor.pardos.R
 import com.korkoor.pardos.domain.logic.Direction
 import com.korkoor.pardos.domain.model.BoardState
 import com.korkoor.pardos.domain.model.TileModel
-import com.korkoor.pardos.ui.game.FloatingScore
 import com.korkoor.pardos.ui.game.GameViewModel
 import com.korkoor.pardos.ui.theme.GameTheme
 import kotlin.math.abs
 
 // ============================================================================
-// 1. FORMAS "CANDY & TOY" (Octágono + Estilos Suaves)
+// 1. FORMAS "SMART" (Adaptables por porcentaje)
 // ============================================================================
 
 enum class ShapeType(val displayName: String) {
@@ -60,17 +54,25 @@ enum class ShapeType(val displayName: String) {
     }
 }
 
-fun getShape(shapeName: String): Shape {
-    return when (ShapeType.fromDisplayName(shapeName)) {
+fun getShape(shapeName: String, isLargeGrid: Boolean): Shape {
+    val type = ShapeType.fromDisplayName(shapeName)
+
+    return when (type) {
         ShapeType.CIRCLE -> CircleShape
-        ShapeType.SQUARE -> RoundedCornerShape(26.dp)
-        ShapeType.TRIANGLE -> SoftTriangleShape
-        ShapeType.DIAMOND -> RoundedCornerShape(18.dp) // Radio suave para el rombo
+
+        // 🔥 SOLUCIÓN DEL BUG: Usamos percent = 20.
+        // Esto significa "redondea solo el 20% de la esquina".
+        ShapeType.SQUARE -> RoundedCornerShape(percent = 20)
+
+        // Para el diamante también usamos porcentaje
+        ShapeType.DIAMOND -> RoundedCornerShape(percent = 15)
+
+        // Si el tablero es muy denso, suavizamos
+        ShapeType.TRIANGLE -> if (isLargeGrid) RoundedCornerShape(percent = 20) else SoftTriangleShape
         ShapeType.OCTAGON -> SoftOctagonShape
     }
 }
 
-// 🔥 OCTÁGONO SOFT
 val SoftOctagonShape = GenericShape { size, _ ->
     val w = size.width
     val h = size.height
@@ -94,10 +96,9 @@ val SoftOctagonShape = GenericShape { size, _ ->
     close()
 }
 
-// 🔥 TRIÁNGULO SOFT
 val SoftTriangleShape = GenericShape { size, _ ->
     val w = size.width; val h = size.height
-    val r = w * 0.18f
+    val r = w * 0.15f
     val top = Offset(w / 2, 0f)
     val botRight = Offset(w, h); val botLeft = Offset(0f, h)
 
@@ -108,7 +109,7 @@ val SoftTriangleShape = GenericShape { size, _ ->
 }
 
 // ============================================================================
-// 2. COMPONENTE PRINCIPAL
+// 2. COMPONENTE DE TABLERO
 // ============================================================================
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -123,24 +124,26 @@ fun BoardDisplay(
     modifier: Modifier = Modifier
 ) {
     val dragState = remember { DragGestureState() }
-    val boardShape = getShape(shapeType)
     val gridSize = state.boardSize
-    val outerPadding = if (gridSize >= 5) 10.dp else 16.dp
-    val spacing = if (gridSize >= 5) 6.dp else 10.dp
-    val cornerRadius = 40.dp
+    val isLargeGrid = gridSize >= 5
 
-    val isDiamond = shapeType == "Diamante"
+    val boardShape = getShape(shapeType, isLargeGrid)
 
-    // Clave para recomponer si cambia el tamaño o la forma
+    // Ajustes de espaciado
+    val outerPadding = if (isLargeGrid) 8.dp else 16.dp
+    val spacing = if (isLargeGrid) 4.dp else 10.dp
+    val cornerRadius = 24.dp
+    val isDiamond = shapeType == "Diamante" && !isLargeGrid
+
     key(gridSize, shapeType) {
         Surface(
             modifier = modifier
                 .fillMaxSize()
                 .shadow(
-                    elevation = 20.dp,
+                    elevation = 10.dp,
                     shape = RoundedCornerShape(cornerRadius),
-                    ambientColor = currentTheme.accentColor.copy(alpha = 0.3f),
-                    spotColor = currentTheme.accentColor.copy(alpha = 0.2f)
+                    ambientColor = currentTheme.accentColor.copy(alpha = 0.2f),
+                    spotColor = currentTheme.accentColor.copy(alpha = 0.15f)
                 ),
             color = currentTheme.surfaceColor.copy(alpha = 0.96f),
             shape = RoundedCornerShape(cornerRadius)
@@ -162,23 +165,25 @@ fun BoardDisplay(
                         )
                     }
             ) {
-                val tileSize = maxWidth / gridSize
+                // Cálculo matemático del tamaño de celda
+                val availableWidth = maxWidth - (spacing * (gridSize - 1))
+                val tileSize = availableWidth / gridSize
 
-                // 1. CAPA FONDO (HUECOS)
-                // Ahora los huecos rotan si es modo diamante, solucionando el bug visual
+                // 1. CAPA DE FONDO
                 Box(Modifier.fillMaxSize()) {
                     repeat(gridSize) { row ->
                         repeat(gridSize) { col ->
+                            val xPos = (tileSize + spacing) * col
+                            val yPos = (tileSize + spacing) * row
+
                             Box(
                                 modifier = Modifier
                                     .size(tileSize)
-                                    .offset(x = tileSize * col, y = tileSize * row)
-                                    .padding(spacing)
+                                    .offset(x = xPos, y = yPos)
                                     .graphicsLayer {
                                         if (isDiamond) {
                                             rotationZ = 45f
-                                            scaleX = 0.72f
-                                            scaleY = 0.72f
+                                            scaleX = 0.72f; scaleY = 0.72f
                                         }
                                         this.shape = boardShape
                                         clip = true
@@ -189,7 +194,7 @@ fun BoardDisplay(
                     }
                 }
 
-                // 2. CAPA FICHAS
+                // 2. CAPA DE FICHAS ANIMADAS
                 state.tiles.forEach { tile ->
                     key(tile.id) {
                         AnimatedTile(
@@ -197,28 +202,31 @@ fun BoardDisplay(
                             tileSize = tileSize,
                             spacing = spacing,
                             shapeName = shapeType,
+                            isLargeGrid = isLargeGrid,
                             currentTheme = currentTheme
                         )
                     }
                 }
 
-                // 🔥 NUEVA CAPA DE PUNTOS FLOTANTES
-                // Se dibuja encima del tablero pero dentro del área de juego
-                viewModel.floatingScores.forEach { score ->
-                    key(score.id) {
-                        // Obtenemos el ancho de cada celda aproximado (asumiendo que BoardDisplay llena el Box)
-                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                            // val tileSize = maxWidth / state.boardSize
-                            FloatingScore(
-                                score = score,
-                                tileSize = tileSize,
-                                onFinished = { id -> viewModel.removeFloatingScore(id) }
-                            )
+                // 3. CAPA DE PUNTOS FLOTANTES
+                // 🔥 AQUÍ SE ARREGLAN LOS ERRORES DE REFERENCIA 🔥
+                // Convertimos explícitamente la lista para que el compilador sepa el tipo
+                val scores = viewModel.floatingScores.toList()
+                scores.forEach { score ->
+                    // Verificamos que sea del tipo correcto (aunque debería serlo por inferencia)
+                    if (score is FloatingScoreModel) {
+                        key(score.id) {
+                            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                FloatingScore(
+                                    score = score,
+                                    tileSize = tileSize,
+                                    onFinished = { id -> viewModel.removeFloatingScore(id) }
+                                )
+                            }
                         }
                     }
                 }
 
-                // 3. INDICADOR DIRECCIÓN (Flecha visual al arrastrar)
                 DirectionIndicator(
                     direction = dragState.currentDirection,
                     modifier = Modifier.align(Alignment.Center),
@@ -229,34 +237,33 @@ fun BoardDisplay(
     }
 }
 
+@SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun AnimatedTile(
     tile: TileModel,
     tileSize: Dp,
     spacing: Dp,
     shapeName: String,
+    isLargeGrid: Boolean,
     currentTheme: GameTheme
 ) {
-    // --- ANIMACIÓN "JELLY" (Squash & Stretch) ---
-    // Cuando la ficha cambia de valor (fusión) o se crea, hace un rebote.
     val scaleAnim = remember { Animatable(0f) }
     LaunchedEffect(tile.value) {
-        // Efecto de pop más exagerado para valores altos
         val targetScale = if (tile.value > 128) 1.2f else 1.15f
         scaleAnim.snapTo(targetScale)
-        scaleAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f)
-        )
+        scaleAnim.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
     }
 
-    // Movimiento suave de la ficha
-    val moveSpec = spring<Dp>(dampingRatio = 0.75f, stiffness = 400f)
-    val animX by animateDpAsState(tileSize * tile.col, moveSpec, label = "x")
-    val animY by animateDpAsState(tileSize * tile.row, moveSpec, label = "y")
+    val targetX = (tileSize + spacing) * tile.col
+    val targetY = (tileSize + spacing) * tile.row
 
-    val shape = getShape(shapeName)
-    val isDiamond = shapeName == "Diamante"
+    val moveSpec = spring<Dp>(dampingRatio = 0.75f, stiffness = 400f)
+    val animX by animateDpAsState(targetX, moveSpec, label = "x")
+    val animY by animateDpAsState(targetY, moveSpec, label = "y")
+
+    val shape = getShape(shapeName, isLargeGrid)
+    val isDiamond = shapeName == "Diamante" && !isLargeGrid
+
     val backgroundColor = getTileColor(tile.value, currentTheme)
     val textColor = getTileTextColor(tile.value)
 
@@ -264,88 +271,87 @@ private fun AnimatedTile(
         modifier = Modifier
             .size(tileSize)
             .offset(animX, animY)
-            .padding(spacing)
-            // 🔥 FIX SOMBRA Y ROTACIÓN:
-            // Usamos graphicsLayer para aplicar la rotación AL CONTENEDOR completo.
-            // Esto hace que la sombra se genere con la forma rotada correcta.
             .graphicsLayer {
                 val baseScale = if (isDiamond) 0.72f else 1f
                 scaleX = scaleAnim.value * baseScale
                 scaleY = scaleAnim.value * baseScale
 
-                if (isDiamond) {
-                    rotationZ = 45f
-                }
+                if (isDiamond) rotationZ = 45f
 
-                // Elevación dinámica: las fichas más grandes "flotan" más alto
-                shadowElevation = if (tile.value >= 128) 8.dp.toPx() else 3.dp.toPx()
+                shadowElevation = if (tile.value >= 128) 4.dp.toPx() else 2.dp.toPx()
                 this.shape = shape
                 clip = true
             }
             .background(backgroundColor)
     ) {
-        // --- EFECTO GLOSS (Brillo de caramelo) ---
+        // Efecto Gloss
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.25f),
-                            Color.Transparent
-                        ),
-                        start = Offset(0f, 0f),
-                        end = Offset(100f, 100f)
+                        colors = listOf(Color.White.copy(alpha = 0.2f), Color.Transparent),
+                        start = Offset(0f, 0f), end = Offset(80f, 80f)
                     )
                 )
         )
 
-        // Texto del número
-        Box(
+        // 🔥 TEXTO QUE SE ADAPTA AL TAMAÑO (SOLUCIÓN NÚMEROS GRANDES) 🔥
+        BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            val text = "${tile.value}"
+            val digits = text.length
+
+            val fontSizeFactor = when {
+                digits <= 2 -> 0.5f
+                digits == 3 -> 0.4f
+                digits == 4 -> 0.35f
+                else -> 0.3f
+            }
+
+            val dynamicFontSize = (maxWidth.value * fontSizeFactor).sp
+
             Text(
-                text = "${tile.value}",
-                fontSize = if (tile.value > 1000) 20.sp else 28.sp,
+                text = text,
+                fontSize = dynamicFontSize,
                 fontWeight = FontWeight.Black,
                 color = textColor,
-                // Si la ficha está rotada (diamante), contra-rotamos el texto para que se lea recto
-                modifier = Modifier.rotate(if (isDiamond) -45f else 0f)
+                modifier = Modifier.rotate(if (isDiamond) -45f else 0f),
+                softWrap = false
             )
         }
     }
 }
 
-// --- UTILIDADES DE COLOR (Paleta Café Pastel Aesthetic) ---
+// ============================================================================
+// 3. UTILIDADES Y CLASES FALTANTES
+// ============================================================================
+
 @Composable
 fun getTileColor(value: Int, theme: GameTheme): Color {
-    // Usamos el color de acento para fichas "Legendarias"
     if (value >= 4096) return theme.accentColor
-
-    // Paleta "Coffee Shop" (Tonos pastel, cremas y cafés suaves)
     return when (value) {
-        2 -> Color(0xFFEEE4DA)      // Leche / Crema (Igual, base limpia)
-        4 -> Color(0xFFEFE0C9)      // Vainilla Suave
-        8 -> Color(0xFFEBCDAA)      // Latte Claro
-        16 -> Color(0xFFE6B89C)     // Durazno / Café con leche muy claro
-        32 -> Color(0xFFDDA684)     // Cappuccino suave
-        64 -> Color(0xFFD49372)     // Canela / Terracota suave
-        128 -> Color(0xFFECC271)    // Dorado Miel (Brillante pero pastel)
-        256 -> Color(0xFFEBC662)    // Caramelo Claro
-        512 -> Color(0xFFE9C052)    // Mostaza Dorada
-        1024 -> Color(0xFFE7B843)   // Toffee
-        2048 -> Color(0xFFE5B032)   // Oro Viejo
+        2 -> Color(0xFFEEE4DA)
+        4 -> Color(0xFFEFE0C9)
+        8 -> Color(0xFFEBCDAA)
+        16 -> Color(0xFFE6B89C)
+        32 -> Color(0xFFDDA684)
+        64 -> Color(0xFFD49372)
+        128 -> Color(0xFFECC271)
+        256 -> Color(0xFFEBC662)
+        512 -> Color(0xFFE9C052)
+        1024 -> Color(0xFFE7B843)
+        2048 -> Color(0xFFE5B032)
         else -> theme.accentColor
     }
 }
 
 @Composable
 fun getTileTextColor(value: Int): Color {
-    val darkText = Color(0xFF776E65) // Gris pardo oscuro (para fondos claros)
-    val lightText = Color(0xFFF9F6F2) // Blanco crema (para fondos oscuros/intensos)
-
-    // Los números 2 y 4 son muy claros, el resto ya tiene suficiente contraste para texto blanco
+    val darkText = Color(0xFF776E65)
+    val lightText = Color(0xFFF9F6F2)
     return if (value < 8) darkText else lightText
 }
 
@@ -381,10 +387,21 @@ private fun DirectionIndicator(direction: Direction?, modifier: Modifier, color:
     }
 }
 
-// ✨ NUEVO: COMPONENTE DE TEXTO FLOTANTE PARA PUNTAJES
+// 🔥 CLASE Y COMPOSABLE FALTANTES (DEFINIDOS AQUÍ PARA EVITAR ERRORES) 🔥
+
+// Modelo de datos para los puntajes flotantes
+data class FloatingScoreModel(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val value: Int,
+    val col: Int,
+    val row: Int,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+// Composable que dibuja el texto flotante
 @Composable
 fun FloatingScore(
-    score: com.korkoor.pardos.ui.game.components.FloatingScoreModel, // Asegúrate de importar tu modelo
+    score: FloatingScoreModel,
     tileSize: Dp,
     onFinished: (String) -> Unit
 ) {
@@ -393,23 +410,25 @@ fun FloatingScore(
     LaunchedEffect(score.id) {
         animState.animateTo(
             targetValue = 1f,
-            animationSpec = tween(durationMillis = 1000, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing)
         )
         onFinished(score.id)
     }
 
-    val floatUpDistance = 80.dp
-    val currentOffset = tileSize * 0.2f - (floatUpDistance * animState.value)
+    val floatUpDistance = 50.dp
+    // Calculamos el offset en píxeles o Dp relativos
+    val currentOffset = -floatUpDistance * animState.value
     val currentAlpha = 1f - animState.value
     val currentScale = 0.5f + (animState.value * 0.5f)
 
-    val xPos = (tileSize * score.col) + (tileSize / 3)
-    val yPos = (tileSize * score.row) + (tileSize / 2)
+    // Posición centrada en la celda
+    val xPos = (tileSize * score.col) + (tileSize / 4)
+    val yPos = (tileSize * score.row) + (tileSize / 4)
 
     Text(
         text = "+${score.value}",
         color = Color(0xFF3D405B).copy(alpha = currentAlpha),
-        fontSize = 24.sp,
+        fontSize = 20.sp,
         fontWeight = FontWeight.ExtraBold,
         modifier = Modifier
             .offset(x = xPos, y = yPos + currentOffset)
@@ -417,15 +436,6 @@ fun FloatingScore(
             .alpha(currentAlpha)
     )
 }
-
-// Definición simple del modelo si no quieres crear un archivo separado
-data class FloatingScoreModel(
-    val id: String = java.util.UUID.randomUUID().toString(),
-    val value: Int,
-    val col: Int,
-    val row: Int,
-    val timestamp: Long = System.currentTimeMillis()
-)
 
 private class DragGestureState {
     var totalDragX by mutableStateOf(0f); var totalDragY by mutableStateOf(0f)
@@ -443,10 +453,9 @@ private class DragGestureState {
         totalDragX += dragAmount.x
         totalDragY += dragAmount.y
 
-        val sensitivity = 15f // Sensibilidad mínima para detectar intención
-        val threshold = 50f   // Distancia para ejecutar el movimiento
+        val sensitivity = 15f
+        val threshold = 50f
 
-        // Detectar dirección visualmente antes de ejecutar
         if (abs(totalDragX) > sensitivity || abs(totalDragY) > sensitivity) {
             currentDirection = if (abs(totalDragX) > abs(totalDragY)) {
                 if (totalDragX > 0) Direction.RIGHT else Direction.LEFT
@@ -455,7 +464,6 @@ private class DragGestureState {
             }
         }
 
-        // Ejecutar movimiento
         if (abs(totalDragX) > threshold || abs(totalDragY) > threshold) {
             currentDirection?.let {
                 onMove(it)

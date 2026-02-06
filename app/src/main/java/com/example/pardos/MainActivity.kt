@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Asegúrate de que esta línea no cause crash si no tienes AdManager, si lo tienes déjala.
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -55,6 +56,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Observamos los niveles. Cuando loadLevelsWithProgress se ejecute, esto se actualizará solo.
                 val allLevels by gameViewModel.levels.collectAsState()
                 val savedRecords by gameViewModel.allRecords.collectAsState(initial = emptyList())
                 val unlockedIds by gameViewModel.unlockedAchievements.collectAsState()
@@ -94,13 +96,11 @@ class MainActivity : ComponentActivity() {
                                 currentTheme = currentTheme
                             )
 
+                            // 🔥 AQUI ESTÁ LA SOLUCIÓN DEFINITIVA 🔥
                             Screen.LevelSelector -> LevelSelectorScreen(
                                 levels = allLevels,
                                 currentTheme = currentTheme,
                                 onLevelSelected = { selectedLevel ->
-                                    // 🔥🔥 CORRECCIÓN: Al seleccionar un nivel, le decimos al ViewModel
-                                    // que configure ese nivel Específico, sin forzar el máximo.
-                                    // Y no ponemos 'isCustom=true' porque es parte de la campaña.
                                     gameViewModel.setupCustomGame(
                                         size = ProgressionEngine.calculateBoardSize(selectedLevel.target),
                                         target = selectedLevel.target,
@@ -109,7 +109,10 @@ class MainActivity : ComponentActivity() {
                                     )
                                     currentScreen = Screen.Game
                                 },
-                                onBack = { currentScreen = Screen.ModeSelection }
+                                onBack = { currentScreen = Screen.ModeSelection },
+
+                                // 👇 ESTO CONECTA LA PANTALLA CON LA BASE DE DATOS 👇
+                                onRefresh = { gameViewModel.loadLevelsWithProgress() }
                             )
 
                             Screen.Game -> GameScreen(
@@ -117,7 +120,12 @@ class MainActivity : ComponentActivity() {
                                 themeViewModel = themeViewModel,
                                 onBackToMenu = {
                                     gameViewModel.resetGameSession()
-                                    currentScreen = Screen.Menu
+                                    // Si estábamos en Clásico, volvemos al mapa, si no al menú
+                                    if (gameViewModel.currentMode == GameMode.CLASICO) {
+                                        currentScreen = Screen.LevelSelector
+                                    } else {
+                                        currentScreen = Screen.Menu
+                                    }
                                 }
                             )
 
@@ -151,13 +159,22 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                // Manejo del botón físico "Atrás" de Android
                 BackHandler(enabled = currentScreen != Screen.Menu) {
                     when (currentScreen) {
                         Screen.Game -> {
                             gameViewModel.resetGameSession()
-                            currentScreen = Screen.ModeSelection
+                            if (gameViewModel.currentMode == GameMode.CLASICO) {
+                                currentScreen = Screen.LevelSelector
+                            } else {
+                                currentScreen = Screen.ModeSelection
+                            }
                         }
                         Screen.LevelSelector -> currentScreen = Screen.ModeSelection
+                        Screen.ModeSelection -> currentScreen = Screen.Menu
+                        Screen.CustomLevel -> currentScreen = Screen.Menu
+                        Screen.Records -> currentScreen = Screen.Menu
+                        Screen.Achievements -> currentScreen = Screen.Menu
                         else -> currentScreen = Screen.Menu
                     }
                 }

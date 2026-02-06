@@ -19,14 +19,16 @@ data class BoardState(
     val isLevelCompleted: Boolean = false,
     val isPaused: Boolean = false,
     val maxTime: Long? = null,
-    val elapsedTime: Long = 0L,
+    val elapsedTime: Long = 0L,   // cronómetro ascendente
+    val timeLeft: Long? = null,   // cuenta regresiva
     val bestScore: Int = 0,
     val combo: Int = 0,
     val allowPowerUps: Boolean = true,
-    val starsEarned: Int = 0, // Calificación de desempeño (0-3)
+    val starsEarned: Int = 0,
     val showTutorialHand: Boolean = false,
     val secondChanceUsed: Boolean = false
-) {
+)
+{
     // --- PROPIEDADES CALCULADAS ---
 
     val isTimeLow: Boolean

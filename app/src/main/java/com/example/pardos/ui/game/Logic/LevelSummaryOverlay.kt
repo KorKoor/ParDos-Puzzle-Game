@@ -50,7 +50,6 @@ fun LevelSummaryOverlay(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Animación de entrada de la tarjeta (Pop-up)
     var isVisible by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0.8f,
@@ -70,11 +69,10 @@ fun LevelSummaryOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f)) // Fondo un poco más oscuro para resaltar la tarjeta
-            .clickable(enabled = false) {}, // Evita clicks fantasma
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable(enabled = false) {},
         contentAlignment = Alignment.Center
     ) {
-        // --- TARJETA AESTHETIC ---
         Surface(
             modifier = Modifier
                 .fillMaxWidth(if (isLandscape) 0.85f else 0.88f)
@@ -95,13 +93,11 @@ fun LevelSummaryOverlay(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 if (isLandscape) {
-                    // --- DISEÑO HORIZONTAL (LANDSCAPE) ---
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(32.dp)
                     ) {
-                        // Lado Izquierdo: Impacto Visual
                         Column(
                             modifier = Modifier.weight(1f),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -112,7 +108,6 @@ fun LevelSummaryOverlay(
                             VictoryHeader(stars, modeName, base, currentTheme)
                         }
 
-                        // Separador Vertical
                         Box(
                             modifier = Modifier
                                 .width(1.dp)
@@ -120,7 +115,6 @@ fun LevelSummaryOverlay(
                                 .background(Color.LightGray.copy(alpha = 0.4f))
                         )
 
-                        // Lado Derecho: Datos y Acción
                         Column(
                             modifier = Modifier.weight(1.3f),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -133,11 +127,7 @@ fun LevelSummaryOverlay(
                         }
                     }
                 } else {
-                    // --- DISEÑO VERTICAL (PORTRAIT) ---
-
-                    // 1. Cabecera con "Glow"
                     Box(contentAlignment = Alignment.Center) {
-                        // Glow trasero
                         Box(
                             modifier = Modifier
                                 .size(120.dp)
@@ -151,32 +141,18 @@ fun LevelSummaryOverlay(
                     }
 
                     Spacer(Modifier.height(12.dp))
-
                     VictoryHeader(stars, modeName, base, currentTheme)
-
                     Spacer(modifier = Modifier.height(24.dp))
-
-                    // 2. Estadísticas Principales (Grande y limpio)
                     StatsRow(moves, timeElapsed)
-
                     Spacer(Modifier.height(24.dp))
-
-                    // 3. Récords
                     PersonalRecordsBox(currentTheme, bestMoves, bestTime)
-
                     Spacer(Modifier.height(32.dp))
-
-                    // 4. Botones
                     ActionButtons(currentTheme, onRetry, onDismiss)
                 }
             }
         }
     }
 }
-
-// -----------------------------------------------------------------------------
-// SUB-COMPONENTES AESTHETIC
-// -----------------------------------------------------------------------------
 
 @Composable
 private fun VictoryHeader(stars: Int, modeName: String, base: Int, currentTheme: GameTheme) {
@@ -214,7 +190,6 @@ private fun StatsRow(moves: Int, timeElapsed: Long) {
             color = Color(0xFF3D405B),
             delayMillis = 400
         )
-        // Pequeño divisor vertical
         Box(
             modifier = Modifier
                 .width(1.dp)
@@ -241,13 +216,13 @@ private fun AnimatedStarsRow(stars: Int, currentTheme: GameTheme) {
             var startAnim by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
-                delay(index * 200L) // Un poco más rápido para ser snappy
+                delay(index * 200L)
                 startAnim = true
             }
 
             val scale by animateFloatAsState(
                 targetValue = if (startAnim && isFilled) 1f else if (startAnim) 0.8f else 0f,
-                animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f), // Más rebote
+                animationSpec = spring(dampingRatio = 0.5f, stiffness = 200f),
                 label = "StarAnim"
             )
 
@@ -263,14 +238,13 @@ private fun AnimatedStarsRow(stars: Int, currentTheme: GameTheme) {
                     contentDescription = null,
                     tint = if (isFilled) Color(0xFFFFD700) else Color.LightGray.copy(alpha = 0.3f),
                     modifier = Modifier
-                        .size(58.dp) // Estrellas más grandes
+                        .size(58.dp)
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
                             rotationZ = rotation
                         }
                         .padding(horizontal = 4.dp)
-                        // Sombra suave en las estrellas llenas
                         .then(if (isFilled) Modifier.shadow(8.dp, CircleShape, spotColor = Color(0xFFFFD700)) else Modifier)
                 )
             }
@@ -280,6 +254,11 @@ private fun AnimatedStarsRow(stars: Int, currentTheme: GameTheme) {
 
 @Composable
 private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime: Long) {
+    // 🔥 FIX: Manejamos los guiones como String y evitamos pasarlos a stringResource
+    // para prevenir la IllegalFormatConversionException (%d != String)
+    val displayTime = if (bestTime <= 0L || bestTime == Long.MAX_VALUE) "--:--" else formatTime(bestTime)
+    val displayMoves = if (bestMoves <= 0 || bestMoves == Int.MAX_VALUE) "--" else bestMoves.toString()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -300,8 +279,11 @@ private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime
                 letterSpacing = 1.5.sp
             )
             Spacer(Modifier.height(6.dp))
+
+            // 🛠️ FIX FINAL: Concatenamos los valores ya formateados como String
+            // Esto evita que el sistema truene si el XML espera un número (%d)
             Text(
-                text = stringResource(R.string.records_combined_format, bestMoves, formatTime(bestTime)),
+                text = "$displayMoves mov.  |  $displayTime",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF3D405B).copy(alpha = 0.8f)
@@ -316,7 +298,6 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Botón Reintentar (Outline pero estilizado)
         OutlinedButton(
             onClick = onRetry,
             modifier = Modifier
@@ -336,7 +317,6 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
             )
         }
 
-        // Botón Siguiente (Sólido con gradiente visual o color fuerte)
         Button(
             onClick = onDismiss,
             modifier = Modifier
@@ -344,8 +324,7 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
                 .height(60.dp)
                 .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.4f)),
             colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
-            shape = RoundedCornerShape(20.dp),
-            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 4.dp)
+            shape = RoundedCornerShape(20.dp)
         ) {
             Text(
                 text = stringResource(R.string.next_button),
@@ -370,16 +349,8 @@ private fun StatDetail(
         startAnim = true
     }
 
-    val alpha by animateFloatAsState(
-        targetValue = if (startAnim) 1f else 0f,
-        animationSpec = tween(500),
-        label = "StatAlpha"
-    )
-    val offsetY by animateFloatAsState(
-        targetValue = if (startAnim) 0f else 20f,
-        animationSpec = spring(dampingRatio = 0.6f),
-        label = "StatSlide"
-    )
+    val alpha by animateFloatAsState(targetValue = if (startAnim) 1f else 0f, animationSpec = tween(500), label = "StatAlpha")
+    val offsetY by animateFloatAsState(targetValue = if (startAnim) 0f else 20f, animationSpec = spring(dampingRatio = 0.6f), label = "StatSlide")
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -388,29 +359,23 @@ private fun StatDetail(
                 this.alpha = alpha
                 translationY = offsetY
             }
-            .clearAndSetSemantics {
-                contentDescription = "$value, $label"
-            }
+            .clearAndSetSemantics { contentDescription = "$value, $label" }
     ) {
-        Text(
-            text = value,
-            fontSize = 24.sp, // Números grandes tipo Instagram Stats
-            fontWeight = FontWeight.Black,
-            color = color,
-            letterSpacing = (-1).sp
-        )
-        Text(
-            text = label.uppercase(),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = color.copy(alpha = 0.4f),
-            letterSpacing = 1.5.sp
-        )
+        Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Black, color = color, letterSpacing = (-1).sp)
+        Text(text = label.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = color.copy(alpha = 0.4f), letterSpacing = 1.5.sp)
     }
 }
 
-private fun formatTime(seconds: Long): String {
-    val mins = seconds / 60
-    val secs = seconds % 60
-    return "%02d:%02d".format(mins, secs)
+fun formatTime(ms: Long): String {
+    if (ms <= 0) return "00:00"
+
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+
+    return if (minutes > 99) {
+        "99:59"
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
+    }
 }

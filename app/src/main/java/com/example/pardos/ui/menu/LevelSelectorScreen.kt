@@ -37,29 +37,32 @@ fun LevelSelectorScreen(
     levels: List<LevelInfo>,
     currentTheme: GameTheme,
     onLevelSelected: (LevelInfo) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    // 🔥 NUEVO: Función para pedir recarga de datos
+    onRefresh: () -> Unit
 ) {
-    // Detección dinámica de la orientación
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Gradiente basado en el tema actual
     val bgGradient = Brush.verticalGradient(colors = currentTheme.colors)
     val gridState = rememberLazyGridState()
 
     val lastUnlockedIndex = levels.indexOfLast { !it.isLocked }.coerceAtLeast(0)
 
+    // 🔥 ESTA ES LA CLAVE:
+    // Cada vez que esta pantalla se hace visible (incluso al volver del juego),
+    // ejecutamos onRefresh() para obligar al ViewModel a leer las SharedPreferences.
     LaunchedEffect(Unit) {
+        onRefresh()
         gridState.scrollToItem(lastUnlockedIndex)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
-        // Fondo picnic optimizado
         PicnicBackgroundOptimized(color = currentTheme.accentColor.copy(alpha = 0.05f))
 
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
 
-            // --- CABECERA AESTHETIC ADAPTABLE ---
+            // --- CABECERA ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,7 +106,7 @@ fun LevelSelectorScreen(
                 }
             }
 
-            // --- GRID DE NIVELES (3 columnas vertical / 6 columnas horizontal) ---
+            // --- GRID ---
             LazyVerticalGrid(
                 state = gridState,
                 columns = GridCells.Fixed(if (isLandscape) 6 else 3),
@@ -137,7 +140,6 @@ fun LevelCardAesthetic(
     val isLocked = level.isLocked
     val isCurrent = !isLocked && level.starsEarned == 0
 
-    // Glassmorphism: Color blanco con transparencia
     val cardColor = if (isLocked) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.7f)
 
     Surface(

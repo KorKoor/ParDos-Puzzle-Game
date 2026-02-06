@@ -23,60 +23,60 @@ import androidx.compose.ui.unit.sp
 import com.korkoor.pardos.domain.model.TileModel
 import kotlin.math.log2
 
-@Composable
-fun Tile(
-    tile: TileModel,
-    base: Int,
-    modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(8.dp)
-) {
-    // 1. Efecto Pop-in: Escala de 0f a 1f usando Spring para rebote sutil
-    val scale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy, // Rebote sutil
-            stiffness = Spring.StiffnessLow               // Velocidad suave
-        ),
-        label = "TileSpawnAnimation"
-    )
-
-    val backgroundColor = getAestheticColor(tile.value, base)
-    val textColor = Color(0xFF3D405B)
-
-    // Efecto de brillo (Glow)
-    val glowModifier = if (tile.value >= base * 8) {
-        Modifier.shadow(
-            elevation = 10.dp,
-            shape = shape,
-            clip = false,
-            ambientColor = backgroundColor.copy(alpha = 0.5f),
-            spotColor = backgroundColor
-        )
-    } else Modifier
-
-    // Aplicamos la escala al Box principal
-    Box(
-        modifier = modifier
-            .padding(4.dp)
-            .graphicsLayer(scaleX = scale, scaleY = scale) // 👈 La magia ocurre aquí
-            .then(glowModifier)
-            .clip(shape)
-            .background(backgroundColor),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = tile.value.toString(),
-            fontSize = when {
-                tile.value < 10 -> 28.sp
-                tile.value < 100 -> 24.sp
-                tile.value < 1000 -> 18.sp
-                else -> 14.sp
-            },
-            fontWeight = FontWeight.Black,
-            color = textColor
-        )
-    }
-}
+//@Composable
+//fun Tile(
+//    tile: TileModel,
+//    base: Int,
+//    modifier: Modifier = Modifier,
+//    shape: Shape = RoundedCornerShape(8.dp)
+//) {
+//    // 1. Efecto Pop-in: Escala de 0f a 1f usando Spring para rebote sutil
+//    val scale by animateFloatAsState(
+//        targetValue = 1f,
+//        animationSpec = spring(
+//            dampingRatio = Spring.DampingRatioMediumBouncy, // Rebote sutil
+//            stiffness = Spring.StiffnessLow               // Velocidad suave
+//        ),
+//        label = "TileSpawnAnimation"
+//    )
+//
+//    val backgroundColor = getAestheticColor(tile.value, base)
+//    val textColor = Color(0xFF3D405B)
+//
+//    // Efecto de brillo (Glow)
+//    val glowModifier = if (tile.value >= base * 8) {
+//        Modifier.shadow(
+//            elevation = 10.dp,
+//            shape = shape,
+//            clip = false,
+//            ambientColor = backgroundColor.copy(alpha = 0.5f),
+//            spotColor = backgroundColor
+//        )
+//    } else Modifier
+//
+//    // Aplicamos la escala al Box principal
+//    Box(
+//        modifier = modifier
+//            .padding(4.dp)
+//            .graphicsLayer(scaleX = scale, scaleY = scale) // 👈 La magia ocurre aquí
+//            .then(glowModifier)
+//            .clip(shape)
+//            .background(backgroundColor),
+//        contentAlignment = Alignment.Center
+//    ) {
+//        Text(
+//            text = tile.value.toString(),
+//            fontSize = when {
+//                tile.value < 10 -> 28.sp
+//                tile.value < 100 -> 24.sp
+//                tile.value < 1000 -> 18.sp
+//                else -> 14.sp
+//            },
+//            fontWeight = FontWeight.Black,
+//            color = textColor
+//        )
+//    }
+//}
 /**
  * Función de paleta Aesthetic para cualquier múltiplo
  */
