@@ -294,4 +294,10 @@
     <string name="ach_edge_lord_desc">Ten todas las fichas en los bordes del tablero.</string>
     <string name="ach_fibonacci_title">Fibonacci Fan</string>
     <string name="ach_fibonacci_desc">Ten fichas con valores de la secuencia Fibonacci.</string>
+
+    <string name="powerup_clean_manual">Escoba</string>
+    <string name="powerup_merge_manual">Fusión</string>
+    <string name="powerup_manual_instruction_clean">Toca una ficha para borrarla</string>
+    <string name="powerup_manual_instruction_merge">Toca dos fichas iguales</string>
+
 </resources>

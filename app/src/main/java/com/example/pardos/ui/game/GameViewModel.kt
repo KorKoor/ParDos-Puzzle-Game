@@ -56,9 +56,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     var activeAchievementPopup by mutableStateOf<Achievement?>(null)
         private set
+    var isSelectModeActive by mutableStateOf(false)
+        private set
 
+    var pendingPowerUpType by mutableStateOf<String?>(null) // "MANUAL_MERGE" o "SINGLE_CLEAN"
+        private set
+
+    var firstSelectedTileId by mutableStateOf<String?>(null)
+        private set
     var lastCleanTime by mutableLongStateOf(0L)
     var lastMergeTime by mutableLongStateOf(0L)
+
+    private val KEY_PROFILE_SETUP = "is_profile_setup_complete"
+
+    // Estado para avisarle a la UI de Compose que debe mostrar la pantalla de creación
+    var showProfileSetupRedirect by mutableStateOf(false)
+        private set
 
     // 🔥 TEMA DEL DESAFÍO DIARIO
     var dailyChallengeThemeIndex by mutableStateOf<Int?>(null)
@@ -129,7 +142,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // 5. BASE DE DATOS
     private val db = Room.databaseBuilder(application, AppDatabase::class.java, "pardos-db")
-        .fallbackToDestructiveMigration()
+        .fallbackToDestructiveMigration() // VITAL para la actualización de versión
         .build()
     private val recordDao = db.recordDao()
 
@@ -141,6 +154,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // 6. BLOQUE DE INICIALIZACIÓN
     init {
+        // 🔥 LIMPIEZA NUCLEAR DE PROGRESO (Campaña V2) 🔥
+        // Esto borra ABSOLUTAMENTE TODO de las SharedPreferences (estrellas, logros, niveles)
+        val migrationKey = "campaign_v2_reset_total"
+        if (!prefs.getBoolean(migrationKey, false)) {
+            prefs.edit().apply {
+                clear() // Borra todo el contenido
+                putBoolean(migrationKey, true) // Marcamos que ya se limpió
+                apply()
+            }
+        }
+
         loadLevelsWithProgress()
 
         viewModelScope.launch {
@@ -287,14 +311,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 size = 4,
                 target = targetForTables,
                 allowPowerUps = true,
-                difficulty = "Zen",
+                difficulty = "Zen", // 🔥 Forzado a Zen
                 level = tablesLevel,
-                initialScore = 0
+                initialScore = 0,
+                isCustom = false // 🔥 Aseguramos que no es custom
             )
         } else {
             currentMultiplierBase = 2
 
-            // 🔥 CARGA SEGURA: Usamos el último desbloqueado para asegurar consistencia
             val levelToStart = if (mode == GameMode.CLASICO) {
                 prefs.getInt(KEY_LAST_UNLOCKED, 1)
             } else {
@@ -306,13 +330,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val correctTarget = ProgressionEngine.calculateTargetForLevel(levelToStart)
             val correctSize = ProgressionEngine.calculateBoardSize(correctTarget)
 
+            // 🔥 REGLA DE ORO: Si es CLASICO, la dificultad es SIEMPRE Zen
+            val forcedDifficulty = if (mode == GameMode.CLASICO) "Zen" else if (mode == GameMode.DESAFIO || mode == GameMode.RAPIDO) "Normal" else "Zen"
+
             setupCustomGame(
                 size = correctSize,
                 target = correctTarget,
                 allowPowerUps = true,
-                difficulty = if (mode == GameMode.DESAFIO || mode == GameMode.RAPIDO) "Normal" else "Zen",
+                difficulty = forcedDifficulty,
                 level = levelToStart,
-                initialScore = savedScore
+                initialScore = savedScore,
+                isCustom = false // 🔥 Importante para resetear determinedMode
             )
         }
     }
@@ -326,6 +354,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         initialScore: Int = 0,
         isCustom: Boolean = false
     ) {
+        // 1. LIMPIEZA TOTAL DE ESTADOS PREVIOS
         timerJob?.cancel()
         timerManager.stop()
         isMoving = false
@@ -333,32 +362,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         realStartTime = 0L
         comboJob?.cancel()
         floatingScores.clear()
-
         _comboCount.value = 0
         showLevelSummary = false
 
+        // 2. INICIALIZACIÓN DEL MOTOR
         gameEngine = GameEngine(boardSize = size)
 
-        // 🔥 SÚPER BALANCE: Solo activamos tiempo si es un modo de Desafío/Rápido externo a la campaña
+        // 3. DETERMINACIÓN DEL MODO (FIX: Evita que la campaña herede el modo Desafío)
         val determinedMode = if (isCustom) {
             if (difficulty != "Zen") GameMode.DESAFIO else GameMode.CUSTOM
         } else {
+            // Si no es custom, respetamos el modo de campaña actual (CLASICO o TABLAS)
             currentMode
         }
 
-        // Si es campaña (Clásico/Tablas), el motor ahora devuelve null automáticamente
-        val timeLimitSeconds = if (determinedMode == GameMode.DESAFIO || determinedMode == GameMode.RAPIDO) {
+        // 4. CÁLCULO DE TIEMPO (Solo se activa en Desafío o Custom con dificultad)
+        val timeLimitSeconds = if (determinedMode == GameMode.DESAFIO || (isCustom && difficulty != "Zen")) {
             ProgressionEngine.calculateTimeLimitForTarget(target, isCampaign = false)
         } else {
-            null
+            null // Campaña siempre es Zen/Sin tiempo
         }
 
         this.currentMode = determinedMode
 
-        // ❤️ SISTEMA DE PIEDAD
+        // 5. SISTEMA DE PIEDAD (PITY MODE)
         val attempts = prefs.getInt("$KEY_ATTEMPTS$level", 0)
         isPityModeActive = attempts >= 5
 
+        // 6. ACTUALIZACIÓN DEL ESTADO DEL TABLERO
         _boardState.update {
             it.copy(
                 currentLevel = level,
@@ -370,16 +401,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isGameOver = false,
                 isLevelCompleted = false,
                 starsEarned = 0,
-                tiles = emptyList(),
+                tiles = emptyList(), // Se llenarán en spawnInitialTiles
                 maxTime = timeLimitSeconds,
-                elapsedTime = timeLimitSeconds ?: 0L, // 0 si es cronómetro ascendente
+                // Si no hay tiempo límite, el tiempo transcurrido debe ser 0 para no contar
+                elapsedTime = timeLimitSeconds ?: 0L,
                 showTutorialHand = (level == 1 && initialScore == 0),
                 secondChanceUsed = false,
                 moveCount = 0
             )
         }
 
-        spawnInitialTiles(level, target) // Pasamos target para el balance de fichas iniciales
+        // 7. GENERACIÓN DE FICHAS INICIALES
+        spawnInitialTiles(level, target)
     }
 
     fun onMove(direction: Direction, onHapticFeedback: (HapticFeedbackType) -> Unit) {
@@ -422,7 +455,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val currentState = _boardState.value
             val currentTiles = currentState.tiles
 
-            val (movedTiles, scoreGained) = gameEngine.move(currentTiles, direction, currentMultiplierBase)
+            // 🛠️ ELIMINADO MULTIPLICADOR: Ahora la fusión es estándar (x1)
+            val (movedTiles, scoreGained) = gameEngine.move(currentTiles, direction, 1)
 
             if (hasBoardChanged(currentTiles, movedTiles)) {
                 isMoving = true
@@ -437,11 +471,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 delay(80)
 
-                // 🎲 GENERACIÓN INTELIGENTE (Balance de aparición 2, 4, 8, 16)
+                // 🎲 GENERACIÓN INTELIGENTE (Aparición normal)
                 val finalTiles = movedTiles.toMutableList()
                 val newValue = ProgressionEngine.getNewTileValue(currentState.levelLimit)
-                gameEngine.spawnTileWithSpecificValue(movedTiles, newValue, currentMultiplierBase)?.let {
+                gameEngine.spawnTileWithSpecificValue(movedTiles, newValue, 1)?.let {
                     finalTiles.add(it)
+                }
+
+                // ✨ EVOLUCIÓN ESPONTÁNEA (Solo 4, 8, 16 de vez en cuando)
+                // Probabilidad del 15% para que ocurra
+                if ((1..100).random() <= 15) {
+                    val luckyCandidates = finalTiles.filter { it.value == 4 || it.value == 8 || it.value == 16 }
+                    if (luckyCandidates.isNotEmpty()) {
+                        val luckyTile = luckyCandidates.random()
+                        val index = finalTiles.indexOf(luckyTile)
+                        if (index != -1) {
+                            val evolvedValue = luckyTile.value * 2
+                            finalTiles[index] = luckyTile.copy(value = evolvedValue)
+
+                            // Feedback visual y sonoro de la evolución
+                            soundManager.playBetterPop(combo = 5)
+                            addFloatingScore(evolvedValue, luckyTile.col, luckyTile.row)
+                        }
+                    }
                 }
 
                 val maxTileValue = finalTiles.maxOfOrNull { it.value } ?: 0
@@ -459,7 +511,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     isMoving = false
                     isGameStarted = false // Detener el hilo del tiempo
                     handleLevelVictory(maxTileValue)
-                    return@launch // <--- ESTO EVITA EL CIERRE DE LA APP
+                    return@launch
                 } else if (gameEngine.isGameOver(finalTiles)) {
                     handleGameOver()
                     isMoving = false
@@ -468,7 +520,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 isMoving = false
 
-                // ✨ AYUDA DIVINA (RE-BALANCEADA AL 25%)
+                // ✨ AYUDA DIVINA (Mantenida exactamente igual)
                 if (ProgressionEngine.shouldTriggerDivineHelp(currentState.levelLimit)) {
                     delay(150) // Pausa dramática
                     _boardState.update { current ->
@@ -476,7 +528,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                         // Solo fichas <= 25% de la meta (Balance justo)
                         val limitThreshold = (current.levelLimit * 0.25).toInt()
-                        val candidates = tiles.filter { it.value <= limitThreshold }
+                        val candidates = tiles.filter { ProgressionEngine.isValueEligibleForDivineHelp(it.value) }
 
                         if (candidates.isNotEmpty()) {
                             val luckyTile = candidates.random()
@@ -519,6 +571,76 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         )
         // 🔊 Al revivir
         playMenuMusic()
+    }
+
+    fun activateSelectMode(type: String) {
+        isSelectModeActive = true
+        pendingPowerUpType = type
+        firstSelectedTileId = null
+    }
+
+    fun cancelSelectMode() {
+        isSelectModeActive = false
+        pendingPowerUpType = null
+        firstSelectedTileId = null
+    }
+
+    fun handleTileClick(tileId: String) {
+        if (!isSelectModeActive) return
+
+        when (pendingPowerUpType) {
+            "SINGLE_CLEAN" -> {
+                _boardState.update { state ->
+                    val updatedTiles = state.tiles.filter { it.id != tileId }
+                    // Registramos que el tablero cambió para efectos visuales
+                    state.copy(tiles = updatedTiles)
+                }
+                soundManager.playBetterPop(combo = 5) // Sonido de limpieza
+                cancelSelectMode()
+            }
+
+            "MANUAL_MERGE" -> {
+                if (firstSelectedTileId == null) {
+                    // Primer paso: Seleccionamos la ficha y le damos feedback al usuario
+                    firstSelectedTileId = tileId
+                    // Podrías disparar una vibración ligera aquí
+                } else {
+                    val firstId = firstSelectedTileId!!
+                    if (firstId == tileId) {
+                        cancelSelectMode() // Si toca la misma, cancelamos
+                        return
+                    }
+
+                    _boardState.update { state ->
+                        val tiles = state.tiles.toMutableList()
+                        val t1 = tiles.find { it.id == firstId }
+                        val t2 = tiles.find { it.id == tileId }
+
+                        // Verificamos que ambas existan y tengan el mismo valor
+                        if (t1 != null && t2 != null && t1.value == t2.value) {
+                            val newValue = t1.value * 2
+
+                            // Efecto de fusión: eliminamos la primera y duplicamos la segunda
+                            tiles.remove(t1)
+                            val indexT2 = tiles.indexOf(t2)
+                            if (indexT2 != -1) {
+                                tiles[indexT2] = t2.copy(value = newValue)
+
+                                // Añadimos puntuación flotante en la posición de la fusión
+                                addFloatingScore(newValue, t2.col, t2.row)
+                                soundManager.playBetterPop(combo = 10)
+                            }
+
+                            state.copy(tiles = tiles, score = state.score + newValue)
+                        } else {
+                            // Si no son iguales, no hacemos nada (o podrías sonar un error)
+                            state
+                        }
+                    }
+                    cancelSelectMode()
+                }
+            }
+        }
     }
 
     private fun handleLevelVictory(maxTile: Int) {
@@ -585,10 +707,31 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             soundManager.playWin()
         }
 
+        // 🔥 AQUI ESTÁ LA NUEVA LÓGICA AGREGADA 🔥
         viewModelScope.launch {
-            delay(800)
-            showLevelSummary = true
+            delay(800) // Pausa dramática
+
+            val currentLvl = _boardState.value.currentLevel
+            val isProfileSetup = prefs.getBoolean("is_profile_setup_complete", false)
+
+            // Verificamos si es nivel 2 o mayor (aplica a nuevos y a veteranos) y si NO tiene perfil
+            if (currentLvl >= 2 && !isProfileSetup) {
+                showProfileSetupRedirect = true
+            } else {
+                showLevelSummary = true
+            }
         }
+    }
+
+    fun onProfileSetupCompleted() {
+        // 1. Marcamos que ya nunca más se le debe pedir esto
+        prefs.edit().putBoolean("is_profile_setup_complete", true).apply()
+
+        // 2. Cerramos la pantalla de perfil
+        showProfileSetupRedirect = false
+
+        // 3. ¡Le mostramos las estrellas de su victoria que quedaron pendientes!
+        showLevelSummary = true
     }
 
     private fun applyComboTimeBonus(combo: Int) {
@@ -808,16 +951,33 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun spawnInitialTiles(level: Int, target: Int) {
-        // 🎲 SÚPER BALANCE: Obtenemos valores iniciales inteligentes (pueden ser 2, 4, 8 o 16)
-        // Esto evita que niveles altos (512+) empiecen demasiado lentos.
-        val value1 = ProgressionEngine.getNewTileValue(target)
-        val value2 = ProgressionEngine.getNewTileValue(target)
+        val currentTiles = mutableListOf<TileModel>()
+        val boardSize = _boardState.value.boardSize
 
-        // Generamos las dos fichas iniciales con los valores balanceados
-        val t1 = gameEngine.spawnTileWithSpecificValue(emptyList(), value1, currentMultiplierBase)
-        val t2 = gameEngine.spawnTileWithSpecificValue(listOfNotNull(t1), value2, currentMultiplierBase)
+        // 🚀 LÓGICA DE CANTIDAD: Más fichas para tableros más grandes
+        // 3x3 -> 2 fichas | 4x4 -> 3 fichas | 5x5 y 6x6 -> 4 fichas
+        val initialTilesCount = when {
+            boardSize >= 5 -> 4
+            boardSize == 4 -> 3
+            else -> 2
+        }
 
-        _boardState.update { it.copy(tiles = listOfNotNull(t1, t2)) }
+        repeat(initialTilesCount) {
+            // 🎲 Obtenemos valores inteligentes según el target del nivel
+            val newValue = ProgressionEngine.getNewTileValue(target)
+
+            // Spawneamos la ficha evitando posiciones ocupadas por las anteriores
+            val newTile = gameEngine.spawnTileWithSpecificValue(
+                currentTiles,
+                newValue,
+                currentMultiplierBase
+            )
+
+            newTile?.let { currentTiles.add(it) }
+        }
+
+        // Actualizamos el estado con la lista completa de fichas iniciales
+        _boardState.update { it.copy(tiles = currentTiles.toList()) }
     }
 
     fun onLevelCompleted() { checkAchievements() }
@@ -958,5 +1118,70 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun hasBoardChanged(old: List<TileModel>, new: List<TileModel>): Boolean {
         if (old.size != new.size) return true
         return old.sortedBy { it.id }.map { it.row to it.col to it.value } != new.sortedBy { it.id }.map { it.row to it.col to it.value }
+    }
+
+    // 🔥🔥🔥🔥 NUEVAS FUNCIONES DE CICLO DE VIDA (PAUSA Y RESUME) 🔥🔥🔥🔥
+
+    fun pauseGame() {
+        // Detenemos el loop del juego rompiendo la condición 'while (isGameStarted)'
+        isGameStarted = false
+        // Detenemos cualquier Job de timer pendiente
+        timerJob?.cancel()
+        // Detenemos la música
+        soundManager.stopMenuMusic() // Usamos este método para pausar si SoundManager no tiene 'pause' explícito
+    }
+
+    fun resumeGame() {
+        // Solo reanudamos si el juego NO ha terminado
+        val state = _boardState.value
+        if (state.isGameOver || state.isLevelCompleted) return
+
+        // Reactivamos la música (asumiendo que en modo juego usas la de menú o ambiente)
+        soundManager.playMenuMusic(getApplication())
+
+        // Reactivamos el Timer si estábamos a mitad de partida
+        // Heurística: Si hay tiempo transcurrido o fichas en el tablero, reanudamos
+        if (!isGameStarted && state.tiles.isNotEmpty()) {
+            isGameStarted = true
+
+            // 🧠 RECALCULO INTELIGENTE DEL TIEMPO REAL
+            // Para que 'elapsed = Now - Start' siga dando el valor correcto,
+            // tenemos que "fingir" un nuevo StartTime basado en lo que ya llevábamos jugado.
+            val now = System.currentTimeMillis()
+
+            realStartTime = if (state.maxTime != null) {
+                // Modo Contrarreloj: elapsed es "tiempo restante".
+                // Tiempo usado = Max - Restante
+                // Start = Now - TiempoUsado
+                val timeUsed = state.maxTime - state.elapsedTime
+                now - timeUsed
+            } else {
+                // Modo Campaña: elapsed es "tiempo jugado".
+                // Start = Now - TiempoJugado
+                now - state.elapsedTime
+            }
+
+            // Reiniciamos el loop del tiempo
+            viewModelScope.launch {
+                while (isGameStarted) {
+                    val elapsed = System.currentTimeMillis() - realStartTime
+                    _boardState.update { current ->
+                        if (current.maxTime != null) {
+                            val remaining = current.maxTime - elapsed
+                            if (remaining <= 0) {
+                                handleGameOver()
+                                isGameStarted = false
+                                current.copy(elapsedTime = 0L)
+                            } else {
+                                current.copy(elapsedTime = remaining)
+                            }
+                        } else {
+                            current.copy(elapsedTime = elapsed)
+                        }
+                    }
+                    delay(1000)
+                }
+            }
+        }
     }
 }

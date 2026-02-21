@@ -50,7 +50,6 @@ fun CustomLevelScreen(
     var allowPowerUps by remember { mutableStateOf(true) }
     var selectedTimeMode by remember { mutableStateOf("Normal") }
 
-    val haptic = LocalHapticFeedback.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val bgGradient = Brush.verticalGradient(colors = currentTheme.colors)
@@ -64,28 +63,27 @@ fun CustomLevelScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(horizontal = if (isLandscape) 48.dp else 24.dp)
+                // 🚀 Reducimos el padding horizontal para que las tarjetas respiren
+                .padding(horizontal = if (isLandscape) 24.dp else 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HeaderSection(onBack)
 
             if (isLandscape) {
-                // --- DISEÑO HORIZONTAL (LANDSCAPE) ---
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp), // Menos espacio entre columnas
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Columna Izquierda: Configuración
-                    Column(modifier = Modifier.weight(1.5f)) {
+                    Column(modifier = Modifier.weight(1.8f)) { // Damos más peso a las opciones
                         Text(
                             text = stringResource(R.string.custom_title),
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
                             color = Color(0xFF3D405B)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         CustomOptionsContent(
                             currentTheme = currentTheme,
@@ -100,54 +98,59 @@ fun CustomLevelScreen(
                         )
                     }
 
-                    // Columna Derecha: Botón de Acción
                     Column(
-                        modifier = Modifier.weight(1f).padding(top = 40.dp),
+                        modifier = Modifier.weight(1f).padding(top = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Button(
                             onClick = { onStartCustom(size, target, allowPowerUps, selectedTimeMode) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(80.dp)
-                                .shadow(16.dp, RoundedCornerShape(32.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.5f)),
-                            shape = RoundedCornerShape(32.dp),
+                                .height(70.dp) // Botón un poco más compacto
+                                .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.4f)),
+                            shape = RoundedCornerShape(24.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor)
                         ) {
                             Text(
                                 text = stringResource(R.string.start_game_button),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
-                                letterSpacing = 1.5.sp,
                                 color = Color.White
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "MODO: ${size}x${size} • OBJETIVO: $target",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF3D405B).copy(alpha = 0.4f)
-                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        // Info visual del modo seleccionado
+                        Surface(
+                            color = Color.White.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(
+                                text = "${size}x${size} • $target",
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF3D405B)
+                            )
+                        }
                     }
                 }
             } else {
-                // --- DISEÑO VERTICAL (PORTRAIT) ---
+                // --- DISEÑO VERTICAL ---
                 Text(
                     text = stringResource(R.string.custom_subtitle),
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF3D405B).copy(alpha = 0.6f),
+                    color = Color(0xFF3D405B).copy(alpha = 0.5f),
                     letterSpacing = 2.sp
                 )
                 Text(
                     text = stringResource(R.string.custom_title),
-                    fontSize = 32.sp,
+                    fontSize = 30.sp,
                     fontWeight = FontWeight.Black,
                     color = Color(0xFF3D405B)
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 CustomOptionsContent(
                     currentTheme = currentTheme,
@@ -161,22 +164,21 @@ fun CustomLevelScreen(
                     onTimeModeChange = { selectedTimeMode = it }
                 )
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
                     onClick = { onStartCustom(size, target, allowPowerUps, selectedTimeMode) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(72.dp)
-                        .shadow(16.dp, RoundedCornerShape(32.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(32.dp),
+                        .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(28.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor)
                 ) {
                     Text(
                         text = stringResource(R.string.start_game_button),
-                        fontSize = 16.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 1.5.sp,
                         color = Color.White
                     )
                 }
@@ -267,18 +269,25 @@ private fun HeaderSection(onBack: () -> Unit) {
 
 @Composable
 fun SelectableCard(text: String, isSelected: Boolean, accentColor: Color, modifier: Modifier, onSelect: () -> Unit) {
-    val backgroundColor by animateColorAsState(if (isSelected) accentColor else Color.White.copy(alpha = 0.7f), label = "bg")
+    val backgroundColor by animateColorAsState(if (isSelected) accentColor else Color.White.copy(alpha = 0.6f), label = "bg")
     val textColor by animateColorAsState(if (isSelected) Color.White else Color(0xFF3D405B), label = "text")
 
     Surface(
         onClick = onSelect,
-        modifier = modifier.height(68.dp).scale(if (isSelected) 1.05f else 1f),
-        shape = RoundedCornerShape(32.dp),
+        // 🚀 Ajustamos la altura y el radio de las tarjetas para que no se vean toscas
+        modifier = modifier.height(60.dp).scale(if (isSelected) 1.03f else 1f),
+        shape = RoundedCornerShape(20.dp),
         color = backgroundColor,
-        shadowElevation = if (isSelected) 12.dp else 0.dp
+        shadowElevation = if (isSelected) 8.dp else 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text, fontSize = 15.sp, fontWeight = FontWeight.Black, color = textColor, maxLines = 1)
+            Text(
+                text = text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = textColor,
+                maxLines = 1
+            )
         }
     }
 }

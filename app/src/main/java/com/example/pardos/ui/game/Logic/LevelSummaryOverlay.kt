@@ -73,6 +73,12 @@ fun LevelSummaryOverlay(
             .clickable(enabled = false) {},
         contentAlignment = Alignment.Center
     ) {
+        // 🚀 EL FIX HERMOSO: Disparamos el confeti AQUÍ para que se vea encima del fondo negro
+        // Si tu función se llama diferente (ej. ConfettiEffect), cámbiala aquí:
+        if (stars > 0) {
+            VictoryConfetti()
+        }
+
         Surface(
             modifier = Modifier
                 .fillMaxWidth(if (isLandscape) 0.85f else 0.88f)
@@ -92,6 +98,7 @@ fun LevelSummaryOverlay(
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // ... (Todo el resto de tu código de Column se mantiene igual)
                 if (isLandscape) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -144,9 +151,9 @@ fun LevelSummaryOverlay(
                     VictoryHeader(stars, modeName, base, currentTheme)
                     Spacer(modifier = Modifier.height(24.dp))
                     StatsRow(moves, timeElapsed)
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                     PersonalRecordsBox(currentTheme, bestMoves, bestTime)
-                    Spacer(Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     ActionButtons(currentTheme, onRetry, onDismiss)
                 }
             }

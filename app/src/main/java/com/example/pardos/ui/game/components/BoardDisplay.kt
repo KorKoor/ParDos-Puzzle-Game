@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -59,15 +62,8 @@ fun getShape(shapeName: String, isLargeGrid: Boolean): Shape {
 
     return when (type) {
         ShapeType.CIRCLE -> CircleShape
-
-        // 🔥 SOLUCIÓN DEL BUG: Usamos percent = 20.
-        // Esto significa "redondea solo el 20% de la esquina".
         ShapeType.SQUARE -> RoundedCornerShape(percent = 20)
-
-        // Para el diamante también usamos porcentaje
         ShapeType.DIAMOND -> RoundedCornerShape(percent = 15)
-
-        // Si el tablero es muy denso, suavizamos
         ShapeType.TRIANGLE -> if (isLargeGrid) RoundedCornerShape(percent = 20) else SoftTriangleShape
         ShapeType.OCTAGON -> SoftOctagonShape
     }
@@ -125,13 +121,25 @@ fun BoardDisplay(
 ) {
     val dragState = remember { DragGestureState() }
     val gridSize = state.boardSize
-    val isLargeGrid = gridSize >= 5
+
+    // 🚀 MEJORA: Definimos rangos de tamaño para expansión masiva
+    val isLargeGrid = gridSize >= 4
 
     val boardShape = getShape(shapeType, isLargeGrid)
 
-    // Ajustes de espaciado
-    val outerPadding = if (isLargeGrid) 8.dp else 16.dp
-    val spacing = if (isLargeGrid) 4.dp else 10.dp
+    // 🛠️ AJUSTE DE ESPACIOS: Tableros grandes ocupan más pantalla, 3x3 se queda normal
+    val outerPadding = when {
+        gridSize >= 5 -> 2.dp  // Casi al borde para 5x5 y 6x6
+        gridSize == 4 -> 6.dp  // Expandido para 4x4
+        else -> 16.dp          // Normal para 3x3
+    }
+
+    val spacing = when {
+        gridSize >= 5 -> 2.dp  // Espacio mínimo entre fichas
+        gridSize == 4 -> 5.dp  // Espacio medio
+        else -> 10.dp          // Espacio original
+    }
+
     val cornerRadius = 24.dp
     val isDiamond = shapeType == "Diamante" && !isLargeGrid
 
@@ -151,25 +159,27 @@ fun BoardDisplay(
             BoxWithConstraints(
                 modifier = Modifier
                     .padding(outerPadding)
-                    .pointerInput(gridSize) {
-                        detectDragGestures(
-                            onDragStart = { dragState.reset() },
-                            onDragEnd = { dragState.complete() },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragState.handleDrag(dragAmount) { dir ->
-                                    viewModel.onMove(dir) { haptic.performHapticFeedback(it) }
-                                    onMoveSound()
+                    // 🛠️ FIX: Escuchamos el cambio de modo selección para bloquear/permitir gestos
+                    .pointerInput(gridSize, viewModel.isSelectModeActive) {
+                        if (!viewModel.isSelectModeActive) {
+                            detectDragGestures(
+                                onDragStart = { dragState.reset() },
+                                onDragEnd = { dragState.complete() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    dragState.handleDrag(dragAmount) { dir ->
+                                        viewModel.onMove(dir) { haptic.performHapticFeedback(it) }
+                                        onMoveSound()
+                                    }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
             ) {
-                // Cálculo matemático del tamaño de celda
                 val availableWidth = maxWidth - (spacing * (gridSize - 1))
                 val tileSize = availableWidth / gridSize
 
-                // 1. CAPA DE FONDO
+                // 1. CAPA DE FONDO (Grilla)
                 Box(Modifier.fillMaxSize()) {
                     repeat(gridSize) { row ->
                         repeat(gridSize) { col ->
@@ -203,17 +213,23 @@ fun BoardDisplay(
                             spacing = spacing,
                             shapeName = shapeType,
                             isLargeGrid = isLargeGrid,
-                            currentTheme = currentTheme
+                            currentTheme = currentTheme,
+                            isSelectMode = viewModel.isSelectModeActive,
+                            isFirstSelected = viewModel.firstSelectedTileId == tile.id,
+                            onClick = {
+                                // 🛠️ Aquí se detecta el toque para PowerUps (Eliminar, Doblar, etc)
+                                if (viewModel.isSelectModeActive) {
+                                    viewModel.handleTileClick(tile.id)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            }
                         )
                     }
                 }
 
                 // 3. CAPA DE PUNTOS FLOTANTES
-                // 🔥 AQUÍ SE ARREGLAN LOS ERRORES DE REFERENCIA 🔥
-                // Convertimos explícitamente la lista para que el compilador sepa el tipo
                 val scores = viewModel.floatingScores.toList()
                 scores.forEach { score ->
-                    // Verificamos que sea del tipo correcto (aunque debería serlo por inferencia)
                     if (score is FloatingScoreModel) {
                         key(score.id) {
                             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -227,11 +243,14 @@ fun BoardDisplay(
                     }
                 }
 
-                DirectionIndicator(
-                    direction = dragState.currentDirection,
-                    modifier = Modifier.align(Alignment.Center),
-                    color = currentTheme.accentColor
-                )
+                // Solo mostramos la flecha de dirección si no estamos eligiendo fichas
+                if (!viewModel.isSelectModeActive) {
+                    DirectionIndicator(
+                        direction = dragState.currentDirection,
+                        modifier = Modifier.align(Alignment.Center),
+                        color = currentTheme.accentColor
+                    )
+                }
             }
         }
     }
@@ -245,14 +264,31 @@ private fun AnimatedTile(
     spacing: Dp,
     shapeName: String,
     isLargeGrid: Boolean,
-    currentTheme: GameTheme
+    currentTheme: GameTheme,
+    isSelectMode: Boolean,
+    isFirstSelected: Boolean,
+    onClick: () -> Unit
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "SelectionGlow")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "GlowAlpha"
+    )
+
     val scaleAnim = remember { Animatable(0f) }
     LaunchedEffect(tile.value) {
         val targetScale = if (tile.value > 128) 1.2f else 1.15f
         scaleAnim.snapTo(targetScale)
         scaleAnim.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
     }
+
+    val selectionScale by animateFloatAsState(
+        targetValue = if (isFirstSelected) 0.85f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "SelectionScale"
+    )
 
     val targetX = (tileSize + spacing) * tile.col
     val targetY = (tileSize + spacing) * tile.row
@@ -271,10 +307,18 @@ private fun AnimatedTile(
         modifier = Modifier
             .size(tileSize)
             .offset(animX, animY)
+            // 🚀 FIX: El clickable va ANTES del graphicsLayer para asegurar el área de toque
+            // Usamos un InteractionSource vacío para que el click sea instantáneo y no bloquee
+            .clickable(
+                enabled = isSelectMode,
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            )
             .graphicsLayer {
                 val baseScale = if (isDiamond) 0.72f else 1f
-                scaleX = scaleAnim.value * baseScale
-                scaleY = scaleAnim.value * baseScale
+                scaleX = scaleAnim.value * baseScale * selectionScale
+                scaleY = scaleAnim.value * baseScale * selectionScale
 
                 if (isDiamond) rotationZ = 45f
 
@@ -282,9 +326,9 @@ private fun AnimatedTile(
                 this.shape = shape
                 clip = true
             }
-            .background(backgroundColor)
+            .background(backgroundColor),
+        contentAlignment = Alignment.Center
     ) {
-        // Efecto Gloss
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -296,7 +340,22 @@ private fun AnimatedTile(
                 )
         )
 
-        // 🔥 TEXTO QUE SE ADAPTA AL TAMAÑO (SOLUCIÓN NÚMEROS GRANDES) 🔥
+        if (isSelectMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(
+                        width = if (isFirstSelected) 4.dp else 2.dp,
+                        color = if (isFirstSelected) Color.White else currentTheme.accentColor.copy(alpha = glowAlpha),
+                        shape = shape
+                    )
+                    .background(
+                        if (isFirstSelected) currentTheme.accentColor.copy(alpha = 0.4f)
+                        else Color.Transparent
+                    )
+            )
+        }
+
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -387,9 +446,6 @@ private fun DirectionIndicator(direction: Direction?, modifier: Modifier, color:
     }
 }
 
-// 🔥 CLASE Y COMPOSABLE FALTANTES (DEFINIDOS AQUÍ PARA EVITAR ERRORES) 🔥
-
-// Modelo de datos para los puntajes flotantes
 data class FloatingScoreModel(
     val id: String = java.util.UUID.randomUUID().toString(),
     val value: Int,
@@ -398,7 +454,6 @@ data class FloatingScoreModel(
     val timestamp: Long = System.currentTimeMillis()
 )
 
-// Composable que dibuja el texto flotante
 @Composable
 fun FloatingScore(
     score: FloatingScoreModel,
@@ -416,12 +471,10 @@ fun FloatingScore(
     }
 
     val floatUpDistance = 50.dp
-    // Calculamos el offset en píxeles o Dp relativos
     val currentOffset = -floatUpDistance * animState.value
     val currentAlpha = 1f - animState.value
     val currentScale = 0.5f + (animState.value * 0.5f)
 
-    // Posición centrada en la celda
     val xPos = (tileSize * score.col) + (tileSize / 4)
     val yPos = (tileSize * score.row) + (tileSize / 4)
 

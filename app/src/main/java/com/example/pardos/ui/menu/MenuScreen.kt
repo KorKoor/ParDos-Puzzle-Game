@@ -43,6 +43,8 @@ fun MenuScreen(
     onRecordsClick: () -> Unit,
     onAchievementsClick: () -> Unit,
     onDailyChallengeClick: () -> Unit,
+    onProfileClick: () -> Unit, // 🔥 NUEVO: Acción para abrir el Perfil
+    onFriendsClick: () -> Unit, // 🔥 NUEVO: Acción para abrir Amigos
     themeViewModel: ThemeViewModel
 ) {
     // Detección de orientación
@@ -132,6 +134,22 @@ fun MenuScreen(
                             onClick = onAchievementsClick
                         )
                     }
+
+                    // 🔥 NUEVA FILA: PERFIL Y AMIGOS (LANDSCAPE) 🔥
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        MiniMenuButton(
+                            text = "PERFIL", // Puedes cambiarlo a stringResource luego
+                            color = Color(0xFF457B9D), // Azul sereno
+                            modifier = Modifier.weight(1f),
+                            onClick = onProfileClick
+                        )
+                        MiniMenuButton(
+                            text = "AMIGOS", // Puedes cambiarlo a stringResource luego
+                            color = Color(0xFF2A9D8F), // Verde agua
+                            modifier = Modifier.weight(1f),
+                            onClick = onFriendsClick
+                        )
+                    }
                 }
             }
         } else {
@@ -200,6 +218,25 @@ fun MenuScreen(
                             color = Color(0xFF6C63FF),
                             modifier = Modifier.weight(1f),
                             onClick = onAchievementsClick
+                        )
+                    }
+
+                    // 🔥 NUEVA FILA: PERFIL Y AMIGOS (PORTRAIT) 🔥
+                    Row(
+                        modifier = Modifier.fillMaxWidth(0.92f),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        MiniMenuButton(
+                            text = "PERFIL",
+                            color = Color(0xFF457B9D), // Azul sereno
+                            modifier = Modifier.weight(1f),
+                            onClick = onProfileClick
+                        )
+                        MiniMenuButton(
+                            text = "AMIGOS",
+                            color = Color(0xFF2A9D8F), // Verde agua
+                            modifier = Modifier.weight(1f),
+                            onClick = onFriendsClick
                         )
                     }
                 }

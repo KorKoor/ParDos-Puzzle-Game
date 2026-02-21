@@ -293,4 +293,9 @@
     <string name="ach_edge_lord_desc">Have all tiles on the edges of the board.</string>
     <string name="ach_fibonacci_title">Fibonacci Fan</string>
     <string name="ach_fibonacci_desc">Have tiles with values from the Fibonacci sequence.</string>
+
+    <string name="powerup_clean_manual">Sweep</string>
+    <string name="powerup_merge_manual">Fusion</string>
+    <string name="powerup_manual_instruction_clean">Tap a tile to remove it</string>
+    <string name="powerup_manual_instruction_merge">Tap two identical tiles</string>
 </resources>

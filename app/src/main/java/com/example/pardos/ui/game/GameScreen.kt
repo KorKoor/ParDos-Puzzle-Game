@@ -20,9 +20,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.AutoFixNormal
+import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.JoinFull
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
@@ -63,9 +71,11 @@ import com.korkoor.pardos.domain.model.GameMode
 import com.korkoor.pardos.ui.game.components.*
 import com.korkoor.pardos.ui.game.logic.AdManager
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
+import com.korkoor.pardos.ui.profile.ProfileSetupDialog
 import com.korkoor.pardos.ui.theme.GameTheme
 import com.korkoor.pardos.ui.theme.ThemeSelector
 import com.korkoor.pardos.ui.theme.ThemeViewModel
+import com.korkoor.pardos.data.local.ProfileManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -89,13 +99,12 @@ fun GameScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Estado para la forma seleccionada
-    var selectedShapeType by rememberSaveable { mutableStateOf("Cuadrado") }
+    // Detectamos si es un tablero grande para expandir el layout
+    val isLargeGrid = state.boardSize >= 5
 
+    var selectedShapeType by rememberSaveable { mutableStateOf("Cuadrado") }
     var showExitDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
-
-    // Evita retroceso visual en el nivel mostrado
     var displayedLevel by remember { mutableIntStateOf(state.currentLevel) }
 
     LaunchedEffect(state.currentLevel) {
@@ -104,7 +113,6 @@ fun GameScreen(
         }
     }
 
-    // Refrescar dificultad al iniciar
     LaunchedEffect(Unit) {
         viewModel.refreshCurrentLevelDifficulty()
     }
@@ -132,56 +140,172 @@ fun GameScreen(
         if (state.moveCount > 0) showExitDialog = true else onBackToMenu()
     }
 
-    Box(modifier = modifier.fillMaxSize().background(bgGradient)) {
+    Column(modifier = modifier.fillMaxSize().background(bgGradient)) {
 
-        // 1. Fondo Estático
-        PicnicBackgroundOptimized(
-            color = if (isTimeLow) Color(0xFFE07A5F).copy(alpha = 0.15f)
-            else currentTheme.accentColor.copy(alpha = 0.05f)
-        )
+        Box(modifier = Modifier.weight(1f)) {
 
-        // 🌸 2. EFECTO SAKURA
-        SakuraBackgroundAnimation(density = 0.5f)
+            PicnicBackgroundOptimized(
+                color = if (isTimeLow) Color(0xFFE07A5F).copy(alpha = 0.15f)
+                else currentTheme.accentColor.copy(alpha = 0.05f)
+            )
 
-        // 3. Contenido del Juego (Con Blur dinámico)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(blurRadius)
-        ) {
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val maxHeight = maxHeight
-                val maxWidth = maxWidth
+            SakuraBackgroundAnimation(density = 0.5f)
 
-                if (isLandscape) {
-                    // --- MODO HORIZONTAL (LANDSCAPE) MEJORADO ---
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // COLUMNA IZQUIERDA: Menú y Header
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(blurRadius)
+            ) {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val maxHeight = maxHeight
+                    val maxWidth = maxWidth
+
+                    if (isLandscape) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                GameTopBar(
+                                    selectedShapeType = selectedShapeType,
+                                    onShapeSelected = { selectedShapeType = it },
+                                    onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() }
+                                )
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = true,
+                                    enter = slideInHorizontally { -it } + fadeIn()
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(32.dp))
+                                            .clickable {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                showThemeMenu = true
+                                            }
+                                            .padding(8.dp)
+                                    ) {
+                                        GameHeader(
+                                            state = state.copy(currentLevel = if (state.currentLevel > displayedLevel) state.currentLevel else displayedLevel),
+                                            currentTheme = currentTheme
+                                        )
+                                    }
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(2.2f) // Aumentado ligeramente para dar más aire al tablero grande
+                                    .fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Ajuste dinámico del tamaño del contenedor del tablero
+                                val boardSize = minOf(maxHeight.value, maxWidth.value * 0.7f).dp * (if (isLargeGrid) 0.98f else 0.92f)
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(boardSize)
+                                        .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    GameBoard(
+                                        state = state,
+                                        selectedShapeType = selectedShapeType,
+                                        viewModel = viewModel,
+                                        haptic = haptic,
+                                        currentTheme = currentTheme,
+                                        onMoveSound = { audioManager.playMoveSound() },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+
+                                    ComboIndicator(
+                                        count = viewModel.comboCount.value,
+                                        accentColor = currentTheme.accentColor
+                                    )
+
+                                    if (state.showTutorialHand) {
+                                        TutorialHand(direction = Direction.RIGHT)
+                                    }
+                                }
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                StatCard(
+                                    icon = Icons.Default.Flag,
+                                    value = state.moveCount.toString(),
+                                    label = stringResource(R.string.moves_label),
+                                    color = Color(0xFF81B29A)
+                                )
+                                Spacer(Modifier.height(12.dp))
+
+                                if (state.score > 0) {
+                                    StatCard(
+                                        icon = Icons.Default.Flag,
+                                        value = state.score.toString(),
+                                        label = stringResource(R.string.points_label),
+                                        color = Color(0xFFE07A5F)
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                }
+
+                                TimerDisplay(
+                                    seconds = state.elapsedTime,
+                                    isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10,
+                                    modifier = Modifier.scale(0.9f)
+                                )
+
+                                Spacer(Modifier.height(24.dp))
+
+                                if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
+                                    PowerUpSection(viewModel, haptic, activity)
+                                }
+                            }
+                        }
+
+                    } else {
+                        // --- MODO VERTICAL (PORTRAIT) ---
                         Column(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .fillMaxSize()
+                                .statusBarsPadding()
+                                .navigationBarsPadding(),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            GameTopBar(
-                                selectedShapeType = selectedShapeType,
-                                onShapeSelected = { selectedShapeType = it },
-                                onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() }
-                            )
+                            androidx.compose.animation.AnimatedVisibility(visible = true, enter = slideInVertically { -it } + fadeIn()) {
+                                GameTopBar(
+                                    selectedShapeType = selectedShapeType,
+                                    onShapeSelected = { selectedShapeType = it },
+                                    onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() }
+                                )
+                            }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = slideInHorizontally { -it } + fadeIn()
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = if (isLargeGrid) 10.dp else 20.dp), // Menos padding lateral para tableros grandes
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -191,322 +315,259 @@ fun GameScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             showThemeMenu = true
                                         }
-                                        .padding(8.dp)
+                                        .padding(bottom = if (isLargeGrid) 8.dp else 16.dp)
                                 ) {
-                                    GameHeader(
-                                        state = state.copy(currentLevel = if (state.currentLevel > displayedLevel) state.currentLevel else displayedLevel),
-                                        currentTheme = currentTheme
-                                    )
-                                }
-                            }
-                        }
-
-                        // COLUMNA CENTRAL: Tablero
-                        Box(
-                            modifier = Modifier
-                                .weight(1.8f)
-                                .fillMaxHeight(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val boardSize = minOf(maxHeight.value, maxWidth.value * 0.6f).dp * 0.95f
-
-                            Box(
-                                modifier = Modifier
-                                    .size(boardSize)
-                                    .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                GameBoard(
-                                    state = state,
-                                    selectedShapeType = selectedShapeType,
-                                    viewModel = viewModel,
-                                    haptic = haptic,
-                                    currentTheme = currentTheme,
-                                    onMoveSound = { audioManager.playMoveSound() },
-                                    modifier = Modifier.fillMaxSize()
-                                )
-
-                                ComboIndicator(
-                                    count = viewModel.comboCount.value,
-                                    accentColor = currentTheme.accentColor
-                                )
-
-                                if (state.showTutorialHand) {
-                                    TutorialHand(direction = Direction.RIGHT)
-                                }
-                            }
-                        }
-
-                        // COLUMNA DERECHA: Estadísticas y PowerUps
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            StatCard(
-                                icon = Icons.Default.Flag,
-                                value = state.moveCount.toString(),
-                                label = stringResource(R.string.moves_label),
-                                color = Color(0xFF81B29A)
-                            )
-                            Spacer(Modifier.height(12.dp))
-
-                            if (state.score > 0) {
-                                StatCard(
-                                    icon = Icons.Default.Flag,
-                                    value = state.score.toString(),
-                                    label = stringResource(R.string.points_label),
-                                    color = Color(0xFFE07A5F)
-                                )
-                                Spacer(Modifier.height(12.dp))
-                            }
-
-                            TimerDisplay(
-                                seconds = state.elapsedTime,
-                                isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10,
-                                modifier = Modifier.scale(0.9f)
-                            )
-
-                            Spacer(Modifier.height(24.dp))
-
-                            if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                PowerUpSection(viewModel, haptic, activity)
-                            }
-                        }
-                    }
-
-                } else {
-                    // --- MODO VERTICAL (PORTRAIT) ---
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .statusBarsPadding()
-                            .navigationBarsPadding(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        AnimatedVisibility(visible = true, enter = slideInVertically { -it } + fadeIn()) {
-                            GameTopBar(
-                                selectedShapeType = selectedShapeType,
-                                onShapeSelected = { selectedShapeType = it },
-                                onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() }
-                            )
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(32.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showThemeMenu = true
+                                    AnimatedContent(
+                                        targetState = if (state.currentLevel > displayedLevel) state.currentLevel else displayedLevel,
+                                        transitionSpec = {
+                                            slideInVertically { height -> height } + fadeIn() togetherWith
+                                                    slideOutVertically { height -> -height } + fadeOut()
+                                        },
+                                        label = "HeaderTransition"
+                                    ) { targetLevel ->
+                                        GameHeader(
+                                            state = state.copy(currentLevel = targetLevel),
+                                            currentTheme = currentTheme
+                                        )
                                     }
-                                    .padding(bottom = 16.dp)
-                            ) {
-                                AnimatedContent(
-                                    targetState = if (state.currentLevel > displayedLevel) state.currentLevel else displayedLevel,
-                                    transitionSpec = {
-                                        slideInVertically { height -> height } + fadeIn() togetherWith
-                                                slideOutVertically { height -> -height } + fadeOut()
-                                    },
-                                    label = "HeaderTransition"
-                                ) { targetLevel ->
-                                    GameHeader(
-                                        state = state.copy(currentLevel = targetLevel),
-                                        currentTheme = currentTheme
+
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(top = 4.dp)
+                                            .size(12.dp, 3.dp)
+                                            .background(currentTheme.accentColor.copy(alpha = 0.4f), CircleShape)
                                     )
                                 }
 
                                 Box(
                                     modifier = Modifier
-                                        .padding(top = 4.dp)
-                                        .size(12.dp, 3.dp)
-                                        .background(currentTheme.accentColor.copy(alpha = 0.4f), CircleShape)
-                                )
-                            }
+                                        .weight(1f, fill = false)
+                                        .aspectRatio(1f)
+                                        .fillMaxWidth(if (isLargeGrid) 0.98f else 0.92f) // El tablero ocupa más ancho si es 5x5 o 6x6
+                                        .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    GameBoard(
+                                        state = state,
+                                        selectedShapeType = selectedShapeType,
+                                        viewModel = viewModel,
+                                        haptic = haptic,
+                                        currentTheme = currentTheme,
+                                        onMoveSound = { audioManager.playMoveSound() },
+                                        modifier = Modifier.fillMaxSize()
+                                    )
 
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f, fill = false)
-                                    .aspectRatio(1f)
-                                    .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                GameBoard(
-                                    state = state,
-                                    selectedShapeType = selectedShapeType,
-                                    viewModel = viewModel,
-                                    haptic = haptic,
-                                    currentTheme = currentTheme,
-                                    onMoveSound = { audioManager.playMoveSound() },
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                    ComboIndicator(
+                                        count = viewModel.comboCount.value,
+                                        accentColor = currentTheme.accentColor
+                                    )
 
-                                ComboIndicator(
-                                    count = viewModel.comboCount.value,
-                                    accentColor = currentTheme.accentColor
-                                )
-
-                                if (state.showTutorialHand) {
-                                    TutorialHand(direction = Direction.RIGHT)
+                                    if (state.showTutorialHand) {
+                                        TutorialHand(direction = Direction.RIGHT)
+                                    }
                                 }
                             }
-                        }
 
-                        AnimatedVisibility(visible = true, enter = slideInVertically { it } + fadeIn()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 12.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                GameFooter(state = state)
+                            androidx.compose.animation.AnimatedVisibility(visible = true, enter = slideInVertically { it } + fadeIn()) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    GameFooter(state = state)
 
-                                if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                    PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth())
+                                    if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
+                                        PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth())
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // --- OVERLAYS Y POPUPS ---
+            // --- OVERLAYS Y POPUPS ---
+            if (state.isLevelCompleted) VictoryConfetti()
 
-        if (state.isLevelCompleted) VictoryConfetti()
-
-        AnimatedVisibility(
-            visible = viewModel.showLevelSummary,
-            enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
-            exit = scaleOut() + fadeOut()
-        ) {
-            val stats = viewModel.getBestStats(state.currentLevel)
-            LevelSummaryOverlay(
-                modeName = stringResource(state.gameMode.nameResId),
-                base = viewModel.currentMultiplierBase,
-                moves = state.moveCount,
-                timeElapsed = if (state.maxTime != null) (state.maxTime!! - state.elapsedTime) else state.elapsedTime,
-                bestMoves = stats.first,
-                bestTime = stats.second,
-                stars = state.starsEarned,
-                currentTheme = currentTheme,
-                onRetry = { viewModel.retryLevel() },
-                onDismiss = { viewModel.nextLevel() }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = state.isGameOver,
-            enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
-            exit = scaleOut() + fadeOut()
-        ) {
-            if (viewModel.loadingAdType == "REVIVE") {
-                AdLoadingOverlay(currentTheme)
+            androidx.compose.animation.AnimatedVisibility(
+                visible = viewModel.showLevelSummary,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                val stats = viewModel.getBestStats(state.currentLevel)
+                LevelSummaryOverlay(
+                    modeName = stringResource(state.gameMode.nameResId),
+                    base = viewModel.currentMultiplierBase,
+                    moves = state.moveCount,
+                    timeElapsed = if (state.maxTime != null) (state.maxTime!! - state.elapsedTime) else state.elapsedTime,
+                    bestMoves = stats.first,
+                    bestTime = stats.second,
+                    stars = state.starsEarned,
+                    currentTheme = currentTheme,
+                    onRetry = { viewModel.retryLevel() },
+                    onDismiss = { viewModel.nextLevel() }
+                )
             }
-            else if (state.secondChanceUsed == false) {
-                SecondChanceOverlay(
-                    onUseSecondChance = {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        activity?.let { act ->
-                            AdManager.showRewardedAd(act) {
-                                viewModel.grantAdReward("REVIVE")
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = state.isGameOver,
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = scaleOut() + fadeOut()
+            ) {
+                if (viewModel.loadingAdType == "REVIVE") {
+                    AdLoadingOverlay(currentTheme)
+                }
+                else if (state.secondChanceUsed == false) {
+                    SecondChanceOverlay(
+                        onUseSecondChance = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            activity?.let { act ->
+                                AdManager.showRewardedAd(act) {
+                                    viewModel.grantAdReward("REVIVE")
+                                }
                             }
-                        }
-                    },
-                    onCancel = { viewModel.retryLevel() },
+                        },
+                        onCancel = { viewModel.retryLevel() },
+                        currentTheme = currentTheme
+                    )
+                }
+                else {
+                    GameOverOverlay(onRestart = { viewModel.retryLevel() }, currentTheme = currentTheme)
+                }
+            }
+
+            AchievementManagerPopup(viewModel = viewModel)
+
+            if (showExitDialog) {
+                ExitGameDialog(
+                    onConfirm = { onBackToMenu() },
+                    onDismiss = { showExitDialog = false },
                     currentTheme = currentTheme
                 )
             }
-            else {
-                GameOverOverlay(onRestart = { viewModel.retryLevel() }, currentTheme = currentTheme)
-            }
-        }
 
-        AchievementManagerPopup(viewModel = viewModel)
-
-        if (showExitDialog) {
-            ExitGameDialog(
-                onConfirm = { onBackToMenu() },
-                onDismiss = { showExitDialog = false },
-                currentTheme = currentTheme
-            )
-        }
-
-        AnimatedVisibility(
-            visible = showThemeMenu,
-            enter = fadeIn() + slideInVertically { it / 2 },
-            exit = fadeOut() + slideOutVertically { it / 2 }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable { showThemeMenu = false },
-                contentAlignment = Alignment.Center
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showThemeMenu,
+                enter = fadeIn() + slideInVertically { it / 2 },
+                exit = fadeOut() + slideOutVertically { it / 2 }
             ) {
-                Surface(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth(0.85f)
-                        .padding(16.dp),
-                    color = Color.White.copy(alpha = 0.95f),
-                    shape = RoundedCornerShape(32.dp),
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { showThemeMenu = false },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
+                    Surface(
                         modifier = Modifier
-                            .padding(24.dp)
-                            .verticalScroll(rememberScrollState()),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxWidth(0.85f)
+                            .padding(16.dp),
+                        color = Color.White.copy(alpha = 0.95f),
+                        shape = RoundedCornerShape(32.dp),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
                     ) {
-                        Text(
-                            text = stringResource(R.string.visual_style),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color(0xFF3D405B),
-                            letterSpacing = 2.sp
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // SOLO MOSTRAMOS EL SELECTOR DE COLORES (TEMAS)
-                        Text(
-                            text = "COLORES",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF3D405B).copy(alpha = 0.6f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        ThemeSelector(viewModel = themeViewModel)
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        Button(
-                            onClick = { showThemeMenu = false },
-                            colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
-                            shape = RoundedCornerShape(32.dp),
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
+                                .padding(24.dp)
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                stringResource(R.string.ready),
+                                text = stringResource(R.string.visual_style),
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = Color(0xFF3D405B),
+                                letterSpacing = 2.sp
                             )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Text(
+                                text = "COLORES",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF3D405B).copy(alpha = 0.6f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            ThemeSelector(viewModel = themeViewModel)
+
+                            Spacer(modifier = Modifier.height(32.dp))
+
+                            Button(
+                                onClick = { showThemeMenu = false },
+                                colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
+                                shape = RoundedCornerShape(32.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp)
+                            ) {
+                                Text(
+                                    stringResource(R.string.ready),
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                 }
+            }
+            // Asegúrate de pasar tu ViewModel a la pantalla si no lo tienes ya
+            if (viewModel.showProfileSetupRedirect) {
+                ProfileSetupDialog(
+                    onProfileSaved = { nombreIngresado, avatarSeleccionadoId ->
+
+                        // 1. Guardamos los datos en SharedPreferences usando el ProfileManager que creamos
+                        val profileManager = ProfileManager(context)
+                        val perfilActual = profileManager.getProfile()
+
+                        profileManager.saveProfile(
+                            perfilActual.copy(
+                                name = nombreIngresado,
+                                avatarId = avatarSeleccionadoId
+                            )
+                        )
+
+                        // 2. Le avisamos al GameViewModel que ya terminamos para que cierre esta ventana
+                        // y muestre las estrellas ganadas.
+                        viewModel.onProfileSetupCompleted()
+                    }
+                )
+            }
+            // DENTRO DE GAMESCREEN, cambia la posición del Overlay
+            if (viewModel.isSelectModeActive) {
+                SelectionModeOverlay(
+                    isManualMerge = viewModel.pendingPowerUpType == "MANUAL_MERGE",
+                    accentColor = currentTheme.accentColor,
+                    onCancel = { viewModel.cancelSelectMode() } // Solo se apaga si picas "Cancelar"
+                )
+            }
+        }
+
+        // --- BANNER DE ANUNCIOS ---
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .height(58.dp)
+                .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.3f)),
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White.copy(alpha = 0.85f),
+            border = BorderStroke(1.dp, currentTheme.accentColor.copy(alpha = 0.3f))
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                androidx.compose.ui.viewinterop.AndroidView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    factory = { context ->
+                        com.google.android.gms.ads.AdView(context).apply {
+                            setAdSize(com.google.android.gms.ads.AdSize.BANNER)
+                            adUnitId = "ca-app-pub-3851960142449906/9416268397"
+                            loadAd(com.google.android.gms.ads.AdRequest.Builder().build())
+                        }
+                    }
+                )
             }
         }
     }
@@ -584,11 +645,18 @@ fun BouncingText(
 }
 
 @Composable
-fun PowerUpSection(viewModel: GameViewModel, haptic: HapticFeedback, activity: Activity?, modifier: Modifier = Modifier) {
+fun PowerUpSection(
+    viewModel: GameViewModel,
+    haptic: HapticFeedback,
+    activity: Activity?,
+    modifier: Modifier = Modifier
+) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
+
     PowerUpBar(
         viewModel = viewModel,
         modifier = modifier,
+        activity = activity, // 🔥 NUEVO: Pasamos el activity para los Reward Ads manuales
         onCleanClick = {
             if (viewModel.isPowerUpAvailable(viewModel.lastCleanTime, currentTime)) {
                 viewModel.useCleanPowerUp()
@@ -742,15 +810,17 @@ fun PowerUpBar(
     onCleanClick: () -> Unit,
     onMergeClick: () -> Unit,
     viewModel: GameViewModel,
+    activity: Activity?, // Necesario para disparar el anuncio Reward
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
+            .padding(horizontal = 4.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 1. CLEAN (AUTO) - Destello mágico
         PowerUpButton(
             label = stringResource(R.string.clean_powerup),
             icon = Icons.Default.AutoFixHigh,
@@ -760,6 +830,7 @@ fun PowerUpBar(
             onClick = onCleanClick
         )
 
+        // 2. MERGE (AUTO) - Estrellas
         PowerUpButton(
             label = stringResource(R.string.merge_powerup),
             icon = Icons.Default.AutoAwesome,
@@ -767,6 +838,40 @@ fun PowerUpBar(
             lastUseTime = viewModel.lastMergeTime,
             viewModel = viewModel,
             onClick = onMergeClick
+        )
+
+        // 3. BORRADO MANUAL - Un destello sutil (Varita refinada)
+        PowerUpButton(
+            label = stringResource(R.string.powerup_clean_manual),
+            icon = Icons.Default.AutoFixNormal, // Menos cargado, más elegante
+            color = Color(0xFFE07A5F),
+            lastUseTime = 0L,
+            viewModel = viewModel,
+            forceAdMode = true,
+            onClick = {
+                activity?.let { act ->
+                    AdManager.showRewardedAd(act) {
+                        viewModel.activateSelectMode("SINGLE_CLEAN")
+                    }
+                }
+            }
+        )
+
+        // 4. FUSIÓN VOLUNTARIA - Símbolo de Infinito/Unión suave
+        PowerUpButton(
+            label = stringResource(R.string.powerup_merge_manual),
+            icon = Icons.Default.AllInclusive, // Curvas suaves, representa unión eterna
+            color = Color(0xFF6C63FF),
+            lastUseTime = 0L,
+            viewModel = viewModel,
+            forceAdMode = true,
+            onClick = {
+                activity?.let { act ->
+                    AdManager.showRewardedAd(act) {
+                        viewModel.activateSelectMode("MANUAL_MERGE")
+                    }
+                }
+            }
         )
     }
 }
@@ -778,12 +883,14 @@ private fun PowerUpButton(
     color: Color,
     lastUseTime: Long,
     viewModel: GameViewModel,
+    forceAdMode: Boolean = false, // Nueva bandera para los nuevos botones
     onClick: () -> Unit
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
 
-    val isAvailable = viewModel.isPowerUpAvailable(lastUseTime, currentTime)
-    val remainingText = viewModel.getRemainingTime(lastUseTime, currentTime)
+    // Si es manual, nunca está "disponible" por tiempo, siempre es por anuncio
+    val isAvailable = !forceAdMode && viewModel.isPowerUpAvailable(lastUseTime, currentTime)
+    val remainingText = if (forceAdMode) "" else viewModel.getRemainingTime(lastUseTime, currentTime)
 
     val scale by animateFloatAsState(
         targetValue = if (isAvailable) 1f else 0.95f,
@@ -813,31 +920,40 @@ private fun PowerUpButton(
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = remainingText,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        if (!forceAdMode) {
+                            Text(
+                                text = remainingText,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                        }
                         Icon(
-                            imageVector = Icons.Default.PlayCircle,
+                            imageVector = if (forceAdMode) icon else Icons.Default.PlayCircle,
                             contentDescription = stringResource(R.string.ad_label),
-                            tint = color.copy(alpha = 0.9f),
-                            modifier = Modifier.size(14.dp)
+                            tint = if (forceAdMode) color else Color.White,
+                            modifier = Modifier.size(if (forceAdMode) 22.dp else 14.dp)
                         )
+                        if (forceAdMode) {
+                            Icon(
+                                imageVector = Icons.Default.PlayCircle,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(10.dp).offset(y = (-2).dp)
+                            )
+                        }
                     }
                 }
             }
         }
 
         Text(
-            text = if (isAvailable) label else stringResource(R.string.ad_label),
+            text = if (isAvailable) label else if (forceAdMode) label else stringResource(R.string.ad_label),
             fontSize = 9.sp,
             fontWeight = FontWeight.Black,
             color = if (isAvailable) Color.White.copy(alpha = 0.7f) else color.copy(alpha = 0.8f),
             modifier = Modifier.padding(top = 6.dp),
-            letterSpacing = 1.sp
+            letterSpacing = 0.5.sp
         )
     }
 }
@@ -1035,23 +1151,35 @@ private fun GameBoard(
     onMoveSound: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // ✅ BOX CONSTRAINTS PARA ESCALADO PERFECTO
+    val gridSize = state.boardSize
+
+    // 🚀 Ajuste: Ahora consideramos "grande" desde 4x4 para que gane espacio
+    val isLargeGrid = gridSize >= 4
+
+    // Reducción agresiva de paddings según el tamaño del tablero
+    val boardPadding = when {
+        gridSize >= 5 -> 0.dp  // Máxima expansión para 5x5 y 6x6
+        gridSize == 4 -> 2.dp  // Expansión notable para 4x4
+        else -> 8.dp           // El 3x3 mantiene su diseño original
+    }
+
     Box(
         modifier = modifier
-            .padding(8.dp)
+            .padding(boardPadding)
             .background(
                 color = currentTheme.surfaceColor.copy(alpha = 0.25f),
                 shape = RoundedCornerShape(20.dp)
             )
             .border(
-                width = 3.dp,
+                // Borde más delgado para tableros con muchas fichas
+                width = if (isLargeGrid) 1.dp else 3.dp,
                 color = currentTheme.accentColor.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(20.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
-        // 🛠️ BUG FIX: "key" fuerza la recomposición al cambiar la forma
-        key(selectedShapeType) {
+        // La key con boardSize asegura que el layout se recalcule al cambiar de nivel
+        key(selectedShapeType, gridSize) {
             BoardDisplay(
                 state = state,
                 viewModel = viewModel,
@@ -1063,13 +1191,13 @@ private fun GameBoard(
             )
         }
 
-        // 🔥 NUEVA CAPA DE PUNTOS FLOTANTES
-        // Se dibuja encima del tablero pero dentro del área de juego
+        // CAPA DE PUNTOS FLOTANTES
         viewModel.floatingScores.forEach { score ->
             key(score.id) {
-                // Obtenemos el ancho de cada celda aproximado (asumiendo que BoardDisplay llena el Box)
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val tileSize = maxWidth / state.boardSize
+                    // tileSize dinámico basado en el ancho real que quedó tras quitar los paddings
+                    val tileSize = maxWidth / gridSize
+
                     FloatingScore(
                         score = score,
                         tileSize = tileSize,
