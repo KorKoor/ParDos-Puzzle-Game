@@ -1,5 +1,6 @@
 package com.korkoor.pardos
 
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,9 +22,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.google.firebase.auth.FirebaseAuth
 import com.korkoor.pardos.domain.model.GameMode
 import com.korkoor.pardos.domain.logic.ProgressionEngine
+import com.korkoor.pardos.notifications.ZenNotificationManager
 import com.korkoor.pardos.ui.game.AchievementsScreen
 import com.korkoor.pardos.ui.game.GameScreen
 import com.korkoor.pardos.ui.game.GameViewModel
@@ -37,7 +37,6 @@ import com.korkoor.pardos.ui.records.RecordsScreen
 import com.korkoor.pardos.ui.theme.PardosTheme
 import com.korkoor.pardos.ui.theme.ThemeViewModel
 
-// 1. Agregamos las pantallas posibles (Incluyendo Perfil y Amigos)
 sealed class Screen {
     data object Splash : Screen()
     data object Menu : Screen()
@@ -47,60 +46,77 @@ sealed class Screen {
     data object Records : Screen()
     data object Achievements : Screen()
     data object LevelSelector : Screen()
-    data object Profile : Screen() // 🔥 NUEVO
-    data object Friends : Screen() // 🔥 NUEVO
+    data object Profile : Screen()
+    data object Friends : Screen()
 }
 
 class MainActivity : ComponentActivity() {
 
     private val gameViewModel: GameViewModel by viewModels()
     private val themeViewModel: ThemeViewModel by viewModels()
+    private lateinit var notificationManager: ZenNotificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Inicializamos AdManager
+        notificationManager = ZenNotificationManager(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+        }
+
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Inicialización silenciosa de Firebase Auth
-        val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser == null) {
-            auth.signInAnonymously().addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d("FIREBASE_AUTH", "Usuario fantasma creado con UID: ${auth.currentUser?.uid}")
-                }
-            }
-        }
-
-        // Actualizamos la racha del jugador al abrir la app
         val profileManager = com.korkoor.pardos.data.local.ProfileManager(this)
-        profileManager.checkAndUpdateStreak()
+
+        // 🔥 RESCATE DE DATOS BLINDADO Y MIGRACIÓN LEGACY 🔥
+        // 1. Primero preguntamos a Firebase
+        profileManager.syncFromFirebase { cloudProfile ->
+
+            // 2. Si hay datos en la nube, los evaluamos
+            if (cloudProfile != null) {
+                val localProfile = profileManager.getProfile()
+
+                // Si la nube tiene más nivel que el local, GANÓ LA NUBE.
+                if (cloudProfile.playerLevel >= localProfile.playerLevel) {
+                    Log.d("MainActivity", "🏆 ¡Restaurando perfil desde la nube! Nivel: ${cloudProfile.playerLevel}")
+                    profileManager.saveProfile(cloudProfile)
+
+                    // Refrescamos niveles en el ViewModel
+                    gameViewModel.loadLevelsWithProgress()
+                }
+            } else {
+                Log.d("MainActivity", "📱 No hay datos en la nube. Revisando si es un jugador veterano...")
+
+                // 🔥 MIGRACIÓN LEGACY: Buscamos si el jugador tenía progreso en la versión anterior
+                // PON AQUÍ EL NOMBRE DE TUS SHAREDPREFERENCES VIEJAS Y LA LLAVE DE TU NIVEL
+                val oldPrefs = getSharedPreferences("pardos_prefs", MODE_PRIVATE)
+                val legacyLevel = oldPrefs.getInt("last_unlocked_level", 1)
+
+                // Intentamos migrar su progreso viejo al nuevo sistema de Perfiles
+                profileManager.migrateLegacyProgressIfNeeded(legacyLevel)
+            }
+
+            // 3. AHORA SÍ, revisamos la racha (solo después de haber decidido qué perfil gana)
+            profileManager.checkAndUpdateStreak()
+        }
 
         setContent {
             PardosTheme {
-                // 🚀 CICLO DE VIDA: DETECTOR DE SEGUNDO PLANO
                 val lifecycleOwner = LocalLifecycleOwner.current
-
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         when (event) {
-                            Lifecycle.Event.ON_PAUSE -> {
-                                gameViewModel.pauseGame()
-                            }
-                            Lifecycle.Event.ON_RESUME -> {
-                                gameViewModel.resumeGame()
-                            }
+                            Lifecycle.Event.ON_PAUSE -> gameViewModel.pauseGame()
+                            Lifecycle.Event.ON_RESUME -> gameViewModel.resumeGame()
                             else -> {}
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
-                    onDispose {
-                        lifecycleOwner.lifecycle.removeObserver(observer)
-                    }
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
-                // --- ESTADO DE NAVEGACIÓN ---
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
                 val currentTheme = themeViewModel.currentTheme
 
@@ -123,13 +139,7 @@ class MainActivity : ComponentActivity() {
                         label = "MainNavigation"
                     ) { target ->
                         when (target) {
-                            Screen.Splash -> {
-                                AnimatedSplashScreen(
-                                    onAnimationFinished = {
-                                        currentScreen = Screen.Menu
-                                    }
-                                )
-                            }
+                            Screen.Splash -> AnimatedSplashScreen(onAnimationFinished = { currentScreen = Screen.Menu })
 
                             Screen.Menu -> {
                                 SideEffect { gameViewModel.resetGameSession() }
@@ -142,7 +152,6 @@ class MainActivity : ComponentActivity() {
                                         gameViewModel.setupDailyChallenge()
                                         currentScreen = Screen.Game
                                     },
-                                    // 🔥 AQUÍ CONECTAMOS LOS NUEVOS BOTONES DEL MENÚ 🔥
                                     onProfileClick = { currentScreen = Screen.Profile },
                                     onFriendsClick = { currentScreen = Screen.Friends },
                                     themeViewModel = themeViewModel
@@ -151,12 +160,8 @@ class MainActivity : ComponentActivity() {
 
                             Screen.ModeSelection -> ModeSelectionScreen(
                                 onModeSelected = { mode ->
-                                    if (mode == GameMode.CLASICO) {
-                                        currentScreen = Screen.LevelSelector
-                                    } else {
-                                        gameViewModel.startNewGame(mode)
-                                        currentScreen = Screen.Game
-                                    }
+                                    if (mode == GameMode.CLASICO) currentScreen = Screen.LevelSelector
+                                    else { gameViewModel.startNewGame(mode); currentScreen = Screen.Game }
                                 },
                                 onBack = { currentScreen = Screen.Menu },
                                 currentTheme = currentTheme
@@ -183,101 +188,57 @@ class MainActivity : ComponentActivity() {
                                 themeViewModel = themeViewModel,
                                 onBackToMenu = {
                                     gameViewModel.resetGameSession()
-                                    if (gameViewModel.currentMode == GameMode.CLASICO) {
-                                        currentScreen = Screen.LevelSelector
-                                    } else {
-                                        currentScreen = Screen.Menu
-                                    }
+                                    currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) Screen.LevelSelector else Screen.Menu
                                 }
                             )
 
                             Screen.CustomLevel -> CustomLevelScreen(
                                 onStartCustom = { size, targetVal, allowPowerUps, difficulty ->
-                                    gameViewModel.setupCustomGame(
-                                        size = size,
-                                        target = targetVal,
-                                        allowPowerUps = allowPowerUps,
-                                        difficulty = difficulty,
-                                        isCustom = true
-                                    )
+                                    gameViewModel.setupCustomGame(size, targetVal, allowPowerUps, difficulty, isCustom = true)
                                     currentScreen = Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu },
                                 currentTheme = currentTheme
                             )
 
-                            Screen.Records -> RecordsScreen(
-                                records = savedRecords,
-                                onBack = { currentScreen = Screen.Menu },
-                                currentTheme = currentTheme
-                            )
+                            Screen.Records -> RecordsScreen(records = savedRecords, onBack = { currentScreen = Screen.Menu }, currentTheme = currentTheme)
 
-                            Screen.Achievements -> AchievementsScreen(
-                                unlockedIds = unlockedIds,
-                                currentTheme = currentTheme,
-                                onBack = { currentScreen = Screen.Menu }
-                            )
+                            Screen.Achievements -> AchievementsScreen(unlockedIds = unlockedIds, currentTheme = currentTheme, onBack = { currentScreen = Screen.Menu })
 
-                            // 🔥 PANTALLA DE PERFIL 🔥
-                            Screen.Profile -> {
-                                // Llamamos a tu ProfileScreen. Le agregamos un botón simple para volver
-                                // mientras no le ponemos un TopAppBar oficial.
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    com.korkoor.pardos.ui.profile.ProfileScreen()
+                            Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(onBack = { currentScreen = Screen.Menu })
 
-                                    // Botón provisional para volver atrás (puedes ajustarlo después)
-                                    androidx.compose.material3.IconButton(
-                                        onClick = { currentScreen = Screen.Menu },
-                                        modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
-                                    ) {
-                                        androidx.compose.material3.Text("🔙", fontSize = 24.sp)
-                                    }
-                                }
-                            }
-
-                            // 🔥 PANTALLA DE AMIGOS (En construcción) 🔥
-                            Screen.Friends -> {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Próximamente: Lista de Amigos")
-
-                                    // Botón provisional para volver atrás
-                                    androidx.compose.material3.IconButton(
-                                        onClick = { currentScreen = Screen.Menu },
-                                        modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
-                                    ) {
-                                        androidx.compose.material3.Text("🔙", fontSize = 24.sp)
-                                    }
-                                }
-                            }
+                            Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
                         }
                     }
                 }
 
-                // Manejo del botón físico "Atrás"
                 BackHandler(enabled = currentScreen != Screen.Menu && currentScreen != Screen.Splash) {
                     when (currentScreen) {
                         Screen.Game -> {
                             gameViewModel.resetGameSession()
-                            if (gameViewModel.currentMode == GameMode.CLASICO) {
-                                currentScreen = Screen.LevelSelector
-                            } else {
-                                currentScreen = Screen.ModeSelection
-                            }
+                            currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) Screen.LevelSelector else Screen.ModeSelection
                         }
                         Screen.LevelSelector -> currentScreen = Screen.ModeSelection
-                        Screen.ModeSelection -> currentScreen = Screen.Menu
-                        Screen.CustomLevel -> currentScreen = Screen.Menu
-                        Screen.Records -> currentScreen = Screen.Menu
-                        Screen.Achievements -> currentScreen = Screen.Menu
-                        Screen.Profile -> currentScreen = Screen.Menu // 🔥 NUEVO
-                        Screen.Friends -> currentScreen = Screen.Menu // 🔥 NUEVO
                         else -> currentScreen = Screen.Menu
                     }
                 }
             }
+        }
+    }
+
+    // 🔥 EL JUGADOR REGRESÓ: Cancelamos el spam
+    override fun onResume() {
+        super.onResume()
+        if (::notificationManager.isInitialized) {
+            notificationManager.cancelAllNotifications()
+        }
+    }
+
+    // 🔥 EL JUGADOR SE FUE: Plantamos las minas de retención
+    override fun onPause() {
+        super.onPause()
+        if (::notificationManager.isInitialized) {
+            notificationManager.scheduleAllNotifications()
         }
     }
 }

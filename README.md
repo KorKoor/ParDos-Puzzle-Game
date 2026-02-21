@@ -1,99 +1,67 @@
 # 🧩 Pardos: Math Zen Puzzle
+Una reimaginación "Juicy" y moderna del género 2048 con infraestructura en la nube.
 
-> **Una reimaginación "Juicy" y moderna del género 2048.**
+Pardos es una experiencia táctil de alto rendimiento construida nativamente para Android. No solo desafía la agilidad matemática, sino que ofrece un ecosistema completo de progresión, competitividad social y persistencia de datos distribuida.
 
-**Pardos** no es solo otro juego de unir números. Es una experiencia visual y táctil construida nativamente para Android con **Jetpack Compose**. Combina una estética "Toy/Jelly" con físicas de rebote, iluminación dinámica y un sistema de progresión matemática profundo.
+✨ Experiencia de Usuario (UX/UI) & Game Feel
+Pardos aplica principios de Juice It or Lose It para maximizar el feedback sensorial:
 
-![Kotlin](https://img.shields.io/badge/Kotlin-2.1.0-purple?style=for-the-badge&logo=kotlin)
-![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material3-4285F4?style=for-the-badge&logo=android)
-![AdMob](https://img.shields.io/badge/Google_AdMob-Monetization-EA4335?style=for-the-badge&logo=google-ads)
-![Room](https://img.shields.io/badge/Android_Room-Persistence-3DDC84?style=for-the-badge&logo=sqlite)
-![KSP](https://img.shields.io/badge/KSP-Symbol_Processing-orange?style=for-the-badge)
+🎨 Estética "Toy & Jelly": Fichas con iluminación especular, sombras dinámicas y animaciones basadas en físicas de resortes (spring physics).
 
----
+🧩 Geometría Dinámica: Formas personalizadas dibujadas mediante Low-level Canvas (Soft Octagon, Squircle, Hexágonos).
 
-## ✨ Experiencia de Usuario (UX/UI)
+📳 Sistema Háptico: Vibración de intensidad variable según la magnitud de la fusión y combos.
 
-Lo que hace único a Pardos es su atención al detalle visual y la sensación de juego (**Game Feel**):
+🌓 Adaptabilidad: Soporte nativo para orientación Landscape y Portrait con layouts diferenciados.
 
-* **🎨 Estética "Toy & Jelly":**
-    * Fichas con **efecto Gloss** (brillo especular) y sombras dinámicas que simulan botones de goma/caramelo.
-    * Animaciones basadas en físicas (`spring` physics) con alto rebote para feedback satisfactorio.
-    * Formas personalizadas dibujadas con `Canvas`: **Soft Octagon**, **Squircle**, Triángulos suaves, etc.
-* **📳 Feedback Háptico Inmersivo:** Vibraciones sutiles al mover y fuertes al fusionar combos.
-* **🔄 Adaptabilidad Total:**
-    * Diseño responsivo que transiciona fluidamente entre modo **Vertical** y **Horizontal**.
-    * Fondos con *Blur* dinámico en tiempo real.
+🎮 Modos de Juego y Mecánicas
+🏆 Campaña: Más de 100 niveles con escalado procedimental de dificultad y tamaño de grid (3x3 hasta 6x6).
 
-## 🎮 Modos de Juego y Mecánicas
+⚡ Desafío: Mecánica de "Time Attack" donde las fusiones exitosas inyectan segundos al reloj.
 
-* **🏆 Campaña (Clásico):** Sistema de niveles incremental. El objetivo (meta de ficha) y el tamaño del tablero (3x3, 4x4, 5x5) escalan dinámicamente según tu progreso.
-* **⚡ Desafío:** Tableros contrarreloj. Fusiona rápido para ganar segundos extra.
-* **🧘 Zen:** Sin estrés, sin tiempo. Solo tú y las matemáticas.
-* **✖️ Tablas:** Un modo educativo único donde practicas las tablas de multiplicar (bases x3, x4, x5...) fusionando múltiplos.
+🧘 Zen: Modo "Infinito" optimizado para reducir la carga cognitiva.
 
-## 🛠️ Ingeniería y Arquitectura
+✖️ Tablas: Gamificación educativa para el aprendizaje de tablas de multiplicar mediante fusiones de múltiplos.
 
-El proyecto sigue una arquitectura **Clean Architecture + MVVM** estricta, optimizada para escalabilidad y rendimiento.
+🛠️ Ingeniería y Arquitectura
+El proyecto implementa una arquitectura Clean Architecture + MVVM desacoplada, facilitando el testing y la mantenibilidad.
 
-### Stack Tecnológico
-* **Lenguaje:** Kotlin 2.1.0.
-* **UI:** Jetpack Compose (Material 3).
-* **Inyección de Dependencias:** Manual (patrón Singleton para `AdManager` y `GameEngine`).
-* **Persistencia:** Room Database con **KSP** (migrado desde KAPT para compatibilidad con Kotlin 2.x).
-* **Monetización:** **Google AdMob** (Formato *Rewarded Ads*) integrado nativamente para revivir y obtener Power-Ups.
+Stack Tecnológico Avanzado
+Persistencia Híbrida: Uso de Room (KSP) para caché local de récords y Firebase Firestore para el perfil global.
 
-### Detalles de Implementación Clave
+Cloud Sync: Sistema de rescate de datos que sincroniza el progreso del usuario mediante el ID único del dispositivo, permitiendo la recuperación tras reinstalación.
 
-1.  **Game Engine Personalizado:**
-    * Lógica de matriz pura separada de la UI.
-    * Algoritmos de fusión recursiva y detección de "Game Over" anticipada.
-    * Generación procedimental de fichas basada en probabilidades dinámicas.
+Social Engine: Sistema de "Círculo Zen" (Amigos) mediante códigos únicos de invitación y Ranking en tiempo real.
 
-2.  **Gestión de Estado Reactiva:**
-    * Uso intensivo de `StateFlow` y `combine` para actualizar la UI sin recomposiciones innecesarias.
-    * `collectAsStateWithLifecycle` para manejo seguro de la memoria en Compose.
+Optimización R8: Configuración personalizada de reglas de ProGuard para ofuscación de código sin romper la serialización de datos de Firebase.
 
-3.  **Sistema de Anuncios (AdManager):**
-    * Implementación robusta de `RewardedAd`.
-    * Callbacks para manejar la carga, visualización y recompensa de forma asíncrona.
-    * Estrategia de precarga de anuncios para minimizar la latencia del usuario.
+Gestión de Estado y Rendimiento
+Reactividad: Flujos de datos asíncronos con StateFlow y gestión de ciclo de vida con collectAsStateWithLifecycle.
 
-## 📂 Estructura del Proyecto
+SoundPool Engine: Implementación de baja latencia para efectos de sonido, optimizando el uso de memoria RAM frente a MediaPlayer.
 
-```text
-com.example.pardos
+Ad Management: Estrategia de precarga (Pre-loading) de anuncios premiados para evitar interrupciones en el flujo de juego.
+
+📂 Estructura del Proyecto
+Plaintext
+com.korkoor.pardos
 ├── data
-│   └── local            # Room Database, DAOs y Entidades (Records).
+│   ├── local            # Room DB, ProfileManager (SharedPreferences).
+│   └── remote           # Firebase Firestore integracion.
 ├── domain
-│   ├── logic            # GameEngine, ProgressionEngine (Matemáticas del juego).
-│   ├── model            # Data Classes (BoardState, TileModel, GameMode).
-│   └── achievements     # Sistema de logros desbloqueables.
+│   ├── logic            # GameEngine, ProgressionEngine (Lógica matemática).
+│   ├── model            # Modelos @Keep (UserProfile, Record, TileModel).
+│   └── achievements     # Sistema de detección de hitos.
 ├── ui
-│   ├── game
-│   │   ├── components   # BoardDisplay, AnimatedTile (Canvas logic).
-│   │   ├── logic        # AdManager, GameTimerManager.
-│   │   └── menu         # Pantallas de menú y overlays.
-│   └── theme            # ThemeViewModel, Paletas de colores dinámicas.
-└── MainActivity.kt      # Single Activity entry point.
+│   ├── game             # Pantallas de juego, ViewModels y animaciones.
+│   ├── profile          # Gestión de Amigos, Ranking y Perfil Zen.
+│   └── theme            # Sistema de temas dinámicos y paletas.
+└── notifications        # ZenNotificationManager (Retención de usuarios).
 🚀 Instalación y Compilación
-Este proyecto utiliza Kotlin 2.1.0 y Gradle 8.x.
+Clona el repositorio: git clone https://github.com/TuUsuario/Pardos.git
 
-Clona el repositorio:
+Agrega tu archivo google-services.json en la carpeta /app.
 
-Bash
-git clone [https://github.com/TuUsuario/Pardos.git](https://github.com/TuUsuario/Pardos.git)
-Abre el proyecto en Android Studio Ladybug (o superior).
+Abre en Android Studio Ladybug o superior.
 
-Importante: Asegúrate de tener configurado tu local.properties si planeas firmar la app, aunque para debug no es necesario.
-
-Sincroniza Gradle (El proyecto usa KSP, la primera vez puede tardar un poco en generar el código de Room).
-
-Ejecuta en un emulador o dispositivo físico.
-
-🔮 Roadmap / Futuro
-[ ] Integración de Google Play Games Services (Leaderboards en la nube).
-
-[ ] Modo "Dark Mode" real sincronizado con el sistema.
-
-[ ] Localización a más idiomas (actualmente ES/EN).
+Sincroniza Gradle y ejecuta (Requiere soporte para KSP).~~~~

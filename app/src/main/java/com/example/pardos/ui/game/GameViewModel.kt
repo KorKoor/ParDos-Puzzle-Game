@@ -112,6 +112,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val initialTarget = ProgressionEngine.calculateTargetForLevel(initialLevel)
     private val initialSize = ProgressionEngine.calculateBoardSize(initialTarget)
 
+    // 🔥 NUEVO: EL GESTOR DE MISIONES
+    private val missionManager = com.korkoor.pardos.data.local.MissionManager(application)
+
     private val _boardState = MutableStateFlow(
         BoardState(
             currentLevel = initialLevel,
@@ -290,6 +293,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val currentAttempts = prefs.getInt("$KEY_ATTEMPTS$level", 0)
         prefs.edit().putInt("$KEY_ATTEMPTS$level", currentAttempts + 1).apply()
 
+        // 🔥 INTEGRACIÓN MISIONES DIARIAS: Partida jugada (incluso si se pierde) 🔥
+        missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
+
         soundManager.playGameOver()
     }
 
@@ -467,6 +473,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     onHapticFeedback(HapticFeedbackType.LongPress)
                     registerMerge()
                     soundManager.playBetterPop(combo = _comboCount.value)
+
+                    // 🔥 INTEGRACIÓN MISIONES: Contabiliza los pares combinados
+                    missionManager.updateProgress(MissionType.MERGE_PAIRS, mergesCount)
                 }
 
                 delay(80)
@@ -497,6 +506,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val maxTileValue = finalTiles.maxOfOrNull { it.value } ?: 0
+
+                // 🔥 INTEGRACIÓN MISIONES: Actualiza el bloque de mayor valor conseguido
+                if (maxTileValue > 0) {
+                    missionManager.updateProgress(MissionType.REACH_BLOCK, maxTileValue)
+                }
+
                 val reachedTarget = maxTileValue >= currentState.levelLimit
                 val newScore = currentState.score + scoreGained
 
@@ -539,6 +554,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                                 soundManager.playBetterPop(combo = 10)
                                 addFloatingScore(newVal, luckyTile.col, luckyTile.row)
+
+                                // 🔥 INTEGRACIÓN MISIONES: Si la ayuda divina crea un bloque alto, lo registramos
+                                missionManager.updateProgress(MissionType.REACH_BLOCK, newVal)
                             }
                         }
                         current.copy(tiles = tiles)
@@ -648,6 +666,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val targetReached = maxTile >= currentState.levelLimit
         if (!targetReached) return
 
+        // 1. Detenemos los relojes inmediatamente
         timerJob?.cancel()
         timerManager.stop()
         stopTimer()
@@ -662,20 +681,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         _boardState.update { state ->
             val totalLimit = state.maxTime ?: 0L
-            val now = System.currentTimeMillis()
-
-            // Calculamos cuánto tiempo real pasó en milisegundos
-            val realDurationMs = if (realStartTime > 0) (now - realStartTime) else 1000L
 
             if (totalLimit > 0) {
-                // MODO DESAFÍO: El tiempo usado es el límite menos lo que sobró
+                // MODO DESAFÍO: El tiempo usado es el límite total menos lo que sobró
                 finalTimeUsed = (totalLimit - state.elapsedTime).coerceAtLeast(0L)
-                // SÚPER BALANCE: Pasamos el tiempo transcurrido y la meta para calcular estrellas
                 finalStars = ProgressionEngine.calculateStars(finalTimeUsed, state.levelLimit)
             } else {
-                // MODO CAMPAÑA: Sin límite, el tiempo usado es la duración real
-                finalTimeUsed = realDurationMs
-                finalStars = 3 // En campaña siempre damos 3 estrellas por completar
+                // 🔥 MODO CAMPAÑA CORREGIDO:
+                // Usamos directamente el elapsedTime del estado, que ya lleva
+                // la cuenta exacta de los milisegundos jugados.
+                finalTimeUsed = state.elapsedTime
+                finalStars = 3
             }
 
             val assuredStars = finalStars.coerceAtLeast(1)
@@ -684,8 +700,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isLevelCompleted = true,
                 starsEarned = assuredStars,
                 isGameOver = false,
-                // Guardamos el tiempo final en milisegundos para récords exactos
-                elapsedTime = finalTimeUsed
+                elapsedTime = finalTimeUsed // Le pasamos el tiempo final real a la UI
             )
 
             stateForAchievements = newState
@@ -693,8 +708,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (_boardState.value.starsEarned > 0) {
+            val currentLvl = _boardState.value.currentLevel
+
             saveLevelProgress(
-                level = _boardState.value.currentLevel,
+                level = currentLvl,
                 stars = _boardState.value.starsEarned,
                 finalTime = finalTimeUsed,
                 finalMoves = _boardState.value.moveCount
@@ -704,17 +721,48 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             saveRecord()
             prefs.edit().remove(KEY_SAVED_SCORE).apply()
 
+            // --- CÓDIGO PARA PERFIL Y NUBE ---
+            val profileManager = com.korkoor.pardos.data.local.ProfileManager(getApplication())
+            profileManager.addXpForLevelVictory(_boardState.value.starsEarned)
+
+            // PERSISTENCIA DE CAMPAÑA
+            profileManager.updateCampaignLevel(currentLvl + 1)
+
+            // --- MISIONES DIARIAS ---
+            val finalTimeSecs = (finalTimeUsed / 1000).toInt()
+            missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
+            missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
+            missionManager.updateProgress(MissionType.EARN_STARS, _boardState.value.starsEarned)
+            if (finalTimeSecs > 0) {
+                missionManager.updateProgress(MissionType.WIN_UNDER_TIME, finalTimeSecs)
+            }
+
             soundManager.playWin()
         }
 
-        // 🔥 AQUI ESTÁ LA NUEVA LÓGICA AGREGADA 🔥
+        // --- LÓGICA DE REDIRECCIÓN ---
         viewModelScope.launch {
-            delay(800) // Pausa dramática
+            delay(800) // Pausa dramática para que se vea la última ficha fusionarse
 
             val currentLvl = _boardState.value.currentLevel
-            val isProfileSetup = prefs.getBoolean("is_profile_setup_complete", false)
 
-            // Verificamos si es nivel 2 o mayor (aplica a nuevos y a veteranos) y si NO tiene perfil
+            // 1. Leemos la bandera local
+            var isProfileSetup = prefs.getBoolean("is_profile_setup_complete", false)
+
+            // 2. 🔥 ESCUDO ANTI-VETERANOS: Si la bandera dice "false", verificamos si recuperó datos
+            if (!isProfileSetup) {
+                val profileManager = com.korkoor.pardos.data.local.ProfileManager(getApplication())
+                val profile = profileManager.getProfile()
+
+                // Si ya se cambió el nombre o si su nivel de campaña es mayor a 2, ya había configurado el perfil
+                if (profile.name != "Jugador Zen" || profile.currentCampaignLevel > 2) {
+                    isProfileSetup = true
+                    // Reparamos la bandera local silenciosamente
+                    prefs.edit().putBoolean("is_profile_setup_complete", true).apply()
+                }
+            }
+
+            // 3. Decidimos a dónde enviarlo
             if (currentLvl >= 2 && !isProfileSetup) {
                 showProfileSetupRedirect = true
             } else {

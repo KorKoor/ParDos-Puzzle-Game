@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         applicationId = "com.korkoor.pardos"
         minSdk = 24
         targetSdk = 36 // Alineado con compileSdk
-        versionCode = 6
-        versionName = "2.0" // Sugerencia: Usa nomenclatura estándar (ej: 2.0)
+        versionCode = 12
+        versionName = "2.1" // Sugerencia: Usa nomenclatura estándar (ej: 2.0)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -62,6 +63,8 @@ dependencies {
 
     // Anuncios
     implementation(libs.play.services.ads.api)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.firestore.ktx)
 
     // Room Database
     val room_version = "2.6.1"
@@ -76,6 +79,12 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    implementation(platform("com.google.firebase:firebase-bom:34.9.0"))
+    implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }
 configurations.all {
     exclude(group = "com.google.ar")

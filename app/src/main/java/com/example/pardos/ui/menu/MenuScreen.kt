@@ -9,20 +9,29 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudSync
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +39,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.DialogProperties
+import com.korkoor.pardos.data.local.MissionManager
+import com.korkoor.pardos.data.local.ProfileManager
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
 import com.korkoor.pardos.ui.theme.ThemeViewModel
 import com.korkoor.pardos.ui.theme.GameTheme
@@ -43,19 +54,43 @@ fun MenuScreen(
     onRecordsClick: () -> Unit,
     onAchievementsClick: () -> Unit,
     onDailyChallengeClick: () -> Unit,
-    onProfileClick: () -> Unit, // 🔥 NUEVO: Acción para abrir el Perfil
-    onFriendsClick: () -> Unit, // 🔥 NUEVO: Acción para abrir Amigos
+    onProfileClick: () -> Unit,
+    onFriendsClick: () -> Unit,
     themeViewModel: ThemeViewModel
 ) {
-    // Detección de orientación
+    val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    // --- INSTANCIAS DE MANAGERS (Para Misiones y Perfil) ---
+    val missionManager = remember { MissionManager(context) }
+    val profileManager = remember { ProfileManager(context) }
 
     val currentTheme = themeViewModel.currentTheme
     val bgColor = currentTheme.colors.first().copy(alpha = 0.98f)
     val textColor = currentTheme.mainTextColor
+    val prefs = context.getSharedPreferences("pardos_prefs", android.content.Context.MODE_PRIVATE)
 
-    // Estado para controlar la visibilidad del diálogo de apoyo
+// Estados para mostrar los diálogos
+    var showPrivacyDisclaimer by remember { mutableStateOf(!prefs.getBoolean("privacy_accepted", false)) }
+    var showTutorial by remember { mutableStateOf(false) }
+
+// 1. Mostrar el Privacy Disclaimer si no ha aceptado
+    if (showPrivacyDisclaimer) {
+        PrivacyDisclaimerDialog(
+            onAccept = {
+                prefs.edit().putBoolean("privacy_accepted", true).apply()
+                showPrivacyDisclaimer = false
+                // Opcional: Mostrar tutorial justo después de aceptar términos
+                showTutorial = true
+            }
+        )
+    }
+
+// 2. Mostrar el tutorial
+    if (showTutorial) {
+        TutorialDialog(onDismiss = { showTutorial = false })
+    }
     var showSupportDialog by remember { mutableStateOf(false) }
 
     Box(
@@ -92,15 +127,16 @@ fun MenuScreen(
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
-
-                    // Botón de corazón flotante para apoyar
                     SupportHeartButton(currentTheme.accentColor) { showSupportDialog = true }
                 }
 
-                // Lado Derecho: Panel de botones
+                // Lado Derecho: Panel de botones con Scroll
                 Column(
-                    modifier = Modifier.weight(1.2f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .weight(1.5f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(end = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     DailyChallengeButton(onDailyChallengeClick, modifier = Modifier.fillMaxWidth().height(60.dp))
@@ -120,35 +156,15 @@ fun MenuScreen(
                         )
                     }
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MiniMenuButton(
-                            text = stringResource(R.string.menu_records),
-                            color = Color(0xFFE07A5F),
-                            modifier = Modifier.weight(1f),
-                            onClick = onRecordsClick
-                        )
-                        MiniMenuButton(
-                            text = stringResource(R.string.menu_achievements),
-                            color = Color(0xFF6C63FF),
-                            modifier = Modifier.weight(1f),
-                            onClick = onAchievementsClick
-                        )
-                    }
+                    // Tarjeta de Misiones
+                    DailyMissionsCard(missionManager, profileManager)
 
-                    // 🔥 NUEVA FILA: PERFIL Y AMIGOS (LANDSCAPE) 🔥
+                    // Cuadrícula Social y Progreso
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MiniMenuButton(
-                            text = "PERFIL", // Puedes cambiarlo a stringResource luego
-                            color = Color(0xFF457B9D), // Azul sereno
-                            modifier = Modifier.weight(1f),
-                            onClick = onProfileClick
-                        )
-                        MiniMenuButton(
-                            text = "AMIGOS", // Puedes cambiarlo a stringResource luego
-                            color = Color(0xFF2A9D8F), // Verde agua
-                            modifier = Modifier.weight(1f),
-                            onClick = onFriendsClick
-                        )
+                        MiniMenuButton("PERFIL", Color(0xFF457B9D), Modifier.weight(1f), onProfileClick)
+                        MiniMenuButton("AMIGOS", Color(0xFF2A9D8F), Modifier.weight(1f), onFriendsClick)
+                        MiniMenuButton(stringResource(R.string.menu_records), Color(0xFFE07A5F), Modifier.weight(1f), onRecordsClick)
+                        MiniMenuButton(stringResource(R.string.menu_achievements), Color(0xFF6C63FF), Modifier.weight(1f), onAchievementsClick)
                     }
                 }
             }
@@ -157,14 +173,16 @@ fun MenuScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState()) // 🔥 SCROLL PARA QUE NO SE CORTE NADA
                     .statusBarsPadding()
-                    .padding(horizontal = 32.dp, vertical = 40.dp),
+                    .navigationBarsPadding()
+                    .padding(horizontal = 32.dp, vertical = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
+                // 1. BRANDING
                 AnimatedTitle("PARDOS", textColor)
-
                 Box(
                     modifier = Modifier
                         .padding(top = 12.dp)
@@ -172,62 +190,61 @@ fun MenuScreen(
                         .height(4.dp)
                         .background(currentTheme.accentColor, CircleShape)
                 )
-
                 Text(
                     text = stringResource(R.string.menu_slogan),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     color = textColor.copy(alpha = 0.4f),
                     letterSpacing = 6.sp,
-                    modifier = Modifier.padding(top = 24.dp)
+                    modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
-
+                // 2. ACCIONES PRINCIPALES
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    DailyChallengeButton(onDailyChallengeClick)
-
                     AestheticMenuButton(
                         text = stringResource(R.string.menu_play),
                         color = currentTheme.accentColor,
                         onClick = onPlayClick
                     )
 
-                    AestheticMenuButton(
-                        text = stringResource(R.string.menu_customize),
-                        color = Color(0xFF81B29A),
-                        onClick = onCustomClick
-                    )
-
                     Row(
                         modifier = Modifier.fillMaxWidth(0.92f),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        MiniMenuButton(
-                            text = stringResource(R.string.menu_records),
-                            color = Color(0xFFE07A5F),
-                            modifier = Modifier.weight(1f),
-                            onClick = onRecordsClick
+                        AestheticMenuButton(
+                            text = stringResource(R.string.menu_customize),
+                            color = Color(0xFF81B29A),
+                            onClick = onCustomClick,
+                            modifier = Modifier.weight(1f).height(64.dp),
+                            fontSize = 12.sp
                         )
-                        MiniMenuButton(
-                            text = stringResource(R.string.menu_achievements),
-                            color = Color(0xFF6C63FF),
-                            modifier = Modifier.weight(1f),
-                            onClick = onAchievementsClick
+                        DailyChallengeButton(
+                            onClick = onDailyChallengeClick,
+                            modifier = Modifier.weight(1f).height(64.dp),
+                            fontSize = 10.sp
                         )
                     }
+                }
 
-                    // 🔥 NUEVA FILA: PERFIL Y AMIGOS (PORTRAIT) 🔥
-                    Row(
-                        modifier = Modifier.fillMaxWidth(0.92f),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 3. MISIONES DIARIAS (Centro de Retención)
+                DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // 4. ZONA SOCIAL Y PROGRESO (Grid 2x2 Aesthetic)
+                Column(
+                    modifier = Modifier.fillMaxWidth(0.92f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MiniMenuButton(
-                            text = "PERFIL",
+                            text = "MI PERFIL",
                             color = Color(0xFF457B9D), // Azul sereno
                             modifier = Modifier.weight(1f),
                             onClick = onProfileClick
@@ -239,14 +256,28 @@ fun MenuScreen(
                             onClick = onFriendsClick
                         )
                     }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        MiniMenuButton(
+                            text = stringResource(R.string.menu_records),
+                            color = Color(0xFFE07A5F), // Terracota
+                            modifier = Modifier.weight(1f),
+                            onClick = onRecordsClick
+                        )
+                        MiniMenuButton(
+                            text = stringResource(R.string.menu_achievements),
+                            color = Color(0xFF6C63FF), // Morado
+                            modifier = Modifier.weight(1f),
+                            onClick = onAchievementsClick
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.weight(0.5f))
+                Spacer(modifier = Modifier.height(40.dp))
 
-                // Botón de corazón en la parte inferior (Portrait)
+                // 5. FOOTER
                 SupportHeartButton(currentTheme.accentColor) { showSupportDialog = true }
 
-                Spacer(modifier = Modifier.weight(0.3f))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = stringResource(R.string.menu_version_info),
@@ -315,7 +346,6 @@ fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
 
             Spacer(Modifier.height(24.dp))
 
-            // Botón Instagram (Sustituye por tu link real)
             Button(
                 onClick = { uriHandler.openUri("https://www.instagram.com/kourkoour/") },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -327,7 +357,6 @@ fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
-            // Botón Ko-fi / Donación (Sustituye por tu link real)
             Button(
                 onClick = { uriHandler.openUri("https://ko-fi.com/korkor0209") },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -395,7 +424,7 @@ fun SupportHeartButton(color: Color, onClick: () -> Unit) {
 }
 
 // ============================================================================
-// TUS COMPONENTES ORIGINALES
+// COMPONENTES DE BOTONES (Ajustados para diseño Responsivo)
 // ============================================================================
 
 @Composable
@@ -403,7 +432,8 @@ fun AestheticMenuButton(
     text: String,
     color: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(0.92f).height(74.dp)
+    modifier: Modifier = Modifier.fillMaxWidth(0.92f).height(74.dp),
+    fontSize: androidx.compose.ui.unit.TextUnit = 15.sp // Permitimos ajustar la fuente dinámicamente
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -435,13 +465,14 @@ fun AestheticMenuButton(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(6.dp).background(color, CircleShape))
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = text,
-                fontSize = 15.sp,
+                text = text.uppercase(),
+                fontSize = fontSize,
                 fontWeight = FontWeight.Black,
                 color = color,
-                letterSpacing = 4.sp
+                letterSpacing = 2.sp,
+                maxLines = 1
             )
         }
     }
@@ -450,22 +481,25 @@ fun AestheticMenuButton(
 @Composable
 fun DailyChallengeButton(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(0.92f).height(74.dp)
+    modifier: Modifier = Modifier.fillMaxWidth(0.92f).height(74.dp),
+    fontSize: androidx.compose.ui.unit.TextUnit = 15.sp
 ) {
     Button(
         onClick = onClick,
         modifier = modifier.shadow(12.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3D405B))
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3D405B)),
+        contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
-        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF2CC8F))
-        Spacer(Modifier.width(14.dp))
+        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF2CC8F), modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
-            text = stringResource(R.string.menu_daily_challenge),
+            text = stringResource(R.string.menu_daily_challenge).uppercase(),
             color = Color.White,
             fontWeight = FontWeight.Black,
-            letterSpacing = 3.sp,
-            fontSize = 15.sp
+            letterSpacing = 2.sp,
+            fontSize = fontSize,
+            maxLines = 1
         )
     }
 }
@@ -479,9 +513,7 @@ fun MiniMenuButton(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier
-            .height(64.dp)
-            .padding(vertical = 4.dp),
+        modifier = modifier.height(64.dp),
         shape = RoundedCornerShape(22.dp),
         color = Color.White.copy(alpha = 0.95f),
         shadowElevation = 6.dp,
@@ -490,16 +522,12 @@ fun MiniMenuButton(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.White, color.copy(alpha = 0.05f))
-                    )
-                ),
+                .background(Brush.verticalGradient(colors = listOf(Color.White, color.copy(alpha = 0.05f)))),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = text,
-                fontSize = 12.sp,
+                text = text.uppercase(),
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 color = color,
                 letterSpacing = 2.sp,
@@ -539,4 +567,120 @@ fun AnimatedTitle(
             )
         }
     }
+}
+
+@Composable
+fun PrivacyDisclaimerDialog(
+    onAccept: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { /* No se puede quitar sin aceptar */ },
+        containerColor = Color(0xFFFDF8F1), // fondoBeige
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.CloudSync, contentDescription = null, tint = Color(0xFFE07A5F))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("El Acuerdo de Armonía", fontWeight = FontWeight.Black, color = Color(0xFF5D4037))
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Para asegurar que tu progreso en ParDos sea eterno, guardamos algunos datos en la nube (Firebase).",
+                    fontSize = 14.sp,
+                    color = Color(0xFF8D6E63)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Lista de datos
+                val items = listOf(
+                    "Identificador anónimo de tu dispositivo.",
+                    "Tu apodo Zen y Avatar elegido.",
+                    "Tu nivel, XP y récords de la vitrina."
+                )
+                items.forEach { item ->
+                    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF81B29A), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(item, fontSize = 13.sp, color = Color(0xFF5D4037), fontWeight = FontWeight.Medium)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "No recopilamos correos, contraseñas ni ubicación. ¡Tu paz mental es nuestra prioridad!",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFE07A5F)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onAccept,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81B29A))
+            ) {
+                Text("ACEPTAR Y JUGAR", fontWeight = FontWeight.Black, color = Color.White)
+            }
+        }
+    )
+}
+@Composable
+fun TutorialDialog(
+    onDismiss: () -> Unit
+) {
+    var step by remember { mutableIntStateOf(1) }
+
+    val totalSteps = 3
+    val (title, description, icon, color) = when(step) {
+        1 -> listOf("CONECTA NÚMEROS", "Desliza para sumar fichas del mismo valor y alcanzar la meta del nivel.", Icons.Rounded.TouchApp, Color(0xFF81B29A))
+        2 -> listOf("CUIDA EL TIEMPO", "En el modo desafío, el reloj es tu único enemigo. ¡Piensa rápido!", Icons.Rounded.Timer, Color(0xFFE07A5F))
+        else -> listOf("USA TU PODER", "Si te quedas atascado, usa los Power-Ups en la parte inferior para despejar el tablero.", Icons.Rounded.Bolt, Color(0xFFF2CC8F))
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color.White,
+        shape = RoundedCornerShape(28.dp),
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = (color as Color).copy(alpha = 0.15f),
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Icon(icon as androidx.compose.ui.graphics.vector.ImageVector, null, tint = color, modifier = Modifier.padding(20.dp))
+                }
+                Spacer(Modifier.height(16.dp))
+                Text(title as String, fontWeight = FontWeight.Black, fontSize = 18.sp, color = Color(0xFF5D4037))
+                Spacer(Modifier.height(8.dp))
+                Text(description as String, textAlign = TextAlign.Center, fontSize = 14.sp, color = Color.Gray)
+
+                Spacer(Modifier.height(24.dp))
+                // Indicadores de paso (Puntitos)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    for (i in 1..totalSteps) {
+                        Box(modifier = Modifier
+                            .size(if (i == step) 10.dp else 8.dp)
+                            .clip(CircleShape)
+                            .background(if (i == step) color else Color.LightGray)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (step < totalSteps) step++ else onDismiss()
+                }
+            ) {
+                Text(if (step < totalSteps) "SIGUIENTE" else "¡ENTENDIDO!", fontWeight = FontWeight.Black, color = color as Color)
+            }
+        }
+    )
 }

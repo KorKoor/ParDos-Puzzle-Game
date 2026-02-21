@@ -10,4 +10,5 @@ plugins {
     // 🔥 NUEVO: Definimos el plugin KSP aquí para que el módulo 'app' pueda usarlo
     // (Esta versión 2.1.0-1.0.29 es específica para Kotlin 2.1.0)
     id("com.google.devtools.ksp") version "2.1.0-1.0.29" apply false
+    id("com.google.gms.google-services") version "4.4.4" apply false
 }

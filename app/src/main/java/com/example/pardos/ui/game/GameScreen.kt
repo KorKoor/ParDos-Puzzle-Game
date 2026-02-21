@@ -6,7 +6,8 @@ import FloatingScore
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.res.Configuration
-import android.media.MediaPlayer
+import android.media.AudioAttributes
+import android.media.SoundPool
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -20,17 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.AutoFixNormal
-import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Hub
-import androidx.compose.material.icons.filled.JoinFull
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
@@ -79,9 +74,6 @@ import com.korkoor.pardos.data.local.ProfileManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// ✅ DEFINICIÓN DE ENUM AL INICIO PARA EVITAR ERRORES DE REFERENCIA
-// Asegúrate de que ShapeType esté definido en este paquete o impórtalo correctamente si está en otro archivo.
-
 @SuppressLint("UnusedContentLambdaTargetStateParameter", "UnusedBoxWithConstraintsScope")
 @Composable
 fun GameScreen(
@@ -98,8 +90,6 @@ fun GameScreen(
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
-    // Detectamos si es un tablero grande para expandir el layout
     val isLargeGrid = state.boardSize >= 5
 
     var selectedShapeType by rememberSaveable { mutableStateOf("Cuadrado") }
@@ -117,12 +107,15 @@ fun GameScreen(
         viewModel.refreshCurrentLevelDifficulty()
     }
 
+    // 🔥 OPTIMIZACIÓN: Audio ultra rápido sin lag ni consumir mucha RAM
     val audioManager = remember { GameAudioManager(context) }
+
+    // 🔥 OPTIMIZACIÓN: Solo recalcula el gradiente si el tema cambia
     val bgGradient = remember(currentTheme) { Brush.verticalGradient(colors = currentTheme.colors) }
+
     val isTimeLow = state.maxTime != null && state.elapsedTime <= 10L
 
     val shouldBlur = viewModel.showLevelSummary || state.isGameOver || showExitDialog || showThemeMenu
-
     val blurRadius by animateDpAsState(
         targetValue = if (shouldBlur) 16.dp else 0.dp,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -208,11 +201,10 @@ fun GameScreen(
 
                             Box(
                                 modifier = Modifier
-                                    .weight(2.2f) // Aumentado ligeramente para dar más aire al tablero grande
+                                    .weight(2.2f)
                                     .fillMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Ajuste dinámico del tamaño del contenedor del tablero
                                 val boardSize = minOf(maxHeight.value, maxWidth.value * 0.7f).dp * (if (isLargeGrid) 0.98f else 0.92f)
 
                                 Box(
@@ -303,7 +295,7 @@ fun GameScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
-                                    .padding(horizontal = if (isLargeGrid) 10.dp else 20.dp), // Menos padding lateral para tableros grandes
+                                    .padding(horizontal = if (isLargeGrid) 10.dp else 20.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -343,7 +335,7 @@ fun GameScreen(
                                     modifier = Modifier
                                         .weight(1f, fill = false)
                                         .aspectRatio(1f)
-                                        .fillMaxWidth(if (isLargeGrid) 0.98f else 0.92f) // El tablero ocupa más ancho si es 5x5 o 6x6
+                                        .fillMaxWidth(if (isLargeGrid) 0.98f else 0.92f)
                                         .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -512,34 +504,26 @@ fun GameScreen(
                     }
                 }
             }
-            // Asegúrate de pasar tu ViewModel a la pantalla si no lo tienes ya
             if (viewModel.showProfileSetupRedirect) {
                 ProfileSetupDialog(
                     onProfileSaved = { nombreIngresado, avatarSeleccionadoId ->
-
-                        // 1. Guardamos los datos en SharedPreferences usando el ProfileManager que creamos
                         val profileManager = ProfileManager(context)
                         val perfilActual = profileManager.getProfile()
-
                         profileManager.saveProfile(
                             perfilActual.copy(
                                 name = nombreIngresado,
                                 avatarId = avatarSeleccionadoId
                             )
                         )
-
-                        // 2. Le avisamos al GameViewModel que ya terminamos para que cierre esta ventana
-                        // y muestre las estrellas ganadas.
                         viewModel.onProfileSetupCompleted()
                     }
                 )
             }
-            // DENTRO DE GAMESCREEN, cambia la posición del Overlay
             if (viewModel.isSelectModeActive) {
                 SelectionModeOverlay(
                     isManualMerge = viewModel.pendingPowerUpType == "MANUAL_MERGE",
                     accentColor = currentTheme.accentColor,
-                    onCancel = { viewModel.cancelSelectMode() } // Solo se apaga si picas "Cancelar"
+                    onCancel = { viewModel.cancelSelectMode() }
                 )
             }
         }
@@ -574,10 +558,9 @@ fun GameScreen(
 }
 
 // -----------------------------------------------------------------------------
-// COMPONENTES AUXILIARES
+// COMPONENTES AUXILIARES Y OPTIMIZACIONES
 // -----------------------------------------------------------------------------
 
-// ✨ NUEVO: COMPONENTE DE TEXTO FLOTANTE PARA PUNTAJES
 @Composable
 fun FloatingScore(
     score: FloatingScoreModel,
@@ -613,9 +596,6 @@ fun FloatingScore(
             .alpha(currentAlpha)
     )
 }
-
-// (ShapeSelector y ShapeOptionItem se eliminaron de aquí porque ya no se usan en este archivo para el menú,
-// pero si los usas en GameTopBar, asegúrate de que sigan existiendo en components)
 
 @Composable
 fun BouncingText(
@@ -656,7 +636,7 @@ fun PowerUpSection(
     PowerUpBar(
         viewModel = viewModel,
         modifier = modifier,
-        activity = activity, // 🔥 NUEVO: Pasamos el activity para los Reward Ads manuales
+        activity = activity,
         onCleanClick = {
             if (viewModel.isPowerUpAvailable(viewModel.lastCleanTime, currentTime)) {
                 viewModel.useCleanPowerUp()
@@ -810,7 +790,7 @@ fun PowerUpBar(
     onCleanClick: () -> Unit,
     onMergeClick: () -> Unit,
     viewModel: GameViewModel,
-    activity: Activity?, // Necesario para disparar el anuncio Reward
+    activity: Activity?,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -820,7 +800,6 @@ fun PowerUpBar(
         horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 1. CLEAN (AUTO) - Destello mágico
         PowerUpButton(
             label = stringResource(R.string.clean_powerup),
             icon = Icons.Default.AutoFixHigh,
@@ -830,7 +809,6 @@ fun PowerUpBar(
             onClick = onCleanClick
         )
 
-        // 2. MERGE (AUTO) - Estrellas
         PowerUpButton(
             label = stringResource(R.string.merge_powerup),
             icon = Icons.Default.AutoAwesome,
@@ -840,10 +818,9 @@ fun PowerUpBar(
             onClick = onMergeClick
         )
 
-        // 3. BORRADO MANUAL - Un destello sutil (Varita refinada)
         PowerUpButton(
             label = stringResource(R.string.powerup_clean_manual),
-            icon = Icons.Default.AutoFixNormal, // Menos cargado, más elegante
+            icon = Icons.Default.AutoFixNormal,
             color = Color(0xFFE07A5F),
             lastUseTime = 0L,
             viewModel = viewModel,
@@ -857,10 +834,9 @@ fun PowerUpBar(
             }
         )
 
-        // 4. FUSIÓN VOLUNTARIA - Símbolo de Infinito/Unión suave
         PowerUpButton(
             label = stringResource(R.string.powerup_merge_manual),
-            icon = Icons.Default.AllInclusive, // Curvas suaves, representa unión eterna
+            icon = Icons.Default.AllInclusive,
             color = Color(0xFF6C63FF),
             lastUseTime = 0L,
             viewModel = viewModel,
@@ -883,12 +859,10 @@ private fun PowerUpButton(
     color: Color,
     lastUseTime: Long,
     viewModel: GameViewModel,
-    forceAdMode: Boolean = false, // Nueva bandera para los nuevos botones
+    forceAdMode: Boolean = false,
     onClick: () -> Unit
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
-
-    // Si es manual, nunca está "disponible" por tiempo, siempre es por anuncio
     val isAvailable = !forceAdMode && viewModel.isPowerUpAvailable(lastUseTime, currentTime)
     val remainingText = if (forceAdMode) "" else viewModel.getRemainingTime(lastUseTime, currentTime)
 
@@ -1024,7 +998,6 @@ private fun TimerDisplay(
     accentColor: Color = Color(0xFFE07A5F),
     textColor: Color = Color(0xFF3D405B)
 ) {
-    // Animación de color: Rojo si es tiempo bajo, gris oscuro si es normal
     val animatedTextColor by animateColorAsState(
         targetValue = if (isLowTime) accentColor else textColor.copy(alpha = 0.7f),
         animationSpec = tween(300),
@@ -1033,7 +1006,6 @@ private fun TimerDisplay(
 
     val isCritical = seconds <= 5 && isLowTime
 
-    // 1️⃣ ANIMACIÓN DE ESCALA (Pulso cardíaco)
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -1045,7 +1017,6 @@ private fun TimerDisplay(
         label = "scale"
     )
 
-    // 2️⃣ ANIMACIÓN DE TEMBLOR (Shake)
     val shakeOffset by infiniteTransition.animateFloat(
         initialValue = -2f,
         targetValue = 2f,
@@ -1058,9 +1029,9 @@ private fun TimerDisplay(
 
     Row(
         modifier = modifier
-            .scale(scale) // Aplicamos el pulso
+            .scale(scale)
             .graphicsLayer {
-                if (isCritical) translationX = shakeOffset // Aplicamos el temblor
+                if (isCritical) translationX = shakeOffset
             },
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1152,15 +1123,12 @@ private fun GameBoard(
     modifier: Modifier = Modifier
 ) {
     val gridSize = state.boardSize
-
-    // 🚀 Ajuste: Ahora consideramos "grande" desde 4x4 para que gane espacio
     val isLargeGrid = gridSize >= 4
 
-    // Reducción agresiva de paddings según el tamaño del tablero
     val boardPadding = when {
-        gridSize >= 5 -> 0.dp  // Máxima expansión para 5x5 y 6x6
-        gridSize == 4 -> 2.dp  // Expansión notable para 4x4
-        else -> 8.dp           // El 3x3 mantiene su diseño original
+        gridSize >= 5 -> 0.dp
+        gridSize == 4 -> 2.dp
+        else -> 8.dp
     }
 
     Box(
@@ -1171,15 +1139,14 @@ private fun GameBoard(
                 shape = RoundedCornerShape(20.dp)
             )
             .border(
-                // Borde más delgado para tableros con muchas fichas
                 width = if (isLargeGrid) 1.dp else 3.dp,
                 color = currentTheme.accentColor.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(20.dp)
             ),
         contentAlignment = Alignment.Center
     ) {
-        // La key con boardSize asegura que el layout se recalcule al cambiar de nivel
-        key(selectedShapeType, gridSize) {
+        // 🔥 OPTIMIZACIÓN: Solo se recrea el display si cambia el tamaño
+        key(gridSize) {
             BoardDisplay(
                 state = state,
                 viewModel = viewModel,
@@ -1191,11 +1158,9 @@ private fun GameBoard(
             )
         }
 
-        // CAPA DE PUNTOS FLOTANTES
         viewModel.floatingScores.forEach { score ->
             key(score.id) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    // tileSize dinámico basado en el ancho real que quedó tras quitar los paddings
                     val tileSize = maxWidth / gridSize
 
                     FloatingScore(
@@ -1221,7 +1186,6 @@ private fun GameFooter(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Contador de movimientos
         StatCard(
             icon = Icons.Default.Flag,
             value = state.moveCount.toString(),
@@ -1229,7 +1193,6 @@ private fun GameFooter(
             color = Color(0xFF81B29A)
         )
 
-        // Temporizador
         Box(modifier = Modifier.padding(horizontal = 8.dp)) {
             TimerDisplay(
                 seconds = state.elapsedTime,
@@ -1238,7 +1201,6 @@ private fun GameFooter(
             )
         }
 
-        // Puntuación
         if (state.score > 0) {
             StatCard(
                 icon = Icons.Default.Flag,
@@ -1256,7 +1218,6 @@ private fun AnimatedLevelDisplay(
     modifier: Modifier = Modifier,
     textColor: Color
 ) {
-    // ✨ ANIMACIÓN: Usamos AnimatedContent para efecto "slot machine" al subir de nivel
     AnimatedContent(
         targetState = level,
         transitionSpec = {
@@ -1327,7 +1288,6 @@ private fun StatCard(
                 modifier = Modifier.size(15.dp)
             )
             Spacer(Modifier.width(6.dp))
-            // ✨ ANIMACIÓN: Usamos BouncingText para que los números reboten al cambiar
             BouncingText(
                 text = value,
                 fontSize = 20.sp,
@@ -1344,67 +1304,54 @@ private fun StatCard(
     }
 }
 
+// 🔥 OPTIMIZACIÓN GIGANTE: SoundPool en lugar de MediaPlayer para latencia 0 y menos RAM
 private class GameAudioManager(private val context: android.content.Context) {
-    private var movePlayer: MediaPlayer? = null
-    private var victoryPlayer: MediaPlayer? = null
+    private var soundPool: SoundPool? = null
+    private var moveSoundId: Int = 0
+    private var victorySoundId: Int = 0
+    private var loaded = false
 
     fun initialize() {
         try {
-            movePlayer = MediaPlayer.create(context, com.korkoor.pardos.R.raw.move_pop)?.apply {
-                setVolume(0.7f, 0.7f)
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+
+            soundPool = SoundPool.Builder()
+                .setMaxStreams(5) // Permite hasta 5 sonidos simultáneos sin crashear
+                .setAudioAttributes(audioAttributes)
+                .build()
+
+            soundPool?.setOnLoadCompleteListener { _, _, status ->
+                if (status == 0) loaded = true
             }
-            victoryPlayer = MediaPlayer.create(context, com.korkoor.pardos.R.raw.victory_sound)?.apply {
-                setVolume(0.8f, 0.8f)
-            }
+
+            moveSoundId = soundPool?.load(context, com.korkoor.pardos.R.raw.move_pop, 1) ?: 0
+            victorySoundId = soundPool?.load(context, com.korkoor.pardos.R.raw.victory_sound, 1) ?: 0
         } catch (e: Exception) {
-            android.util.Log.e("GameAudio", "Error initializing audio", e)
+            android.util.Log.e("GameAudio", "Error initializing SoundPool", e)
         }
     }
 
     fun playMoveSound() {
-        movePlayer?.apply {
-            try {
-                if (isPlaying) {
-                    pause()
-                    seekTo(0)
-                }
-                start()
-            } catch (e: Exception) {
-                android.util.Log.e("GameAudio", "Error playing move sound", e)
-            }
+        if (loaded && moveSoundId != 0) {
+            soundPool?.play(moveSoundId, 0.7f, 0.7f, 1, 0, 1f)
         }
     }
 
     fun playVictorySound() {
-        victoryPlayer?.apply {
-            try {
-                if (isPlaying) {
-                    pause()
-                    seekTo(0)
-                }
-                start()
-            } catch (e: Exception) {
-                android.util.Log.e("GameAudio", "Error playing victory sound", e)
-            }
+        if (loaded && victorySoundId != 0) {
+            soundPool?.play(victorySoundId, 0.8f, 0.8f, 1, 0, 1f)
         }
     }
 
     fun release() {
-        try {
-            movePlayer?.release()
-            victoryPlayer?.release()
-        } catch (e: Exception) {
-            android.util.Log.e("GameAudio", "Error releasing audio", e)
-        } finally {
-            movePlayer = null
-            victoryPlayer = null
-        }
+        soundPool?.release()
+        soundPool = null
+        loaded = false
     }
 }
-
-// ============================================================================
-// EXTENSIONES DE UTILIDAD
-// ============================================================================
 
 fun Long.formatTime(): String {
     val totalSeconds = this / 1000
@@ -1412,8 +1359,6 @@ fun Long.formatTime(): String {
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)
 }
-
-
 
 val GameMode.displayResId: Int
     get() = when (this) {

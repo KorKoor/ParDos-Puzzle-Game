@@ -1,15 +1,31 @@
-*.iml
+# Carpetas de construcción y caché
 .gradle
-/local.properties
+/build
+.externalNativeBuild
+.cxx
+/captures
+
+# Archivos de configuración de Android Studio e IntelliJ
+*.iml
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+/.idea/deploymentTargetSelector.xml
+
+# Configuración local del usuario (Ruta del SDK, etc.)
 local.properties
+
+# Archivos de sistema
+.DS_Store
+
+# Seguridad y Firebase
+google-services.json
+*.jks
+*.keystore
+secrets.properties
+
+# Kotlin
+.kotlin
