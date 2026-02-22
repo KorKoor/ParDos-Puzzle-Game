@@ -322,4 +322,26 @@
     <string name="accessible_mode_announce_move_blocked">Move %1$s produced no changes on the board.</string>
     <string name="accessible_mode_announce_game_over">Game over. No moves remain.</string>
     <string name="accessible_mode_announce_level_complete">Objective reached. Level completed.</string>
+    <string name="accessible_mode_goal_title">Game objective</string>
+    <string name="accessible_mode_objective_summary">Your goal is to create tile %1$d on a %2$dx%3$d board.</string>
+    <string name="accessible_mode_repeat_objective">Repeat objective</string>
+    <string name="accessible_mode_open_tutorial">Open guided tutorial</string>
+    <string name="accessible_mode_quick_help_title">What to do now</string>
+    <string name="accessible_mode_repeat_help">Repeat quick help</string>
+    <string name="accessible_mode_repeat_board">Repeat board</string>
+    <string name="accessible_mode_hint_playing">Make a move with the direction buttons. When equal tiles collide, they merge.</string>
+    <string name="accessible_mode_hint_level_complete">Objective completed. You can start a new match or exit.</string>
+    <string name="accessible_mode_hint_game_over">No valid moves left. Start a new match to continue.</string>
+    <string name="accessible_mode_announce_tutorial_opened">Tutorial opened. Follow each step to learn screen reader play.</string>
+    <string name="accessible_tutorial_step_title">Tutorial %1$d of %2$d</string>
+    <string name="accessible_tutorial_next">Next step</string>
+    <string name="accessible_tutorial_previous">Previous step</string>
+    <string name="accessible_tutorial_finish">Got it</string>
+    <string name="accessible_tutorial_close">Close tutorial</string>
+    <string name="accessible_tutorial_step_1">Objective: create tile %1$d. As soon as that tile appears, you win.</string>
+    <string name="accessible_tutorial_step_2">Controls: use Move up, down, left and right. Each button shifts all tiles in that direction.</string>
+    <string name="accessible_tutorial_step_3">Core rule: if two tiles with the same value touch, they merge into a bigger tile.</string>
+    <string name="accessible_tutorial_step_4">Status reading: use Repeat status to hear score, moves, highest tile and empty spaces.</string>
+    <string name="accessible_tutorial_step_5">Board reading: each row is read left to right. Use Repeat board whenever you need it.</string>
+    <string name="accessible_tutorial_step_6">Recommended strategy: keep your highest tile in one corner and avoid filling the board.</string>
 </resources>

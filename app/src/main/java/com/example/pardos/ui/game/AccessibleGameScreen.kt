@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -52,6 +53,9 @@ fun AccessibleGameScreen(
     val accessibilityManager = remember(context) {
         context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager
     }
+    val prefs = remember(context) {
+        context.getSharedPreferences("pardos_accessibility", Context.MODE_PRIVATE)
+    }
 
     val announce = remember(view, accessibilityManager) {
         { message: String ->
@@ -73,17 +77,45 @@ fun AccessibleGameScreen(
         )
     }
 
+    var tutorialVisible by rememberSaveable { mutableStateOf(false) }
+    var tutorialStepIndex by rememberSaveable { mutableStateOf(0) }
+
+    val tutorialSteps = remember(state.levelLimit, state.boardSize) {
+        context.buildTutorialSteps(state)
+    }
+
+    fun closeTutorial() {
+        tutorialVisible = false
+        prefs.edit().putBoolean("tutorial_seen_v1", true).apply()
+    }
+
     LaunchedEffect(Unit) {
         startAccessibleMatch()
         announce(context.getString(R.string.accessible_mode_announce_started))
+
+        val seenTutorial = prefs.getBoolean("tutorial_seen_v1", false)
+        if (!seenTutorial) {
+            tutorialVisible = true
+            tutorialStepIndex = 0
+            announce(context.getString(R.string.accessible_mode_announce_tutorial_opened))
+        }
+    }
+
+    LaunchedEffect(tutorialVisible, tutorialStepIndex, tutorialSteps) {
+        if (tutorialVisible && tutorialSteps.isNotEmpty()) {
+            announce(tutorialSteps[tutorialStepIndex])
+        }
     }
 
     var pendingDirection by remember { mutableStateOf<Direction?>(null) }
     var previousState by remember { mutableStateOf(AccessibleBoardSnapshot.from(state)) }
 
     val controlsEnabled = !state.isGameOver && !state.isLevelCompleted && !viewModel.showLevelSummary
+    val objectiveText = remember(state.levelLimit, state.boardSize) { context.buildObjectiveSummary(state) }
+    val quickHelpText = remember(state.levelLimit, state.isLevelCompleted, state.isGameOver) { context.buildNextActionHint(state) }
     val statusText = remember(state) { context.buildStatusSummary(state) }
     val boardRows = remember(state) { context.buildBoardRows(state) }
+    val boardSummaryText = remember(boardRows) { boardRows.joinToString(separator = ". ") }
 
     LaunchedEffect(state.tiles, state.score, state.moveCount, state.isGameOver, state.isLevelCompleted) {
         pendingDirection?.let { direction ->
@@ -168,6 +200,71 @@ fun AccessibleGameScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.accessible_mode_goal_title),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = objectiveText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                )
+
+                OutlinedButton(
+                    onClick = { announce(objectiveText) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.accessible_mode_repeat_objective))
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        tutorialStepIndex = 0
+                        tutorialVisible = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.accessible_mode_open_tutorial))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.accessible_mode_quick_help_title),
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = quickHelpText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                )
+                OutlinedButton(
+                    onClick = { announce(quickHelpText) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.accessible_mode_repeat_help))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
                     .padding(14.dp)
             ) {
                 Text(
@@ -203,6 +300,12 @@ fun AccessibleGameScreen(
                 HorizontalDivider()
                 boardRows.forEach { row ->
                     Text(text = row, style = MaterialTheme.typography.bodyMedium)
+                }
+                OutlinedButton(
+                    onClick = { announce(boardSummaryText) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(R.string.accessible_mode_repeat_board))
                 }
             }
         }
@@ -271,6 +374,43 @@ fun AccessibleGameScreen(
         }
     }
 
+    if (tutorialVisible) {
+        val stepTitle = stringResource(
+            R.string.accessible_tutorial_step_title,
+            tutorialStepIndex + 1,
+            tutorialSteps.size
+        )
+        val stepText = tutorialSteps[tutorialStepIndex]
+
+        AlertDialog(
+            onDismissRequest = { closeTutorial() },
+            title = { Text(text = stepTitle) },
+            text = { Text(text = stepText) },
+            confirmButton = {
+                if (tutorialStepIndex < tutorialSteps.lastIndex) {
+                    TextButton(onClick = { tutorialStepIndex += 1 }) {
+                        Text(text = stringResource(R.string.accessible_tutorial_next))
+                    }
+                } else {
+                    TextButton(onClick = { closeTutorial() }) {
+                        Text(text = stringResource(R.string.accessible_tutorial_finish))
+                    }
+                }
+            },
+            dismissButton = {
+                if (tutorialStepIndex > 0) {
+                    TextButton(onClick = { tutorialStepIndex -= 1 }) {
+                        Text(text = stringResource(R.string.accessible_tutorial_previous))
+                    }
+                } else {
+                    TextButton(onClick = { closeTutorial() }) {
+                        Text(text = stringResource(R.string.accessible_tutorial_close))
+                    }
+                }
+            }
+        )
+    }
+
     if (viewModel.showLevelSummary || state.isLevelCompleted) {
         AlertDialog(
             onDismissRequest = {},
@@ -306,6 +446,34 @@ fun AccessibleGameScreen(
             }
         )
     }
+}
+
+private fun Context.buildObjectiveSummary(state: BoardState): String {
+    return getString(
+        R.string.accessible_mode_objective_summary,
+        state.levelLimit,
+        state.boardSize,
+        state.boardSize
+    )
+}
+
+private fun Context.buildNextActionHint(state: BoardState): String {
+    return when {
+        state.isGameOver -> getString(R.string.accessible_mode_hint_game_over)
+        state.isLevelCompleted -> getString(R.string.accessible_mode_hint_level_complete)
+        else -> getString(R.string.accessible_mode_hint_playing)
+    }
+}
+
+private fun Context.buildTutorialSteps(state: BoardState): List<String> {
+    return listOf(
+        getString(R.string.accessible_tutorial_step_1, state.levelLimit),
+        getString(R.string.accessible_tutorial_step_2),
+        getString(R.string.accessible_tutorial_step_3),
+        getString(R.string.accessible_tutorial_step_4),
+        getString(R.string.accessible_tutorial_step_5),
+        getString(R.string.accessible_tutorial_step_6)
+    )
 }
 
 private fun Context.buildStatusSummary(state: BoardState): String {
