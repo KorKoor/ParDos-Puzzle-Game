@@ -11,6 +11,8 @@
     <string name="menu_records">RÉCORDS</string>
     <string name="menu_achievements">LOGROS</string>
     <string name="menu_daily_challenge">RETO DIARIO</string>
+    <string name="menu_profile">PERFIL</string>
+    <string name="menu_friends">AMIGOS</string>
     <string name="menu_version_info">VERSIÓN 2.0 • 2026</string>
 
     <string name="mode_selection_subtitle">MODO DE JUEGO</string>
@@ -302,7 +304,9 @@
 
     <string name="accessible_mode_title">Modo Accesible</string>
     <string name="accessible_mode_subtitle">Control por botones y lectura guiada del tablero</string>
+    <string name="accessible_mode_subtitle_simple">Interfaz simplificada para jugar con lector de pantalla.</string>
     <string name="accessible_mode_status_summary">Puntos %1$d. Movimientos %2$d. Ficha mayor %3$d. Espacios libres %4$d.</string>
+    <string name="accessible_mode_repeat_summary">Repetir resumen</string>
     <string name="accessible_mode_repeat_status">Repetir estado</string>
     <string name="accessible_mode_board_title">Estado del tablero</string>
     <string name="accessible_mode_controls_title">Controles de movimiento</string>
@@ -314,15 +318,25 @@
     <string name="accessible_mode_row_format">Fila %1$d: %2$s</string>
     <string name="accessible_mode_new_match">Nueva partida</string>
     <string name="accessible_mode_exit_app">Salir de la app</string>
+    <string name="accessible_mode_exit_to_menu">Volver al menu</string>
+    <string name="accessible_mode_show_board">Mostrar tablero</string>
+    <string name="accessible_mode_hide_board">Ocultar tablero</string>
+    <string name="accessible_mode_board_shown">Tablero visible.</string>
+    <string name="accessible_mode_board_hidden">Tablero oculto.</string>
     <string name="accessible_mode_win_title">Nivel completado</string>
     <string name="accessible_mode_win_body">Llegaste al objetivo. Puedes iniciar una nueva partida accesible.</string>
     <string name="accessible_mode_game_over_title">Partida terminada</string>
     <string name="accessible_mode_game_over_body">No quedan movimientos posibles en el tablero.</string>
     <string name="accessible_mode_announce_started">Modo accesible activado. Usa los botones de dirección para jugar.</string>
     <string name="accessible_mode_announce_move_success">%1$s aplicado. Puntos %2$d, movimientos %3$d, ficha mayor %4$d, espacios libres %5$d.</string>
+    <string name="accessible_mode_announce_new_tile">Nueva ficha generada: %1$d.</string>
+    <string name="accessible_mode_announce_new_tile_common_two">Nueva ficha generada: 2. Es normal que 2 aparezca la mayoria de veces.</string>
     <string name="accessible_mode_announce_move_blocked">Movimiento %1$s sin cambios en el tablero.</string>
     <string name="accessible_mode_announce_game_over">Partida terminada. No quedan movimientos.</string>
     <string name="accessible_mode_announce_level_complete">Objetivo alcanzado. Nivel completado.</string>
+    <string name="accessible_menu_title">Menú accesible</string>
+    <string name="accessible_menu_subtitle">Mismas opciones del menú normal en formato lineal para lector de pantalla.</string>
+    <string name="accessible_menu_announce_ready">Menú accesible listo. Opciones: jugar, personalizar, reto diario, perfil, amigos, récords y logros.</string>
     <string name="accessible_mode_goal_title">Objetivo del juego</string>
     <string name="accessible_mode_objective_summary">Tu meta es crear la ficha %1$d en un tablero de %2$dx%3$d.</string>
     <string name="accessible_mode_repeat_objective">Repetir objetivo</string>
@@ -333,6 +347,8 @@
     <string name="accessible_mode_hint_playing">Haz un movimiento con los botones. Si dos fichas iguales chocan, se fusionan.</string>
     <string name="accessible_mode_hint_level_complete">Ya cumpliste el objetivo. Puedes iniciar nueva partida o salir.</string>
     <string name="accessible_mode_hint_game_over">No hay movimientos validos. Inicia nueva partida para continuar.</string>
+    <string name="accessible_mode_last_spawn_value">Ultima ficha nueva: %1$d.</string>
+    <string name="accessible_mode_spawn_rule_short">Regla de aparicion: normalmente sale 2, y algunas veces 4 o valores mayores.</string>
     <string name="accessible_mode_announce_tutorial_opened">Tutorial abierto. Sigue los pasos para aprender a jugar con lector.</string>
     <string name="accessible_tutorial_step_title">Tutorial %1$d de %2$d</string>
     <string name="accessible_tutorial_next">Siguiente paso</string>
@@ -345,5 +361,6 @@
     <string name="accessible_tutorial_step_4">Lectura del estado: usa repetir estado para escuchar puntos, movimientos, ficha mayor y espacios libres.</string>
     <string name="accessible_tutorial_step_5">Lectura del tablero: en estado del tablero cada fila se lee de izquierda a derecha. Usa repetir tablero cuando lo necesites.</string>
     <string name="accessible_tutorial_step_6">Estrategia recomendada: intenta mantener tu ficha mayor en una esquina y evita llenar todo el tablero.</string>
+    <string name="accessible_tutorial_step_7">Aparicion de fichas: lo mas comun es que salga 2. Tambien pueden salir 4 y, en ciertos niveles, valores mayores.</string>
 
 </resources>

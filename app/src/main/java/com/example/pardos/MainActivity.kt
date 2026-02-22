@@ -38,6 +38,7 @@ import com.korkoor.pardos.ui.game.AchievementsScreen
 import com.korkoor.pardos.ui.game.GameScreen
 import com.korkoor.pardos.ui.game.GameViewModel
 import com.korkoor.pardos.ui.menu.AnimatedSplashScreen
+import com.korkoor.pardos.ui.menu.AccessibleMenuScreen
 import com.korkoor.pardos.ui.menu.CustomLevelScreen
 import com.korkoor.pardos.ui.menu.LevelSelectorScreen
 import com.korkoor.pardos.ui.menu.MenuScreen
@@ -151,18 +152,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                var currentScreen by remember {
-                    mutableStateOf<Screen>(if (isScreenReaderEnabled) Screen.AccessibilityGame else Screen.Splash)
-                }
+                var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
                 val currentTheme = themeViewModel.currentTheme
-
-                LaunchedEffect(isScreenReaderEnabled) {
-                    if (isScreenReaderEnabled && currentScreen != Screen.AccessibilityGame) {
-                        Log.d(TAG, "Switching to accessibility mode")
-                        gameViewModel.resetGameSession()
-                        currentScreen = Screen.AccessibilityGame
-                    }
-                }
 
                 LaunchedEffect(gameViewModel.dailyChallengeThemeIndex) {
                     gameViewModel.dailyChallengeThemeIndex?.let { index ->
@@ -185,30 +176,70 @@ class MainActivity : ComponentActivity() {
 
                             Screen.Menu -> {
                                 SideEffect { gameViewModel.resetGameSession() }
-                                MenuScreen(
-                                    onPlayClick = { currentScreen = Screen.ModeSelection },
-                                    onCustomClick = { currentScreen = Screen.CustomLevel },
-                                    onRecordsClick = { currentScreen = Screen.Records },
-                                    onAchievementsClick = { currentScreen = Screen.Achievements },
-                                    onDailyChallengeClick = {
-                                        gameViewModel.setupDailyChallenge()
-                                        currentScreen = Screen.Game
-                                    },
-                                    onProfileClick = { currentScreen = Screen.Profile },
-                                    onFriendsClick = { currentScreen = Screen.Friends },
-                                    themeViewModel = themeViewModel
-                                )
+                                val onPlayAction = {
+                                    if (isScreenReaderEnabled) {
+                                        gameViewModel.updateAccessibilitySpawnAssist(true)
+                                        gameViewModel.setupCustomGame(
+                                            size = 4,
+                                            target = 128,
+                                            allowPowerUps = false,
+                                            difficulty = "Zen",
+                                            level = 1,
+                                            initialScore = 0,
+                                            isCustom = true
+                                        )
+                                        currentScreen = Screen.AccessibilityGame
+                                    } else {
+                                        gameViewModel.updateAccessibilitySpawnAssist(false)
+                                        currentScreen = Screen.ModeSelection
+                                    }
+                                }
+                                val onCustomAction = { currentScreen = Screen.CustomLevel }
+                                val onRecordsAction = { currentScreen = Screen.Records }
+                                val onAchievementsAction = { currentScreen = Screen.Achievements }
+                                val onDailyChallengeAction = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(isScreenReaderEnabled)
+                                    gameViewModel.setupDailyChallenge()
+                                    currentScreen = if (isScreenReaderEnabled) Screen.AccessibilityGame else Screen.Game
+                                }
+                                val onProfileAction = { currentScreen = Screen.Profile }
+                                val onFriendsAction = { currentScreen = Screen.Friends }
+
+                                if (isScreenReaderEnabled) {
+                                    AccessibleMenuScreen(
+                                        onPlayClick = onPlayAction,
+                                        onCustomClick = onCustomAction,
+                                        onRecordsClick = onRecordsAction,
+                                        onAchievementsClick = onAchievementsAction,
+                                        onDailyChallengeClick = onDailyChallengeAction,
+                                        onProfileClick = onProfileAction,
+                                        onFriendsClick = onFriendsAction
+                                    )
+                                } else {
+                                    MenuScreen(
+                                        onPlayClick = onPlayAction,
+                                        onCustomClick = onCustomAction,
+                                        onRecordsClick = onRecordsAction,
+                                        onAchievementsClick = onAchievementsAction,
+                                        onDailyChallengeClick = onDailyChallengeAction,
+                                        onProfileClick = onProfileAction,
+                                        onFriendsClick = onFriendsAction,
+                                        themeViewModel = themeViewModel
+                                    )
+                                }
                             }
 
                             Screen.AccessibilityGame -> {
+                                SideEffect { gameViewModel.updateAccessibilitySpawnAssist(true) }
                                 com.korkoor.pardos.ui.game.AccessibleGameScreen(
                                     viewModel = gameViewModel,
-                                    onExitApp = { finish() }
+                                    onExitApp = { currentScreen = Screen.Menu }
                                 )
                             }
 
                             Screen.ModeSelection -> ModeSelectionScreen(
                                 onModeSelected = { mode ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
                                     if (mode == GameMode.CLASICO) {
                                         currentScreen = Screen.LevelSelector
                                     } else {
@@ -224,6 +255,7 @@ class MainActivity : ComponentActivity() {
                                 levels = allLevels,
                                 currentTheme = currentTheme,
                                 onLevelSelected = { selectedLevel ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.setupCustomGame(
                                         size = ProgressionEngine.calculateBoardSize(selectedLevel.target),
                                         target = selectedLevel.target,
@@ -240,6 +272,7 @@ class MainActivity : ComponentActivity() {
                                 viewModel = gameViewModel,
                                 themeViewModel = themeViewModel,
                                 onBackToMenu = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.resetGameSession()
                                     currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) {
                                         Screen.LevelSelector
@@ -251,8 +284,9 @@ class MainActivity : ComponentActivity() {
 
                             Screen.CustomLevel -> CustomLevelScreen(
                                 onStartCustom = { size, targetVal, allowPowerUps, difficulty ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(isScreenReaderEnabled)
                                     gameViewModel.setupCustomGame(size, targetVal, allowPowerUps, difficulty, isCustom = true)
-                                    currentScreen = Screen.Game
+                                    currentScreen = if (isScreenReaderEnabled) Screen.AccessibilityGame else Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu },
                                 currentTheme = currentTheme
