@@ -300,4 +300,28 @@
     <string name="powerup_manual_instruction_clean">Toca una ficha para borrarla</string>
     <string name="powerup_manual_instruction_merge">Toca dos fichas iguales</string>
 
+    <string name="accessible_mode_title">Modo Accesible</string>
+    <string name="accessible_mode_subtitle">Control por botones y lectura guiada del tablero</string>
+    <string name="accessible_mode_status_summary">Puntos %1$d. Movimientos %2$d. Ficha mayor %3$d. Espacios libres %4$d.</string>
+    <string name="accessible_mode_repeat_status">Repetir estado</string>
+    <string name="accessible_mode_board_title">Estado del tablero</string>
+    <string name="accessible_mode_controls_title">Controles de movimiento</string>
+    <string name="accessible_move_up">Mover arriba</string>
+    <string name="accessible_move_down">Mover abajo</string>
+    <string name="accessible_move_left">Mover izquierda</string>
+    <string name="accessible_move_right">Mover derecha</string>
+    <string name="accessible_mode_cell_empty">vacío</string>
+    <string name="accessible_mode_row_format">Fila %1$d: %2$s</string>
+    <string name="accessible_mode_new_match">Nueva partida</string>
+    <string name="accessible_mode_exit_app">Salir de la app</string>
+    <string name="accessible_mode_win_title">Nivel completado</string>
+    <string name="accessible_mode_win_body">Llegaste al objetivo. Puedes iniciar una nueva partida accesible.</string>
+    <string name="accessible_mode_game_over_title">Partida terminada</string>
+    <string name="accessible_mode_game_over_body">No quedan movimientos posibles en el tablero.</string>
+    <string name="accessible_mode_announce_started">Modo accesible activado. Usa los botones de dirección para jugar.</string>
+    <string name="accessible_mode_announce_move_success">%1$s aplicado. Puntos %2$d, movimientos %3$d, ficha mayor %4$d, espacios libres %5$d.</string>
+    <string name="accessible_mode_announce_move_blocked">Movimiento %1$s sin cambios en el tablero.</string>
+    <string name="accessible_mode_announce_game_over">Partida terminada. No quedan movimientos.</string>
+    <string name="accessible_mode_announce_level_complete">Objetivo alcanzado. Nivel completado.</string>
+
 </resources>

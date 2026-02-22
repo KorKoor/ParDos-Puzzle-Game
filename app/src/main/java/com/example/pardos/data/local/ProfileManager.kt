@@ -4,13 +4,32 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.util.Log
-import com.google.firebase.firestore.FieldPath
+import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.korkoor.pardos.domain.model.UserProfile
 
 class ProfileManager(private val context: Context) {
+    companion object {
+        private const val TAG = "ProfileManager"
+    }
+
     private val prefs: SharedPreferences = context.getSharedPreferences("pardos_profile", Context.MODE_PRIVATE)
-    private val db = FirebaseFirestore.getInstance()
+    private val db: FirebaseFirestore? by lazy {
+        try {
+            val app = FirebaseApp.initializeApp(context) ?: FirebaseApp.getApps(context).firstOrNull()
+            if (app == null) {
+                Log.w(TAG, "Firebase no configurado. Se desactiva sincronizacion en la nube.")
+                null
+            } else {
+                FirebaseFirestore.getInstance(app).also {
+                    Log.d(TAG, "FirebaseFirestore inicializado correctamente.")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "No se pudo inicializar FirebaseFirestore: ${e.message}")
+            null
+        }
+    }
 
     // 🔥 EL SECRETO DE LA PERSISTENCIA
     // Genera un ID único para el dispositivo que sobrevive a las reinstalaciones
@@ -155,25 +174,29 @@ class ProfileManager(private val context: Context) {
     }
 
     private fun syncToFirebase() {
-        val profile = getProfile()
-
-        // 🛡️ ESCUDO: Si el perfil es nivel 1, tiene 0 XP y se llama "Jugador Zen",
-        // es muy probable que sea un perfil recién creado tras reinstalar.
-        // NO lo subimos para no borrar lo que ya existe en la nube.
-        if (profile.playerLevel == 1 && profile.currentXp == 0 && profile.name == "Jugador Zen") {
-            Log.d("ProfileManager", "⚠️ Perfil inicial detectado. No se subirá a la nube para evitar sobreescritura.")
+        val firestore = db
+        if (firestore == null) {
+            Log.w(TAG, "Sync omitido: Firebase no esta disponible en este build.")
             return
         }
 
-        db.collection("users").document(profile.uid)
+        val profile = getProfile()
+        if (profile.playerLevel == 1 && profile.currentXp == 0 && profile.name == "Jugador Zen") {
+            Log.d(TAG, "Perfil inicial detectado. No se sube para evitar sobreescritura.")
+            return
+        }
+
+        firestore.collection("users").document(profile.uid)
             .set(profile)
             .addOnSuccessListener {
-                Log.d("ProfileManager", "✅ Sincronizado correctamente.")
+                Log.d(TAG, "Sincronizado en Firebase correctamente.")
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Fallo sincronizando en Firebase: ${e.message}")
             }
     }
 
     fun addFriendByCode(friendUid: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
-        // Validación inmediata
         if (friendUid.isBlank()) {
             onError("Código vacío.")
             return
@@ -184,7 +207,14 @@ class ProfileManager(private val context: Context) {
             return
         }
 
-        db.collection("users").document(friendUid).get()
+        val firestore = db
+        if (firestore == null) {
+            onError("Funciones sociales no disponibles: Firebase no configurado.")
+            Log.w(TAG, "addFriendByCode cancelado: Firebase no disponible.")
+            return
+        }
+
+        firestore.collection("users").document(friendUid).get()
             .addOnSuccessListener { document ->
                 if (document.exists()) {
                     val friendName = document.getString("name") ?: "Jugador"
@@ -196,21 +226,15 @@ class ProfileManager(private val context: Context) {
                         friendsSet.add(friendUid)
                         prefs.edit().putStringSet("friends_list", friendsSet).apply()
 
-                        // Reflejamos los cambios en el modelo de datos y sincronizamos
                         val currentProfile = getProfile()
                         val updatedProfile = currentProfile.copy(friendsUids = friendsSet.toList())
                         saveProfile(updatedProfile)
 
-                        // 🥇 Insignia Social (1 amigo)
                         unlockSocialBadge()
 
-                        // 🔥 NUEVO: Insignia Influencer Zen (3 amigos) 🔥
                         if (friendsSet.size >= 3) {
                             if (!prefs.getBoolean("badge_influencer_unlocked", false)) {
                                 prefs.edit().putBoolean("badge_influencer_unlocked", true).apply()
-
-                                // Volvemos a guardar el perfil para que Firebase detecte
-                                // que la insignia se desbloqueó (por si acaso la usas en la nube)
                                 saveProfile(getProfile())
                             }
                         }
@@ -239,26 +263,30 @@ class ProfileManager(private val context: Context) {
     // Dentro de tu archivo ProfileManager.kt
 
     fun getFriendsProfiles(onComplete: (List<UserProfile>) -> Unit) {
+        val firestore = db
+        if (firestore == null) {
+            Log.w(TAG, "getFriendsProfiles: Firebase no disponible. Regresando lista vacia.")
+            onComplete(emptyList())
+            return
+        }
+
         val currentFriends = getProfile().friendsUids
         if (currentFriends.isEmpty()) {
             onComplete(emptyList())
             return
         }
 
-        // 🔥 CUIDADO: Firestore no permite buscar más de 10 amigos de golpe con 'whereIn'.
-        // Si un jugador tiene 15 amigos, la app crashearía. Por eso lo dividimos en bloques (chunks) de 10.
         val chunks = currentFriends.chunked(10)
         val allFriends = mutableListOf<UserProfile>()
         var completedChunks = 0
 
         for (chunk in chunks) {
-            // Buscamos directamente por el ID del documento, es más rápido y seguro
-            db.collection("users").whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
+            firestore.collection("users").whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
                 .addOnSuccessListener { snapshot ->
                     val friendsInChunk = snapshot.documents.mapNotNull { doc ->
                         try {
                             UserProfile(
-                                uid = doc.id, // Tomamos el ID directo del documento
+                                uid = doc.id,
                                 name = doc.getString("name") ?: "Jugador Zen",
                                 avatarId = doc.getLong("avatarId")?.toInt() ?: 1,
                                 playerLevel = doc.getLong("playerLevel")?.toInt() ?: 1,
@@ -279,8 +307,6 @@ class ProfileManager(private val context: Context) {
 
                     allFriends.addAll(friendsInChunk)
                     completedChunks++
-
-                    // Cuando terminemos de buscar todos los bloques, devolvemos la lista
                     if (completedChunks == chunks.size) {
                         onComplete(allFriends)
                     }
@@ -295,15 +321,19 @@ class ProfileManager(private val context: Context) {
     }
 
     fun syncFromFirebase(onResult: (UserProfile?) -> Unit) {
-        // 🔥 IMPORTANTE: Source.SERVER obliga a Firebase a ignorar la caché local
-        // y descargar los datos reales de la nube.
-        db.collection("users").document(deviceId)
+        val firestore = db
+        if (firestore == null) {
+            Log.w(TAG, "syncFromFirebase omitido: Firebase no disponible.")
+            onResult(null)
+            return
+        }
+
+        firestore.collection("users").document(deviceId)
             .get(com.google.firebase.firestore.Source.SERVER)
             .addOnSuccessListener { document ->
                 if (document.exists()) {
-                    Log.d("ProfileManager", "☁️ Datos encontrados en la nube para el ID: $deviceId")
+                    Log.d(TAG, "Datos encontrados en la nube para el ID: $deviceId")
 
-                    // Extraemos manualmente para evitar errores de parseo
                     val cloudProfile = UserProfile(
                         uid = document.getString("uid") ?: deviceId,
                         name = document.getString("name") ?: "Jugador Zen",
@@ -322,15 +352,16 @@ class ProfileManager(private val context: Context) {
 
                     onResult(cloudProfile)
                 } else {
-                    Log.d("ProfileManager", "☁️ El documento no existe en la nube.")
+                    Log.d(TAG, "El documento no existe en la nube.")
                     onResult(null)
                 }
             }
             .addOnFailureListener { e ->
-                Log.e("ProfileManager", "❌ Error descargando de Firestore: ${e.message}")
+                Log.e(TAG, "Error descargando de Firestore: ${e.message}")
                 onResult(null)
             }
     }
+
     fun migrateLegacyProgressIfNeeded(legacyCampaignLevel: Int) {
         val prefs = context.getSharedPreferences("pardos_profile", android.content.Context.MODE_PRIVATE)
         val hasMigrated = prefs.getBoolean("migrated_v1_to_v2", false)
@@ -377,3 +408,4 @@ class ProfileManager(private val context: Context) {
         }
     }
 }
+

@@ -298,4 +298,28 @@
     <string name="powerup_merge_manual">Fusion</string>
     <string name="powerup_manual_instruction_clean">Tap a tile to remove it</string>
     <string name="powerup_manual_instruction_merge">Tap two identical tiles</string>
+
+    <string name="accessible_mode_title">Accessible Mode</string>
+    <string name="accessible_mode_subtitle">Button controls and guided board reading</string>
+    <string name="accessible_mode_status_summary">Score %1$d. Moves %2$d. Highest tile %3$d. Empty spaces %4$d.</string>
+    <string name="accessible_mode_repeat_status">Repeat status</string>
+    <string name="accessible_mode_board_title">Board snapshot</string>
+    <string name="accessible_mode_controls_title">Movement controls</string>
+    <string name="accessible_move_up">Move up</string>
+    <string name="accessible_move_down">Move down</string>
+    <string name="accessible_move_left">Move left</string>
+    <string name="accessible_move_right">Move right</string>
+    <string name="accessible_mode_cell_empty">empty</string>
+    <string name="accessible_mode_row_format">Row %1$d: %2$s</string>
+    <string name="accessible_mode_new_match">New match</string>
+    <string name="accessible_mode_exit_app">Exit app</string>
+    <string name="accessible_mode_win_title">Level completed</string>
+    <string name="accessible_mode_win_body">You reached the objective. You can start a new accessible match.</string>
+    <string name="accessible_mode_game_over_title">Game over</string>
+    <string name="accessible_mode_game_over_body">No more valid moves remain on the board.</string>
+    <string name="accessible_mode_announce_started">Accessible mode enabled. Use direction buttons to play.</string>
+    <string name="accessible_mode_announce_move_success">%1$s applied. Score %2$d, moves %3$d, highest tile %4$d, empty spaces %5$d.</string>
+    <string name="accessible_mode_announce_move_blocked">Move %1$s produced no changes on the board.</string>
+    <string name="accessible_mode_announce_game_over">Game over. No moves remain.</string>
+    <string name="accessible_mode_announce_level_complete">Objective reached. Level completed.</string>
 </resources>
