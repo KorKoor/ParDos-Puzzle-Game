@@ -1,38 +1,48 @@
 package com.korkoor.pardos
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.korkoor.pardos.domain.model.GameMode
 import com.korkoor.pardos.domain.logic.ProgressionEngine
+import com.korkoor.pardos.domain.model.GameMode
 import com.korkoor.pardos.notifications.ZenNotificationManager
 import com.korkoor.pardos.ui.game.AchievementsScreen
 import com.korkoor.pardos.ui.game.GameScreen
 import com.korkoor.pardos.ui.game.GameViewModel
 import com.korkoor.pardos.ui.menu.AnimatedSplashScreen
+import com.korkoor.pardos.ui.menu.AccessibleMenuScreen
 import com.korkoor.pardos.ui.menu.CustomLevelScreen
+import com.korkoor.pardos.ui.menu.LevelSelectorScreen
 import com.korkoor.pardos.ui.menu.MenuScreen
 import com.korkoor.pardos.ui.menu.ModeSelectionScreen
-import com.korkoor.pardos.ui.menu.LevelSelectorScreen
 import com.korkoor.pardos.ui.records.RecordsScreen
 import com.korkoor.pardos.ui.theme.PardosTheme
 import com.korkoor.pardos.ui.theme.ThemeViewModel
@@ -40,6 +50,7 @@ import com.korkoor.pardos.ui.theme.ThemeViewModel
 sealed class Screen {
     data object Splash : Screen()
     data object Menu : Screen()
+    data object AccessibilityGame : Screen()
     data object ModeSelection : Screen()
     data object Game : Screen()
     data object CustomLevel : Screen()
@@ -52,69 +63,93 @@ sealed class Screen {
 
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val NOTIFICATION_REQUEST_CODE = 101
+    }
+
     private val gameViewModel: GameViewModel by viewModels()
     private val themeViewModel: ThemeViewModel by viewModels()
     private lateinit var notificationManager: ZenNotificationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.d(TAG, "onCreate - app launch start")
 
         notificationManager = ZenNotificationManager(this)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
-        }
+        requestNotificationPermissionIfNeeded()
 
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val profileManager = com.korkoor.pardos.data.local.ProfileManager(this)
-
-        // 🔥 RESCATE DE DATOS BLINDADO Y MIGRACIÓN LEGACY 🔥
-        // 1. Primero preguntamos a Firebase
         profileManager.syncFromFirebase { cloudProfile ->
-
-            // 2. Si hay datos en la nube, los evaluamos
             if (cloudProfile != null) {
                 val localProfile = profileManager.getProfile()
-
-                // Si la nube tiene más nivel que el local, GANÓ LA NUBE.
                 if (cloudProfile.playerLevel >= localProfile.playerLevel) {
-                    Log.d("MainActivity", "🏆 ¡Restaurando perfil desde la nube! Nivel: ${cloudProfile.playerLevel}")
+                    Log.d(TAG, "Restoring cloud profile at level=${cloudProfile.playerLevel}")
                     profileManager.saveProfile(cloudProfile)
-
-                    // Refrescamos niveles en el ViewModel
                     gameViewModel.loadLevelsWithProgress()
+                } else {
+                    Log.d(TAG, "Keeping local profile. local=${localProfile.playerLevel} cloud=${cloudProfile.playerLevel}")
                 }
             } else {
-                Log.d("MainActivity", "📱 No hay datos en la nube. Revisando si es un jugador veterano...")
-
-                // 🔥 MIGRACIÓN LEGACY: Buscamos si el jugador tenía progreso en la versión anterior
-                // PON AQUÍ EL NOMBRE DE TUS SHAREDPREFERENCES VIEJAS Y LA LLAVE DE TU NIVEL
+                Log.d(TAG, "No cloud profile found. Checking legacy migration")
                 val oldPrefs = getSharedPreferences("pardos_prefs", MODE_PRIVATE)
                 val legacyLevel = oldPrefs.getInt("last_unlocked_level", 1)
-
-                // Intentamos migrar su progreso viejo al nuevo sistema de Perfiles
                 profileManager.migrateLegacyProgressIfNeeded(legacyLevel)
             }
 
-            // 3. AHORA SÍ, revisamos la racha (solo después de haber decidido qué perfil gana)
             profileManager.checkAndUpdateStreak()
         }
 
         setContent {
             PardosTheme {
                 val lifecycleOwner = LocalLifecycleOwner.current
+                val accessibilityManager = remember {
+                    getSystemService(AccessibilityManager::class.java)
+                }
+                var isScreenReaderEnabled by remember {
+                    mutableStateOf(isScreenReaderActive(accessibilityManager))
+                }
+
+                LaunchedEffect(Unit) {
+                    Log.d(TAG, "Initial screenReaderEnabled=$isScreenReaderEnabled")
+                }
+
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         when (event) {
                             Lifecycle.Event.ON_PAUSE -> gameViewModel.pauseGame()
                             Lifecycle.Event.ON_RESUME -> gameViewModel.resumeGame()
-                            else -> {}
+                            else -> Unit
                         }
                     }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
+
+                DisposableEffect(accessibilityManager) {
+                    if (accessibilityManager == null) {
+                        onDispose { }
+                    } else {
+                        val touchListener = AccessibilityManager.TouchExplorationStateChangeListener {
+                            isScreenReaderEnabled = isScreenReaderActive(accessibilityManager)
+                            Log.d(TAG, "Touch exploration changed -> screenReaderEnabled=$isScreenReaderEnabled")
+                        }
+                        val stateListener = AccessibilityManager.AccessibilityStateChangeListener {
+                            isScreenReaderEnabled = isScreenReaderActive(accessibilityManager)
+                            Log.d(TAG, "Accessibility state changed -> screenReaderEnabled=$isScreenReaderEnabled")
+                        }
+
+                        accessibilityManager.addTouchExplorationStateChangeListener(touchListener)
+                        accessibilityManager.addAccessibilityStateChangeListener(stateListener)
+
+                        onDispose {
+                            accessibilityManager.removeTouchExplorationStateChangeListener(touchListener)
+                            accessibilityManager.removeAccessibilityStateChangeListener(stateListener)
+                        }
+                    }
                 }
 
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
@@ -133,9 +168,7 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AnimatedContent(
                         targetState = currentScreen,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600))
-                        },
+                        transitionSpec = { fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600)) },
                         label = "MainNavigation"
                     ) { target ->
                         when (target) {
@@ -143,25 +176,76 @@ class MainActivity : ComponentActivity() {
 
                             Screen.Menu -> {
                                 SideEffect { gameViewModel.resetGameSession() }
-                                MenuScreen(
-                                    onPlayClick = { currentScreen = Screen.ModeSelection },
-                                    onCustomClick = { currentScreen = Screen.CustomLevel },
-                                    onRecordsClick = { currentScreen = Screen.Records },
-                                    onAchievementsClick = { currentScreen = Screen.Achievements },
-                                    onDailyChallengeClick = {
-                                        gameViewModel.setupDailyChallenge()
-                                        currentScreen = Screen.Game
-                                    },
-                                    onProfileClick = { currentScreen = Screen.Profile },
-                                    onFriendsClick = { currentScreen = Screen.Friends },
-                                    themeViewModel = themeViewModel
+                                val onPlayAction = {
+                                    if (isScreenReaderEnabled) {
+                                        gameViewModel.updateAccessibilitySpawnAssist(true)
+                                        gameViewModel.setupCustomGame(
+                                            size = 4,
+                                            target = 128,
+                                            allowPowerUps = false,
+                                            difficulty = "Zen",
+                                            level = 1,
+                                            initialScore = 0,
+                                            isCustom = true
+                                        )
+                                        currentScreen = Screen.AccessibilityGame
+                                    } else {
+                                        gameViewModel.updateAccessibilitySpawnAssist(false)
+                                        currentScreen = Screen.ModeSelection
+                                    }
+                                }
+                                val onCustomAction = { currentScreen = Screen.CustomLevel }
+                                val onRecordsAction = { currentScreen = Screen.Records }
+                                val onAchievementsAction = { currentScreen = Screen.Achievements }
+                                val onDailyChallengeAction = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(isScreenReaderEnabled)
+                                    gameViewModel.setupDailyChallenge()
+                                    currentScreen = if (isScreenReaderEnabled) Screen.AccessibilityGame else Screen.Game
+                                }
+                                val onProfileAction = { currentScreen = Screen.Profile }
+                                val onFriendsAction = { currentScreen = Screen.Friends }
+
+                                if (isScreenReaderEnabled) {
+                                    AccessibleMenuScreen(
+                                        onPlayClick = onPlayAction,
+                                        onCustomClick = onCustomAction,
+                                        onRecordsClick = onRecordsAction,
+                                        onAchievementsClick = onAchievementsAction,
+                                        onDailyChallengeClick = onDailyChallengeAction,
+                                        onProfileClick = onProfileAction,
+                                        onFriendsClick = onFriendsAction
+                                    )
+                                } else {
+                                    MenuScreen(
+                                        onPlayClick = onPlayAction,
+                                        onCustomClick = onCustomAction,
+                                        onRecordsClick = onRecordsAction,
+                                        onAchievementsClick = onAchievementsAction,
+                                        onDailyChallengeClick = onDailyChallengeAction,
+                                        onProfileClick = onProfileAction,
+                                        onFriendsClick = onFriendsAction,
+                                        themeViewModel = themeViewModel
+                                    )
+                                }
+                            }
+
+                            Screen.AccessibilityGame -> {
+                                SideEffect { gameViewModel.updateAccessibilitySpawnAssist(true) }
+                                com.korkoor.pardos.ui.game.AccessibleGameScreen(
+                                    viewModel = gameViewModel,
+                                    onExitApp = { currentScreen = Screen.Menu }
                                 )
                             }
 
                             Screen.ModeSelection -> ModeSelectionScreen(
                                 onModeSelected = { mode ->
-                                    if (mode == GameMode.CLASICO) currentScreen = Screen.LevelSelector
-                                    else { gameViewModel.startNewGame(mode); currentScreen = Screen.Game }
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    if (mode == GameMode.CLASICO) {
+                                        currentScreen = Screen.LevelSelector
+                                    } else {
+                                        gameViewModel.startNewGame(mode)
+                                        currentScreen = Screen.Game
+                                    }
                                 },
                                 onBack = { currentScreen = Screen.Menu },
                                 currentTheme = currentTheme
@@ -171,6 +255,7 @@ class MainActivity : ComponentActivity() {
                                 levels = allLevels,
                                 currentTheme = currentTheme,
                                 onLevelSelected = { selectedLevel ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.setupCustomGame(
                                         size = ProgressionEngine.calculateBoardSize(selectedLevel.target),
                                         target = selectedLevel.target,
@@ -187,36 +272,54 @@ class MainActivity : ComponentActivity() {
                                 viewModel = gameViewModel,
                                 themeViewModel = themeViewModel,
                                 onBackToMenu = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.resetGameSession()
-                                    currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) Screen.LevelSelector else Screen.Menu
+                                    currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) {
+                                        Screen.LevelSelector
+                                    } else {
+                                        Screen.Menu
+                                    }
                                 }
                             )
 
                             Screen.CustomLevel -> CustomLevelScreen(
                                 onStartCustom = { size, targetVal, allowPowerUps, difficulty ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(isScreenReaderEnabled)
                                     gameViewModel.setupCustomGame(size, targetVal, allowPowerUps, difficulty, isCustom = true)
-                                    currentScreen = Screen.Game
+                                    currentScreen = if (isScreenReaderEnabled) Screen.AccessibilityGame else Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu },
                                 currentTheme = currentTheme
                             )
 
-                            Screen.Records -> RecordsScreen(records = savedRecords, onBack = { currentScreen = Screen.Menu }, currentTheme = currentTheme)
+                            Screen.Records -> RecordsScreen(
+                                records = savedRecords,
+                                onBack = { currentScreen = Screen.Menu },
+                                currentTheme = currentTheme
+                            )
 
-                            Screen.Achievements -> AchievementsScreen(unlockedIds = unlockedIds, currentTheme = currentTheme, onBack = { currentScreen = Screen.Menu })
+                            Screen.Achievements -> AchievementsScreen(
+                                unlockedIds = unlockedIds,
+                                currentTheme = currentTheme,
+                                onBack = { currentScreen = Screen.Menu }
+                            )
 
                             Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(onBack = { currentScreen = Screen.Menu })
-
                             Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
                         }
                     }
                 }
 
-                BackHandler(enabled = currentScreen != Screen.Menu && currentScreen != Screen.Splash) {
+                BackHandler(enabled = currentScreen != Screen.Menu && currentScreen != Screen.Splash && currentScreen != Screen.AccessibilityGame) {
+                    Log.d(TAG, "Back pressed on screen=$currentScreen")
                     when (currentScreen) {
                         Screen.Game -> {
                             gameViewModel.resetGameSession()
-                            currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) Screen.LevelSelector else Screen.ModeSelection
+                            currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) {
+                                Screen.LevelSelector
+                            } else {
+                                Screen.ModeSelection
+                            }
                         }
                         Screen.LevelSelector -> currentScreen = Screen.ModeSelection
                         else -> currentScreen = Screen.Menu
@@ -226,19 +329,54 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // 🔥 EL JUGADOR REGRESÓ: Cancelamos el spam
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == NOTIFICATION_REQUEST_CODE) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            Log.d(TAG, "POST_NOTIFICATIONS result granted=$granted")
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         if (::notificationManager.isInitialized) {
+            Log.d(TAG, "onResume -> cancelAllNotifications")
             notificationManager.cancelAllNotifications()
         }
     }
 
-    // 🔥 EL JUGADOR SE FUE: Plantamos las minas de retención
     override fun onPause() {
         super.onPause()
         if (::notificationManager.isInitialized) {
+            Log.d(TAG, "onPause -> scheduleAllNotifications")
             notificationManager.scheduleAllNotifications()
         }
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            Log.d(TAG, "Notification runtime permission not required on SDK ${Build.VERSION.SDK_INT}")
+            return
+        }
+
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        Log.d(TAG, "POST_NOTIFICATIONS granted=$granted")
+        if (!granted) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_REQUEST_CODE)
+            Log.d(TAG, "Requested POST_NOTIFICATIONS permission")
+        }
+    }
+
+    private fun isScreenReaderActive(manager: AccessibilityManager?): Boolean {
+        if (manager == null) return false
+        return manager.isEnabled && manager.isTouchExplorationEnabled
     }
 }

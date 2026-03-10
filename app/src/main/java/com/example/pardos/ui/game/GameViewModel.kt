@@ -54,6 +54,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var currentMode by mutableStateOf<GameMode>(GameMode.CLASICO)
         private set
 
+    var accessibilitySpawnAssist by mutableStateOf(false)
+        private set
+
     var activeAchievementPopup by mutableStateOf<Achievement?>(null)
         private set
     var isSelectModeActive by mutableStateOf(false)
@@ -216,6 +219,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         realStartTime = 0L // Reiniciamos el reloj real
         floatingScores.clear()
         playMenuMusic()
+    }
+
+    fun updateAccessibilitySpawnAssist(enabled: Boolean) {
+        accessibilitySpawnAssist = enabled
     }
 
     fun refreshCurrentLevelDifficulty() {
@@ -482,7 +489,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 🎲 GENERACIÓN INTELIGENTE (Aparición normal)
                 val finalTiles = movedTiles.toMutableList()
-                val newValue = ProgressionEngine.getNewTileValue(currentState.levelLimit)
+                val newValue = pickNewTileValue(currentState.levelLimit)
                 gameEngine.spawnTileWithSpecificValue(movedTiles, newValue, 1)?.let {
                     finalTiles.add(it)
                 }
@@ -1012,7 +1019,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         repeat(initialTilesCount) {
             // 🎲 Obtenemos valores inteligentes según el target del nivel
-            val newValue = ProgressionEngine.getNewTileValue(target)
+            val newValue = pickNewTileValue(target)
 
             // Spawneamos la ficha evitando posiciones ocupadas por las anteriores
             val newTile = gameEngine.spawnTileWithSpecificValue(
@@ -1120,8 +1127,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                     // 🔥 SÚPER BALANCE: Si el tablero estaba vacío, generamos fichas inteligentes
                     val finalTiles = cleanedTiles.ifEmpty {
-                        val v1 = ProgressionEngine.getNewTileValue(currentState.levelLimit)
-                        val v2 = ProgressionEngine.getNewTileValue(currentState.levelLimit)
+                        val v1 = pickNewTileValue(currentState.levelLimit)
+                        val v2 = pickNewTileValue(currentState.levelLimit)
 
                         val t1 = gameEngine.spawnTileWithSpecificValue(emptyList(), v1, currentMultiplierBase)
                         val t2 = gameEngine.spawnTileWithSpecificValue(listOfNotNull(t1), v2, currentMultiplierBase)
@@ -1161,6 +1168,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         dailyChallengeThemeIndex = randomTheme
         currentMode = GameMode.DESAFIO
         setupCustomGame(size = dailySize, target = dailyTarget, allowPowerUps = false, difficulty = "Normal", level = 1, isCustom = true)
+    }
+
+    private fun pickNewTileValue(target: Int): Int {
+        if (!accessibilitySpawnAssist) return ProgressionEngine.getNewTileValue(target)
+
+        val rand = Random.nextDouble()
+        return when {
+            target >= 1024 && rand < 0.08 -> 8
+            rand < 0.22 -> 4
+            else -> 2
+        }
     }
 
     private fun hasBoardChanged(old: List<TileModel>, new: List<TileModel>): Boolean {
