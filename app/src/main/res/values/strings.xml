@@ -364,4 +364,12 @@
     <string name="accessible_tutorial_step_7">Aparicion de fichas: lo mas comun es que salga 2. Tambien pueden salir 4 y, en ciertos niveles, valores mayores.</string>
 
     <string name="menu_play_subtitle">Nivel %1$d</string>
+    <string name="event_weekend_gold_title">Fin de semana dorado</string>
+    <string name="event_weekend_gold_desc">Monedas x2 al ganar niveles</string>
+    <string name="event_xp_wednesday_title">Miércoles de experiencia</string>
+    <string name="event_xp_wednesday_desc">XP x2 al ganar niveles</string>
+    <string name="event_festival_week_title">Semana festival</string>
+    <string name="event_festival_week_desc">Monedas x1.5 y estrellas dobles en el ranking</string>
+    <string name="event_ends_today">Termina hoy</string>
+    <string name="event_ends_in">Termina en %1$d días</string>
 </resources>

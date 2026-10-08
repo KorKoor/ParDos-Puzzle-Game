@@ -362,4 +362,12 @@
     <string name="accessible_tutorial_step_6">Recommended strategy: keep your highest tile in one corner and avoid filling the board.</string>
     <string name="accessible_tutorial_step_7">Tile spawning: the most common new tile is 2. You can also get 4 and, in some levels, higher values.</string>
     <string name="menu_play_subtitle">Level %1$d</string>
+    <string name="event_weekend_gold_title">Golden weekend</string>
+    <string name="event_weekend_gold_desc">Coins x2 for winning levels</string>
+    <string name="event_xp_wednesday_title">XP Wednesday</string>
+    <string name="event_xp_wednesday_desc">XP x2 for winning levels</string>
+    <string name="event_festival_week_title">Festival week</string>
+    <string name="event_festival_week_desc">Coins x1.5 and double ranking stars</string>
+    <string name="event_ends_today">Ends today</string>
+    <string name="event_ends_in">Ends in %1$d days</string>
 </resources>

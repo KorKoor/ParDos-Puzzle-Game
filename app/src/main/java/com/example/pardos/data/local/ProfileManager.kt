@@ -110,7 +110,11 @@ class ProfileManager(private val context: Context) {
 
     fun addXpForLevelVictory(starsEarned: Int) {
         val profile = getProfile()
-        val xpGained = 15 + (starsEarned * 10)
+        val today = LocalDay.today()
+        val xpGained = com.korkoor.pardos.domain.events.EventCalendar.apply(
+            15 + (starsEarned * 10),
+            com.korkoor.pardos.domain.events.EventCalendar.xpMultiplier(today)
+        )
 
         var newXp = profile.currentXp + xpGained
         var newLevel = profile.playerLevel
@@ -129,7 +133,7 @@ class ProfileManager(private val context: Context) {
             playerLevel = newLevel,
             currentXp = newXp,
             xpToNextLevel = nextLevelLimit,
-            weeklyStars = starsSoFar + starsEarned.coerceAtLeast(0),
+            weeklyStars = starsSoFar + starsEarned.coerceAtLeast(0) * com.korkoor.pardos.domain.events.EventCalendar.starMultiplier(today),
             weekId = week
         )
         saveProfile(updatedProfile)

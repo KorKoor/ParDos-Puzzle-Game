@@ -87,7 +87,10 @@ fun DailyMissionsCard(
                                 // 1. Reclamar en el Manager para apagar el botón
                                 missionManager.claimMissionReward(mission.id)
                                 com.korkoor.pardos.data.local.EconomyManager(context).addCoins(
-                                    com.korkoor.pardos.domain.rewards.CoinRewards.forMission(mission.xpReward)
+                                    com.korkoor.pardos.domain.events.EventCalendar.apply(
+                                        com.korkoor.pardos.domain.rewards.CoinRewards.forMission(mission.xpReward),
+                                        com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today())
+                                    )
                                 )
 
                                 // 2. Sumar la XP real al perfil

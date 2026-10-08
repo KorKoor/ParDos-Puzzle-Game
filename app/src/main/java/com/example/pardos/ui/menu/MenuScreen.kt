@@ -103,6 +103,10 @@ fun MenuScreen(
     }
     var showSupportDialog by remember { mutableStateOf(false) }
 
+    // --- EVENTOS PROGRAMADOS ---
+    val todayDay = remember { com.korkoor.pardos.data.local.LocalDay.today() }
+    val activeEvents = remember { com.korkoor.pardos.domain.events.EventCalendar.activeOn(todayDay) }
+
     // --- ECONOMÍA Y RECOMPENSA DIARIA ---
     val economy = remember { com.korkoor.pardos.data.local.EconomyManager(context) }
     val dailyRewards = remember { com.korkoor.pardos.data.local.DailyRewardManager(context) }
@@ -216,6 +220,7 @@ fun MenuScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
+                    activeEvents.take(2).forEach { ev -> EventBanner(ev, todayDay) }
                     BottomDock(items = dockItemsL, modifier = Modifier.padding(horizontal = 0.dp))
                     DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
                     Spacer(Modifier.height(8.dp))
@@ -290,6 +295,11 @@ fun MenuScreen(
                             onClick = onCustomClick,
                             modifier = Modifier.weight(1f)
                         )
+                    }
+
+                    activeEvents.take(2).forEach { ev ->
+                        Spacer(Modifier.height(12.dp))
+                        EventBanner(ev, todayDay)
                     }
 
                     Spacer(Modifier.height(20.dp))

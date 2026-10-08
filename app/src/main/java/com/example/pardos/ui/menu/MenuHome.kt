@@ -22,6 +22,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import com.korkoor.pardos.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.MonetizationOn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -297,3 +302,49 @@ fun BottomDock(items: List<DockItem>, modifier: Modifier = Modifier) {
         }
     }
 }
+
+
+/** Banner del evento activo con cuenta atrás de días. */
+@Composable
+fun EventBanner(event: com.korkoor.pardos.domain.events.GameEvent, today: Int, modifier: Modifier = Modifier) {
+    val (title, desc, icon, color) = when (event.type) {
+        com.korkoor.pardos.domain.events.EventType.WEEKEND_GOLD ->
+            EventStyle(R.string.event_weekend_gold_title, R.string.event_weekend_gold_desc, Icons.Rounded.MonetizationOn, Gold)
+        com.korkoor.pardos.domain.events.EventType.XP_WEDNESDAY ->
+            EventStyle(R.string.event_xp_wednesday_title, R.string.event_xp_wednesday_desc, Icons.Rounded.AutoAwesome, GemBlue)
+        com.korkoor.pardos.domain.events.EventType.FESTIVAL_WEEK ->
+            EventStyle(R.string.event_festival_week_title, R.string.event_festival_week_desc, Icons.Rounded.Celebration, Terracotta)
+    }
+    val left = event.daysLeft(today)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.18f), color.copy(alpha = 0.06f))))
+            .border(1.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(40.dp).background(color.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(title).uppercase(),
+                fontSize = 12.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.sp, maxLines = 1
+            )
+            Text(stringResource(desc), fontSize = 11.sp, color = Navy.copy(alpha = 0.6f), maxLines = 1)
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = if (left == 0) stringResource(R.string.event_ends_today) else stringResource(R.string.event_ends_in, left),
+            fontSize = 10.sp, fontWeight = FontWeight.Black, color = color
+        )
+    }
+}
+
+private data class EventStyle(val title: Int, val desc: Int, val icon: ImageVector, val color: Color)

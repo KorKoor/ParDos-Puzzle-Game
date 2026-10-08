@@ -702,8 +702,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             // 🪙 Monedas: se calculan ANTES de guardar el progreso (para saber si es primera vez)
             val firstClear = levelStore.starsFor(currentMode, currentLvl) == 0
-            lastCoinsEarned = com.korkoor.pardos.domain.rewards.CoinRewards.forLevelWin(
+            val baseCoins = com.korkoor.pardos.domain.rewards.CoinRewards.forLevelWin(
                 _boardState.value.starsEarned, firstClear
+            )
+            // Eventos programados (fin de semana dorado, semana festival...)
+            lastCoinsEarned = com.korkoor.pardos.domain.events.EventCalendar.apply(
+                baseCoins,
+                com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today())
             )
             economy.addCoins(lastCoinsEarned)
 
