@@ -16,7 +16,10 @@ data class UserProfile(
     val lastPlayDate: Long = 0L,
     val friendsUids: List<String> = emptyList(), // Lista de IDs de sus amigos
     val unlockedBadges: List<String> = emptyList(),
-    val pinnedRecords: List<String> = listOf("", "", "") // 🔥 NUEVO: Espacio para 3 récords
+    val pinnedRecords: List<String> = listOf("", "", ""), // 🔥 NUEVO: Espacio para 3 récords
+    // Ranking semanal entre amigos: estrellas ganadas en la semana `weekId`
+    val weeklyStars: Int = 0,
+    val weekId: Int = 0
 ) {
     // Constructor vacío requerido por Firestore para leer los datos
     constructor() : this("", "Jugador Zen", 1, 1, 1, 0, 100, 0, 0, 0L, emptyList(), emptyList())

@@ -37,6 +37,13 @@ class ProfileManager(private val context: Context) {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "dispositivo_desconocido"
     }
 
+    private fun currentWeekId(): Int =
+        com.korkoor.pardos.domain.social.WeekCalendar.weekId(LocalDay.today())
+
+    /** Estrellas de ESTA semana; si la semana guardada es otra, empieza de cero. */
+    private fun currentWeeklyStars(): Int =
+        if (prefs.getInt("weekly_week", 0) == currentWeekId()) prefs.getInt("weekly_stars", 0) else 0
+
     fun getProfile(): UserProfile {
         // 1. Leemos el String largo de los récords (o un valor por defecto con separadores si está vacío)
         val pinnedCsv = prefs.getString("pinned_records_csv", "|||") ?: "|||"
@@ -60,7 +67,9 @@ class ProfileManager(private val context: Context) {
             unlockedBadges = prefs.getStringSet("unlocked_badges", emptySet())?.toList() ?: emptyList(),
 
             // 🔥 LA NUEVA PIEZA:
-            pinnedRecords = pinnedList
+            pinnedRecords = pinnedList,
+            weeklyStars = currentWeeklyStars(),
+            weekId = currentWeekId()
         )
     }
 
@@ -75,6 +84,8 @@ class ProfileManager(private val context: Context) {
             putInt("current_streak", profile.currentStreak)
             putInt("best_streak", profile.bestStreak)
             putLong("last_play_date", profile.lastPlayDate)
+            putInt("weekly_stars", profile.weeklyStars)
+            putInt("weekly_week", profile.weekId)
 
             // Guardamos los amigos e insignias (Sets)
             putStringSet("friends_list", profile.friendsUids.toSet())
@@ -111,10 +122,15 @@ class ProfileManager(private val context: Context) {
             nextLevelLimit += 50
         }
 
+        val week = currentWeekId()
+        val starsSoFar = if (profile.weekId == week) profile.weeklyStars else 0
+
         val updatedProfile = profile.copy(
             playerLevel = newLevel,
             currentXp = newXp,
-            xpToNextLevel = nextLevelLimit
+            xpToNextLevel = nextLevelLimit,
+            weeklyStars = starsSoFar + starsEarned.coerceAtLeast(0),
+            weekId = week
         )
         saveProfile(updatedProfile)
     }
@@ -190,14 +206,14 @@ class ProfileManager(private val context: Context) {
             }
     }
 
+    /**
+     * Agrega un amigo por código. Acepta el ID completo o solo el prefijo de 8 caracteres
+     * que se muestra en pantalla (antes solo funcionaba el ID completo, y era confuso).
+     */
     fun addFriendByCode(friendUid: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
-        if (friendUid.isBlank()) {
-            onError("Código vacío.")
-            return
-        }
-
-        if (friendUid == deviceId) {
-            onError("¡No puedes agregarte a ti mismo!")
+        val code = friendUid.trim().lowercase()
+        if (code.length < 6) {
+            onError("El código es demasiado corto.")
             return
         }
 
@@ -208,40 +224,49 @@ class ProfileManager(private val context: Context) {
             return
         }
 
-        firestore.collection("users").document(friendUid).get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val friendName = document.getString("name") ?: "Jugador"
-                    val friendsSet = prefs.getStringSet("friends_list", emptySet())?.toMutableSet() ?: mutableSetOf()
+        fun finish(friendId: String, friendName: String) {
+            if (friendId == deviceId) {
+                onError("¡No puedes agregarte a ti mismo!")
+                return
+            }
+            val friendsSet = prefs.getStringSet("friends_list", emptySet())?.toMutableSet() ?: mutableSetOf()
+            if (friendsSet.contains(friendId)) {
+                onError("Ya lo tienes en tu lista.")
+                return
+            }
+            friendsSet.add(friendId)
+            prefs.edit().putStringSet("friends_list", friendsSet).apply()
+            saveProfile(getProfile().copy(friendsUids = friendsSet.toList()))
+            unlockSocialBadge()
+            if (friendsSet.size >= 3 && !prefs.getBoolean("badge_influencer_unlocked", false)) {
+                prefs.edit().putBoolean("badge_influencer_unlocked", true).apply()
+                saveProfile(getProfile())
+            }
+            onSuccess(friendName)
+        }
 
-                    if (friendsSet.contains(friendUid)) {
-                        onError("Ya lo tienes en tu lista.")
-                    } else {
-                        friendsSet.add(friendUid)
-                        prefs.edit().putStringSet("friends_list", friendsSet).apply()
-
-                        val currentProfile = getProfile()
-                        val updatedProfile = currentProfile.copy(friendsUids = friendsSet.toList())
-                        saveProfile(updatedProfile)
-
-                        unlockSocialBadge()
-
-                        if (friendsSet.size >= 3) {
-                            if (!prefs.getBoolean("badge_influencer_unlocked", false)) {
-                                prefs.edit().putBoolean("badge_influencer_unlocked", true).apply()
-                                saveProfile(getProfile())
-                            }
-                        }
-
-                        onSuccess(friendName)
-                    }
-                } else {
-                    onError("Código no encontrado.")
+        if (code.length >= 16) {
+            firestore.collection("users").document(code).get()
+                .addOnSuccessListener { doc ->
+                    if (doc.exists()) finish(doc.id, doc.getString("name") ?: "Jugador")
+                    else onError("Código no encontrado.")
                 }
-            }
-            .addOnFailureListener { e ->
-                onError("Error de red: ${e.localizedMessage}")
-            }
+                .addOnFailureListener { e -> onError("Error de red: ${e.localizedMessage}") }
+        } else {
+            // Búsqueda por prefijo del ID de documento
+            val id = com.google.firebase.firestore.FieldPath.documentId()
+            firestore.collection("users")
+                .whereGreaterThanOrEqualTo(id, code)
+                .whereLessThanOrEqualTo(id, code + "\uf8ff")
+                .limit(1)
+                .get()
+                .addOnSuccessListener { snap ->
+                    val doc = snap.documents.firstOrNull()
+                    if (doc != null) finish(doc.id, doc.getString("name") ?: "Jugador")
+                    else onError("Código no encontrado.")
+                }
+                .addOnFailureListener { e -> onError("Error de red: ${e.localizedMessage}") }
+        }
     }
 
     fun updateCampaignLevel(newLevel: Int) {
@@ -292,7 +317,9 @@ class ProfileManager(private val context: Context) {
                                 lastPlayDate = doc.getLong("lastPlayDate") ?: 0L,
                                 friendsUids = (doc.get("friendsUids") as? List<String>) ?: emptyList(),
                                 unlockedBadges = (doc.get("unlockedBadges") as? List<String>) ?: emptyList(),
-                                pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", "")
+                                pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", ""),
+                                weeklyStars = doc.getLong("weeklyStars")?.toInt() ?: 0,
+                                weekId = doc.getLong("weekId")?.toInt() ?: 0
                             )
                         } catch (e: Exception) {
                             null
