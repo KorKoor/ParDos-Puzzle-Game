@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.prestige.tint
+import androidx.compose.material.icons.rounded.EmojiEvents
 import com.korkoor.pardos.ui.profile.AvatarImage
 
 import com.korkoor.pardos.ui.design.*
@@ -80,7 +82,17 @@ fun PlayerHeader(profile: UserProfile, onClick: () -> Unit, modifier: Modifier =
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.korkoor.pardos.ui.prestige.RankDot(com.korkoor.pardos.domain.prestige.PrestigeRank.forScore(profile.prestige), 12.dp)
+                    Spacer(Modifier.width(5.dp))
+                    val t = com.korkoor.pardos.domain.prestige.ProfileTitles.byId(profile.titleId)
+                    Text(t.name, fontSize = 10.sp, fontWeight = FontWeight.Black, color = t.tint(), maxLines = 1)
+                    if (profile.platinum) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF8E9AC4), modifier = Modifier.size(12.dp))
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "NV ${profile.playerLevel}",

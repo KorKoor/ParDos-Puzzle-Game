@@ -300,6 +300,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
         missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
         retention.onGameFinished(won = true, dailyChallenge = false)
+        com.korkoor.pardos.data.local.PrestigeManager(getApplication()).onLevelWon(
+            activeSpec?.kind ?: com.korkoor.pardos.domain.level.LevelKind.ZEN, activeSpec?.isBoss == true, peakFlowTier, winStreak
+        )
         soundManager.playWin()
         viewModelScope.launch {
             delay(800)
@@ -1341,7 +1344,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val isDaily = dailyChallengeThemeIndex != null
             lastGameBonus = retention.onGameFinished(won = true, dailyChallenge = isDaily)
             retention.onStars(_boardState.value.starsEarned)
-            if (isDaily) retention.onDailyChallengeCompleted()
+            if (isDaily) {
+                retention.onDailyChallengeCompleted()
+                com.korkoor.pardos.data.local.PrestigeManager(getApplication()).onDailyDone()
+            }
 
             saveLevelProgress(
                 level = currentLvl,
@@ -1351,6 +1357,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             )
 
             stateForAchievements?.let { checkAchievements(it) }
+            // Prestigio: tipos de nivel ganados, jefes, "flow" y mejor racha (esto también revisa los hitos)
+            com.korkoor.pardos.data.local.PrestigeManager(getApplication()).onLevelWon(
+                activeSpec?.kind ?: com.korkoor.pardos.domain.level.LevelKind.ZEN, activeSpec?.isBoss == true, peakFlowTier, winStreak
+            )
             saveRecord()
             prefs.edit().remove(KEY_SAVED_SCORE).apply()
 

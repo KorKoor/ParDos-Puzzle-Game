@@ -104,9 +104,17 @@ class ProfileManager(private val context: Context) {
             weeklyStars = currentWeeklyStars(),
             weekId = currentWeekId(),
             friendCode = if (signedUid != null) ensureFriendCode() else "",
-            bannerId = prefs.getInt("banner_id", 1)
+            bannerId = prefs.getInt("banner_id", 1),
+            prestige = PrestigeManager.cachedScore(context),
+            titleId = PrestigeManager.cachedTitleId(context),
+            platinum = PrestigeManager.cachedPlatinum(context),
+            towerBest = PrestigeManager.cachedTower(context),
+            pieces = PrestigeManager.cachedPieces(context)
         )
     }
+
+    /** Pide subir el perfil (con la espera de siempre): lo usan el prestigio y los títulos cuando cambian. */
+    fun requestSync() = syncToFirebase()
 
     fun saveProfile(profile: UserProfile) {
         prefs.edit().apply {
@@ -297,7 +305,8 @@ class ProfileManager(private val context: Context) {
     private fun profileHash(p: UserProfile): Int = SyncPolicy.contentHash(
         listOf(
             p.uid, p.name, p.avatarId, p.playerLevel, p.currentCampaignLevel, p.currentXp, p.xpToNextLevel,
-            p.currentStreak, p.bestStreak, p.friendsUids, p.unlockedBadges, p.pinnedRecords, p.weeklyStars, p.weekId, p.friendCode, p.bannerId
+            p.currentStreak, p.bestStreak, p.friendsUids, p.unlockedBadges, p.pinnedRecords, p.weeklyStars, p.weekId, p.friendCode, p.bannerId,
+            p.prestige, p.titleId, p.platinum, p.towerBest, p.pieces
         )
     )
 
@@ -596,7 +605,12 @@ class ProfileManager(private val context: Context) {
             pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", ""),
             weeklyStars = doc.getLong("weeklyStars")?.toInt() ?: 0,
             weekId = doc.getLong("weekId")?.toInt() ?: 0,
-            friendCode = doc.getString("friendCode") ?: ""
+            friendCode = doc.getString("friendCode") ?: "",
+            prestige = doc.getLong("prestige")?.toInt() ?: 0,
+            titleId = doc.getString("titleId") ?: "default",
+            platinum = doc.getBoolean("platinum") ?: false,
+            towerBest = doc.getLong("towerBest")?.toInt() ?: 0,
+            pieces = doc.getLong("pieces")?.toInt() ?: 0
         )
     } catch (e: Exception) { null }
 
@@ -642,6 +656,7 @@ class ProfileManager(private val context: Context) {
         .put("friendsUids", org.json.JSONArray(p.friendsUids)).put("unlockedBadges", org.json.JSONArray(p.unlockedBadges))
         .put("pinnedRecords", org.json.JSONArray(p.pinnedRecords))
         .put("weeklyStars", p.weeklyStars).put("weekId", p.weekId).put("friendCode", p.friendCode)
+        .put("prestige", p.prestige).put("titleId", p.titleId).put("platinum", p.platinum).put("towerBest", p.towerBest).put("pieces", p.pieces)
 
     private fun profileFromJson(o: org.json.JSONObject): UserProfile {
         fun list(key: String): List<String> = o.optJSONArray(key)?.let { a -> List(a.length()) { a.optString(it) } } ?: emptyList()
@@ -654,7 +669,9 @@ class ProfileManager(private val context: Context) {
             lastPlayDate = o.optLong("lastPlayDate", 0L),
             friendsUids = list("friendsUids"), unlockedBadges = list("unlockedBadges"),
             pinnedRecords = list("pinnedRecords").ifEmpty { listOf("", "", "") },
-            weeklyStars = o.optInt("weeklyStars", 0), weekId = o.optInt("weekId", 0), friendCode = o.optString("friendCode", "")
+            weeklyStars = o.optInt("weeklyStars", 0), weekId = o.optInt("weekId", 0), friendCode = o.optString("friendCode", ""),
+            prestige = o.optInt("prestige", 0), titleId = o.optString("titleId", "default"), platinum = o.optBoolean("platinum", false),
+            towerBest = o.optInt("towerBest", 0), pieces = o.optInt("pieces", 0)
         )
     }
 

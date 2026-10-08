@@ -23,7 +23,13 @@ data class UserProfile(
     // Código corto para que te agreguen (solo cuentas con sesión)
     val friendCode: String = "",
     // Banner de perfil (fondo de tu tarjeta); 1 = el gratuito
-    val bannerId: Int = 1
+    val bannerId: Int = 1,
+    // Prestigio (lo que ven tus amigos): puntos, título que luces, Platino, piso de la torre y piezas del álbum
+    val prestige: Int = 0,
+    val titleId: String = "default",
+    val platinum: Boolean = false,
+    val towerBest: Int = 0,
+    val pieces: Int = 0
 ) {
     // Constructor vacío requerido por Firestore para leer los datos
     constructor() : this("", "Jugador Zen", 1, 1, 1, 0, 100, 0, 0, 0L, emptyList(), emptyList())

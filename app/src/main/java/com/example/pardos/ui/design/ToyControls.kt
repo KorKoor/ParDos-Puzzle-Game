@@ -71,10 +71,10 @@ fun ToyButton(
         brush = if (enabled) container.toyGradient() else null
     ) {
         if (enabled) {
-            Box(
-                Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 14.dp, end = 14.dp)
-                    .fillMaxWidth().height(6.dp).background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
-            )
+            // matchParentSize: el reflejo sigue al botón sin ensancharlo (con fillMaxWidth ocupaba todo el ancho disponible)
+            Box(Modifier.matchParentSize().padding(top = 4.dp, start = 14.dp, end = 14.dp)) {
+                Box(Modifier.fillMaxWidth().height(6.dp).background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50)))
+            }
         }
         CompositionLocalProvider(LocalContentColor provides ink) {
             Row(

@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.profile
 
+import com.korkoor.pardos.ui.prestige.tint
 import com.korkoor.pardos.ui.design.ToyTextField
 import com.korkoor.pardos.ui.design.ToyButton
 import com.korkoor.pardos.ui.design.ToyTextButton
@@ -53,6 +54,7 @@ fun ProfileScreen(
     onBack: () -> Unit = {},
     onRecords: () -> Unit = {},
     onSettings: () -> Unit = {},
+    onPrestige: () -> Unit = {},
     gameViewModel: GameViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -76,7 +78,8 @@ fun ProfileScreen(
         profileManager.getFriendsProfiles { amigos ->
             val todos = amigos.toMutableList()
             todos.add(profile)
-            val ordenados = todos.sortedWith(compareByDescending<UserProfile> { it.playerLevel }.thenByDescending { it.currentXp })
+            // El podio es de prestigio: trofeos, colección, campaña y torre cuentan
+            val ordenados = todos.sortedWith(compareByDescending<UserProfile> { it.prestige }.thenByDescending { it.playerLevel })
             fullRanking = ordenados
         }
     }
@@ -189,7 +192,9 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+                    PrestigeMini(profile, onPrestige)
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     // Barra de XP
                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -506,13 +511,20 @@ fun RankingRow(rank: Int, user: UserProfile, isMe: Boolean, cafeProfundo: Color,
                         }
                     }
                 }
-                Text("${user.currentXp} XP", fontSize = 10.sp, color = cafeSuave, fontWeight = FontWeight.Medium)
+                val t = com.korkoor.pardos.domain.prestige.ProfileTitles.byId(user.titleId)
+                Text(t.name, fontSize = 10.sp, color = t.tint(), fontWeight = FontWeight.Bold)
             }
 
-            // Nivel
+            // Prestigio (con su rango) y Platino
+            if (user.platinum) {
+                Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF8E9AC4), modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+            }
+            com.korkoor.pardos.ui.prestige.RankDot(com.korkoor.pardos.domain.prestige.PrestigeRank.forScore(user.prestige), 20.dp)
+            Spacer(Modifier.width(8.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("NIVEL", fontSize = 8.sp, fontWeight = FontWeight.Black, color = cafeSuave)
-                Text("${user.playerLevel}", fontSize = 18.sp, fontWeight = FontWeight.Black, color = cafeProfundo)
+                Text("PRESTIGIO", fontSize = 8.sp, fontWeight = FontWeight.Black, color = cafeSuave)
+                Text("${user.prestige}", fontSize = 18.sp, fontWeight = FontWeight.Black, color = cafeProfundo)
             }
         }
     }
@@ -592,5 +604,28 @@ fun RecordSlot(
                 )
             }
         }
+    }
+}
+
+/** Rango, título y puntos de prestigio de un vistazo (toca para ver todo). */
+@Composable
+private fun PrestigeMini(profile: UserProfile, onClick: () -> Unit) {
+    val rank = com.korkoor.pardos.domain.prestige.PrestigeRank.forScore(profile.prestige)
+    val title = com.korkoor.pardos.domain.prestige.ProfileTitles.byId(profile.titleId)
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF241547), Color(0xFF3A2570))))
+            .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        com.korkoor.pardos.ui.prestige.RankBadge(rank, 52.dp, animate = false)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(rank.title.uppercase(), fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 1.sp)
+            Text(title.name, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFFFFD36E))
+            Text("${profile.prestige} puntos de prestigio", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.65f))
+        }
+        if (profile.platinum) Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFFBBCBF2), modifier = Modifier.size(26.dp))
+        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.7f))
     }
 }

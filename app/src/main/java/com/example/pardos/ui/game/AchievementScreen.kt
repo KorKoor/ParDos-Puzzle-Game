@@ -72,7 +72,8 @@ private enum class StatusFilter(val label: String) { ALL("Todos"), DONE("Logrado
 fun AchievementsScreen(
     unlockedIds: Set<String>,
     currentTheme: GameTheme,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onPrestige: () -> Unit = {}
 ) {
     val all = gameAchievements.all
     val total = all.size
@@ -116,6 +117,7 @@ fun AchievementsScreen(
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                item { PlatinumBanner(unlocked, total, onPrestige) }
                 item { SummaryCard(unlocked, total, all, unlockedIds) }
 
                 backfill?.let { (coins, gems) ->
@@ -366,5 +368,32 @@ private fun AchievementRow(
             Spacer(Modifier.width(8.dp))
             Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Sage, modifier = Modifier.size(24.dp))
         }
+    }
+}
+
+/** Cabecera que lleva al Prestigio: el trofeo de Platino se llena con los logros y los hitos que llevas. */
+@Composable
+private fun PlatinumBanner(unlocked: Int, total: Int, onClick: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val manager = remember { com.korkoor.pardos.data.local.PrestigeManager(context) }
+    val milestonesDone = remember { manager.doneMilestones.size }
+    val milestonesTotal = com.korkoor.pardos.domain.prestige.PrestigeMilestones.all.size
+    val (have, all) = com.korkoor.pardos.domain.prestige.Platinum.progress(unlocked, total, milestonesDone, milestonesTotal)
+    val score = remember { manager.score() }
+    val rank = com.korkoor.pardos.domain.prestige.PrestigeRank.forScore(score)
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF241547), Color(0xFF3A2570), Color(0xFF1E2A5A))))
+            .clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        com.korkoor.pardos.ui.prestige.PlatinumTrophy(if (all == 0) 0f else have.toFloat() / all, 70.dp, earned = manager.isPlatinum)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("PLATINO  $have / $all", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
+            Text("Rango ${rank.title} · $score puntos", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD36E))
+            Text("Toca para ver tus hitos, títulos y cómo vas frente a tus amigos", fontSize = 11.sp, color = Color.White.copy(alpha = 0.65f))
+        }
+        com.korkoor.pardos.ui.prestige.RankBadge(rank, 56.dp, animate = false)
     }
 }

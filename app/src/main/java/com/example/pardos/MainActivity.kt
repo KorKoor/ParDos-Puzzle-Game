@@ -59,6 +59,7 @@ sealed class Screen {
     data object CustomLevel : Screen()
     data object Records : Screen()
     data object Achievements : Screen()
+    data object Prestige : Screen()
     data object LevelSelector : Screen()
     data object Profile : Screen()
     data object Friends : Screen()
@@ -75,7 +76,7 @@ sealed class Screen {
 private fun Screen.navDepth(): Int = when (this) {
     Screen.Splash -> 0
     Screen.Menu -> 1
-    Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements,
+    Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements, Screen.Prestige,
     Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.AccessibilityGame,
     Screen.Season, Screen.Wheel -> 2
     Screen.Studio, Screen.Settings -> 3
@@ -424,13 +425,21 @@ class MainActivity : ComponentActivity() {
                             Screen.Achievements -> AchievementsScreen(
                                 unlockedIds = unlockedIds,
                                 currentTheme = currentTheme,
-                                onBack = { currentScreen = Screen.Menu }
+                                onBack = { currentScreen = Screen.Menu },
+                                onPrestige = { currentScreen = Screen.Prestige }
+                            )
+
+                            Screen.Prestige -> com.korkoor.pardos.ui.prestige.PrestigeScreen(
+                                onBack = { currentScreen = Screen.Menu },
+                                onTrophies = { currentScreen = Screen.Achievements },
+                                onAlbum = { currentScreen = Screen.Collection }
                             )
 
                             Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(
                                 onBack = { currentScreen = Screen.Menu },
                                 onRecords = { currentScreen = Screen.Records },
-                                onSettings = { currentScreen = Screen.Settings }
+                                onSettings = { currentScreen = Screen.Settings },
+                                onPrestige = { currentScreen = Screen.Prestige }
                             )
                             Screen.Settings -> com.korkoor.pardos.ui.settings.SettingsScreen(onBack = { currentScreen = Screen.Profile })
                             Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
@@ -484,6 +493,8 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                    // Celebraciones de prestigio (hitos, títulos, rangos y Platino) por encima de cualquier pantalla
+                    com.korkoor.pardos.ui.prestige.PrestigeToastHost()
                 }
 
                 BackHandler(enabled = currentScreen != Screen.Menu && currentScreen != Screen.Splash && currentScreen != Screen.AccessibilityGame) {
@@ -522,6 +533,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Hitos, rango y Platino al día cada vez que vuelves a la app
+        try { com.korkoor.pardos.data.local.PrestigeManager(this).refresh() } catch (e: Exception) { Log.w(TAG, "prestigio: ${e.message}") }
         if (::notificationManager.isInitialized) {
             Log.d(TAG, "onResume -> cancelAllNotifications")
             notificationManager.cancelAllNotifications()

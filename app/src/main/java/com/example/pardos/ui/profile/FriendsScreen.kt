@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.profile
 
+import com.korkoor.pardos.ui.prestige.tint
 import com.korkoor.pardos.ui.design.*
 
 import android.content.Context
@@ -300,6 +301,18 @@ private fun RankRow(player: RankedPlayer, profile: UserProfile?) {
                 fontSize = 15.sp, fontWeight = FontWeight.Black, color = Navy,
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+            profile?.let { fp ->
+                val t = com.korkoor.pardos.domain.prestige.ProfileTitles.byId(fp.titleId)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.korkoor.pardos.ui.prestige.RankDot(com.korkoor.pardos.domain.prestige.PrestigeRank.forScore(fp.prestige), 12.dp)
+                    Spacer(Modifier.width(5.dp))
+                    Text(t.name, fontSize = 10.sp, fontWeight = FontWeight.Black, color = t.tint())
+                    if (fp.platinum) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF8E9AC4), modifier = Modifier.size(12.dp))
+                    }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("NV ${profile?.playerLevel ?: 1}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Sage)
                 val streak = profile?.currentStreak ?: 0
