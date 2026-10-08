@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.korkoor.pardos.domain.shop.SkinInventory
+import com.korkoor.pardos.domain.shop.TileSkin
 import java.util.TimeZone
 
 /** Día local (días desde epoch en la zona horaria del jugador). Evita romper rachas por UTC. */
@@ -27,6 +29,8 @@ class EconomyManager(context: Context) {
             _gems.value = prefs.getInt(KEY_GEMS, 0)
             _freezes.value = prefs.getInt(KEY_FREEZES, 0)
             _vip.value = prefs.getBoolean(KEY_VIP, false)
+            _ownedSkins.value = prefs.getStringSet(KEY_OWNED_SKINS, null)?.toSet() ?: setOf(TileSkin.DEFAULT.id)
+            _equippedSkin.value = TileSkin.fromId(prefs.getString(KEY_EQUIPPED_SKIN, null))
             loaded = true
         }
     }
@@ -36,6 +40,34 @@ class EconomyManager(context: Context) {
     val streakFreezes: StateFlow<Int> = _freezes.asStateFlow()
     /** VIP (compra única): los poderes que piden anuncio se usan gratis. */
     val isVip: StateFlow<Boolean> = _vip.asStateFlow()
+
+    // --- Skins de fichas ---
+    val ownedSkins: StateFlow<Set<String>> = _ownedSkins.asStateFlow()
+    val equippedSkin: StateFlow<TileSkin> = _equippedSkin.asStateFlow()
+
+    private fun skinInventory() = SkinInventory(_ownedSkins.value, _equippedSkin.value.id)
+
+    /** Compra una skin con monedas o gemas según su precio. Devuelve el resultado para mostrar el motivo. */
+    fun buySkin(skin: TileSkin): SkinInventory.Purchase {
+        val result = skinInventory().buy(skin, _coins.value, _gems.value)
+        if (result is SkinInventory.Purchase.Ok) {
+            _coins.value = result.coinsLeft
+            _gems.value = result.gemsLeft
+            _ownedSkins.value = result.inventory.owned
+            prefs.edit()
+                .putInt(KEY_COINS, _coins.value)
+                .putInt(KEY_GEMS, _gems.value)
+                .putStringSet(KEY_OWNED_SKINS, _ownedSkins.value)
+                .apply()
+        }
+        return result
+    }
+
+    fun equipSkin(skin: TileSkin) {
+        val inv = skinInventory().equip(skin)
+        _equippedSkin.value = TileSkin.fromId(inv.equipped)
+        prefs.edit().putString(KEY_EQUIPPED_SKIN, inv.equipped).apply()
+    }
 
     fun setVip(value: Boolean) {
         _vip.value = value
@@ -112,10 +144,14 @@ class EconomyManager(context: Context) {
         const val KEY_GEMS = "gems"
         const val KEY_FREEZES = "streak_freezes"
         const val KEY_VIP = "vip"
+        const val KEY_OWNED_SKINS = "owned_skins"
+        const val KEY_EQUIPPED_SKIN = "equipped_skin"
         val _coins = MutableStateFlow(0)
         val _gems = MutableStateFlow(0)
         val _freezes = MutableStateFlow(0)
         val _vip = MutableStateFlow(false)
+        val _ownedSkins = MutableStateFlow(setOf(TileSkin.DEFAULT.id))
+        val _equippedSkin = MutableStateFlow(TileSkin.DEFAULT)
         var loaded = false
     }
 }

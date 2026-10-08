@@ -21,6 +21,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.korkoor.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.ui.game.components.tileLook
+import com.korkoor.pardos.domain.shop.SkinInventory
+import com.korkoor.pardos.domain.shop.TileSkin
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,6 +51,8 @@ fun ShopScreen(
     val gems by economy.gems.collectAsState()
     val freezes by economy.streakFreezes.collectAsState()
     val isVip by economy.isVip.collectAsState()
+    val equippedSkin by economy.equippedSkin.collectAsState()
+    val ownedSkins by economy.ownedSkins.collectAsState()
     val prices by billing.prices.collectAsState()
     val message by billing.message.collectAsState()
     var localMessage by remember { mutableStateOf<String?>(null) }
@@ -99,6 +107,39 @@ fun ShopScreen(
                 price = prices[ShopCatalog.VIP_FOREVER],
                 onBuy = { billing.purchase(activity, ShopCatalog.VIP_FOREVER) }
             )
+
+            // --- SKINS DE FICHAS ---
+            SectionTitle("SKINS DE FICHAS")
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(end = 4.dp)
+            ) {
+                items(TileSkin.entries.toList()) { skin ->
+                    val owned = skin.isFree || skin.id in ownedSkins
+                    SkinCard(
+                        skin = skin,
+                        owned = owned,
+                        equipped = skin == equippedSkin,
+                        canAfford = coins >= skin.coinPrice && gems >= skin.gemPrice,
+                        onClick = {
+                            if (owned) {
+                                economy.equipSkin(skin)
+                                localMessage = "Skin equipada: ${skinName(skin)}"
+                            } else {
+                                when (economy.buySkin(skin)) {
+                                    is SkinInventory.Purchase.Ok -> {
+                                        economy.equipSkin(skin)
+                                        localMessage = "¡${skinName(skin)} desbloqueada y equipada!"
+                                    }
+                                    SkinInventory.Purchase.NotEnoughCoins -> localMessage = "Te faltan monedas"
+                                    SkinInventory.Purchase.NotEnoughGems -> localMessage = "Te faltan gemas"
+                                    SkinInventory.Purchase.AlreadyOwned -> Unit
+                                }
+                            }
+                        }
+                    )
+                }
+            }
 
             // --- GEMAS ---
             SectionTitle("GEMAS")
@@ -308,5 +349,91 @@ private fun ShopRow(
             Spacer(Modifier.width(5.dp))
             Text(priceText, fontSize = 13.sp, fontWeight = FontWeight.Black, color = if (enabled) Navy else Navy.copy(alpha = 0.35f))
         }
+    }
+}
+
+
+private fun skinName(skin: TileSkin): String = when (skin) {
+    TileSkin.JELLY -> "Gelatina"
+    TileSkin.FLAT -> "Mate"
+    TileSkin.WOOD -> "Madera"
+    TileSkin.GLASS -> "Cristal"
+    TileSkin.NEON -> "Neón"
+}
+
+@Composable
+private fun SkinCard(
+    skin: TileSkin,
+    owned: Boolean,
+    equipped: Boolean,
+    canAfford: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        modifier = Modifier
+            .width(150.dp)
+            .clip(shape)
+            .background(Color.White)
+            .border(if (equipped) 2.dp else 1.dp, if (equipped) Sage else Navy.copy(alpha = 0.08f), shape)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Vista previa sobre un mini tablero
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Navy.copy(alpha = 0.06f))
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(2, 16, 128).forEach { v -> SkinTilePreview(skin, v) }
+            }
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(skinName(skin), fontSize = 15.sp, fontWeight = FontWeight.Black, color = Navy)
+        Spacer(Modifier.height(8.dp))
+
+        val (label, bg, fg) = when {
+            equipped -> Triple("EQUIPADA", Sage, Color.White)
+            owned -> Triple("EQUIPAR", Sage.copy(alpha = 0.16f), Sage)
+            skin.gemPrice > 0 -> Triple("${skin.gemPrice} ◆", if (canAfford) GemBlue.copy(alpha = 0.16f) else Navy.copy(alpha = 0.06f), if (canAfford) GemBlue else Navy.copy(alpha = 0.35f))
+            else -> Triple("${skin.coinPrice} ●", if (canAfford) Gold.copy(alpha = 0.18f) else Navy.copy(alpha = 0.06f), if (canAfford) Gold else Navy.copy(alpha = 0.35f))
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(14.dp))
+                .background(bg)
+                .padding(horizontal = 14.dp, vertical = 7.dp)
+        ) {
+            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Black, color = fg, letterSpacing = 1.sp)
+        }
+    }
+}
+
+@Composable
+private fun SkinTilePreview(skin: TileSkin, value: Int) {
+    val look = tileLook(skin, value, GameTheme.Zen)
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .then(if (look.glow != null) Modifier.shadow(6.dp, shape, spotColor = look.glow, ambientColor = look.glow) else Modifier)
+            .clip(shape)
+            .background(look.background)
+            .then(if (look.border != null) Modifier.border(1.5.dp, look.border, shape) else Modifier),
+        contentAlignment = Alignment.Center
+    ) {
+        if (look.gloss) {
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.Transparent)
+                )
+            )
+        }
+        Text("$value", fontSize = if (value >= 100) 11.sp else 14.sp, fontWeight = FontWeight.Black, color = look.text)
     }
 }

@@ -119,8 +119,10 @@ fun BoardDisplay(
     onMoveSound: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val dragState = remember { DragGestureState() }
     val gridSize = state.boardSize
+    val equippedSkin by remember { com.korkoor.pardos.data.local.EconomyManager(context) }.equippedSkin.collectAsState()
 
     // 🚀 MEJORA: Definimos rangos de tamaño para expansión masiva
     val isLargeGrid = gridSize >= 4
@@ -208,6 +210,7 @@ fun BoardDisplay(
                 state.tiles.forEach { tile ->
                     key(tile.id) {
                         AnimatedTile(
+                            skin = equippedSkin,
                             tile = tile,
                             tileSize = tileSize,
                             spacing = spacing,
@@ -259,6 +262,7 @@ fun BoardDisplay(
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
 private fun AnimatedTile(
+    skin: com.korkoor.pardos.domain.shop.TileSkin,
     tile: TileModel,
     tileSize: Dp,
     spacing: Dp,
@@ -307,8 +311,9 @@ private fun AnimatedTile(
     val shape = getShape(shapeName, isLargeGrid)
     val isDiamond = shapeName == "Diamante" && !isLargeGrid
 
-    val backgroundColor = getTileColor(tile.value, currentTheme)
-    val textColor = getTileTextColor(tile.value)
+    val look = tileLook(skin, tile.value, currentTheme)
+    val backgroundColor = look.background
+    val textColor = look.text
 
     Box(
         modifier = Modifier
@@ -329,14 +334,15 @@ private fun AnimatedTile(
 
                 if (isDiamond) rotationZ = 45f
 
-                shadowElevation = if (tile.value >= 128) 4.dp.toPx() else 2.dp.toPx()
+                shadowElevation = look.elevation.dp.toPx()
                 this.shape = shape
                 clip = true
             }
-            .background(backgroundColor),
+            .background(backgroundColor)
+            .then(if (look.border != null) Modifier.border(if (look.glow != null) 2.dp else 1.5.dp, look.border, shape) else Modifier),
         contentAlignment = Alignment.Center
     ) {
-        Box(
+        if (look.gloss) Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
