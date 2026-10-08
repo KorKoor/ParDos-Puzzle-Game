@@ -17,26 +17,39 @@ class ZenNotificationManager(private val context: Context) {
 
     private val workManager = WorkManager.getInstance(context)
 
+    /**
+     * Pocas notificaciones, con sentido. Se programan al salir del juego (hoy ya jugaste),
+     * así que los avisos de racha y regalo apuntan a MAÑANA y solo avisan de algo real.
+     */
     fun scheduleAllNotifications() {
         Log.d(TAG, "scheduleAllNotifications")
         cancelAllNotifications()
 
-        schedule("powerup_clean", "Tu Varita Magica esta lista", "El poder de limpieza se ha recargado. Vuelve al tablero.", 15, TimeUnit.MINUTES, 1)
-        schedule("powerup_merge", "Poder de Fusion disponible", "Combina estrategicamente. Tu poder esta al 100%.", 16, TimeUnit.MINUTES, 2)
-        schedule("revancha", "El tablero te reta de nuevo", "Toma un respiro y vuelve a intentarlo. Puedes superar este nivel.", 1, TimeUnit.HOURS, 3)
-        schedule("partida_pendiente", "Tu partida te esta esperando", "Dejaste tus fichas a medias. Entra y termina lo que empezaste.", 2, TimeUnit.HOURS, 4)
+        val streak = com.korkoor.pardos.data.local.ProfileManager(context).getProfile().currentStreak
+        val nextDay = streak + 1
 
-        scheduleAtHour("despertar", "Buenos dias, jugador Zen", "Tus 3 nuevas misiones diarias acaban de llegar. Gana tu XP de hoy.", 9, 0, 5)
-        scheduleAtHour("almuerzo", "Hora de un respiro", "Despeja tu mente con una partida rapida de ParDos.", 13, 30, 6)
-        scheduleAtHour("salvavidas", "Alerta roja: Tu racha", "Solo te toma 2 minutos. Juega ahora y no pierdas tus dias acumulados.", 20, 0, 7)
-        scheduleAtHour("recompensas", "Olvidaste tu botin", "Tienes XP esperando a ser reclamada. Entra antes de que termine el dia.", 21, 0, 8)
-        scheduleAtHour("nocturno", "Relaja tu mente antes de dormir", "Combina un par de fichas en modo Zen para descansar mejor.", 22, 30, 9)
+        // Poderes recargados (a los 16 min, cuando ambos cooldowns ya pasaron)
+        schedule("powerup_ready", "Tus poderes están listos", "Varita y Fusión recargadas. Vuelve al tablero.", 16, TimeUnit.MINUTES, 1)
 
-        schedule("nivel_cerca", "Estas a punto de ascender", "Te falta muy poca XP para subir de nivel. Entra y consiguelo hoy.", 24, TimeUnit.HOURS, 10)
+        // Regalo del día siguiente (mañana 10:00)
+        scheduleAtHour(
+            "regalo_diario", "Tu regalo de hoy te espera",
+            "Día $nextDay de racha: entra y reclama tus monedas.",
+            10, 0, 2, dayOffset = 1
+        )
 
-        schedule("racha_perdida", "Tu fuego se apago", "Perdiste tu racha, pero hoy es un gran dia para iniciar una nueva.", 2, TimeUnit.DAYS, 13)
-        schedule("soborno", "Te extranamos en el tablero", "Tus fichas estan frias. Entra hoy y supera un nivel para calentar motores.", 5, TimeUnit.DAYS, 14)
-        schedule("gran_retorno", "Ha pasado mucho tiempo", "El arte de combinar te llama. Echamos una partida rapida sin estres.", 14, TimeUnit.DAYS, 15)
+        // Racha en riesgo (mañana 20:00) — solo si hay una racha que proteger
+        if (streak >= 2) {
+            scheduleAtHour(
+                "racha_riesgo", "Tu racha de $streak días está en riesgo",
+                "Solo te toma 2 minutos. Juega hoy y no la pierdas.",
+                20, 0, 3, dayOffset = 1
+            )
+        }
+
+        // Regresos: 3 y 7 días sin entrar
+        schedule("regreso_3d", "Tus fichas te extrañan", "Hay misiones nuevas y un regalo esperándote.", 3, TimeUnit.DAYS, 4)
+        schedule("regreso_7d", "Ha pasado una semana", "Vuelve a un tablero tranquilo: una partida Zen y listo.", 7, TimeUnit.DAYS, 5)
     }
 
     fun cancelAllNotifications() {
@@ -61,7 +74,7 @@ class ZenNotificationManager(private val context: Context) {
         workManager.enqueueUniqueWork(tag, ExistingWorkPolicy.REPLACE, request)
     }
 
-    private fun scheduleAtHour(tag: String, title: String, message: String, targetHour: Int, targetMinute: Int, id: Int) {
+    private fun scheduleAtHour(tag: String, title: String, message: String, targetHour: Int, targetMinute: Int, id: Int, dayOffset: Int = 0) {
         val now = Calendar.getInstance()
         val target = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, targetHour)
@@ -69,6 +82,7 @@ class ZenNotificationManager(private val context: Context) {
             set(Calendar.SECOND, 0)
         }
 
+        target.add(Calendar.DAY_OF_YEAR, dayOffset)
         if (target.before(now)) {
             target.add(Calendar.DAY_OF_YEAR, 1)
         }
