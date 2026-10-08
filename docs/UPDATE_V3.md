@@ -14,10 +14,11 @@ Guía técnica de lo que cambió en la rama `update-v3` y cómo trabajar con ell
 
 ```
 shared/   (Kotlin Multiplatform: Android + iOS)   <- lógica pura, sin Android
-  domain/logic      GameEngine, ProgressionEngine
+  domain/logic      GameEngine (con semilla), ProgressionEngine, DailyChallenge, RaceRules, DuelRules
+  domain/events     EventCalendar (eventos programados sin servidor)
   domain/model      BoardState, TileModel, GameMode, LevelInfo, LevelRepository, DailyMission
   domain/rewards    DailyRewards, StreakCalculator, CoinRewards, ChapterRewards
-  domain/shop       ShopCatalog, CoinShop
+  domain/shop       ShopCatalog, CoinShop, TileSkins (catálogo + inventario)
   domain/social     Leaderboard, WeekCalendar
 app/      (Android)
   data/local        EconomyManager, DailyRewardManager, LevelProgressStore, ProfileManager, MissionManager
@@ -31,6 +32,18 @@ app/      (Android)
 
 Regla: **toda regla de juego nueva (puntos, premios, progresión) va en `shared/` con su prueba**, y la UI solo la muestra.
 Eso es lo que permitirá reutilizarla en iOS.
+
+## Modos y sistemas de juego
+
+- **Motor determinista:** `GameEngine(boardSize, random)`. Con una semilla, los mismos movimientos dan el mismo tablero.
+  Lo usan el reto diario (igual para todos los del mismo día local) y el duelo.
+- **Eventos programados:** `EventCalendar.activeOn(díaLocal)`. Fin de semana dorado (monedas x2), Miércoles de
+  experiencia (XP x2) y Semana festival (monedas x1.5 y estrellas dobles en el ranking). No se acumulan: aplica el mejor.
+- **Skins de fichas:** `TileSkin` (Gelatina, Mate, Madera, Cristal, Neón). El dibujo está en
+  `ui/game/components/TileSkinStyle.kt`; se compran y equipan en la tienda.
+- **Modo Carrera:** `RaceRules`. Etapas encadenadas (3x3 → 6x6), el reloj sube con cada etapa superada (máx. 180 s).
+- **Duelo local:** `DuelRules`. Misma semilla para los dos jugadores, 60 s cada uno, se pasan el teléfono.
+- **Cofres de capítulo:** `ChapterRewards` (cada 20 niveles del mapa).
 
 ## Convenciones importantes
 
