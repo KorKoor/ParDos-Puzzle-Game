@@ -66,13 +66,13 @@ fun ProfileScreen(
     }
 
     // --- PALETA ZEN ---
-    val fondoBeige = Color(0xFFFDF8F1)
-    val cafeProfundo = Color(0xFF5D4037)
-    val cafeSuave = Color(0xFF8D6E63)
+    val fondoBeige = Color(0xFFFFFBF5)
+    val cafeProfundo = com.korkoor.pardos.ui.design.Navy
+    val cafeSuave = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.55f)
     val cremaPuro = Color(0xFFFFFFFF)
-    val terracota = Color(0xFFE07A5F)
-    val verdeMenta = Color(0xFF81B29A)
-    val dorado = Color(0xFFF2CC8F)
+    val terracota = com.korkoor.pardos.ui.design.Terracotta
+    val verdeMenta = com.korkoor.pardos.ui.design.Sage
+    val dorado = com.korkoor.pardos.ui.design.Gold
 
     Box(
         modifier = Modifier
@@ -95,24 +95,13 @@ fun ProfileScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // --- HEADER ---
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    onClick = onBack,
-                    shape = CircleShape,
-                    color = cremaPuro,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = null, tint = cafeProfundo)
-                    }
-                }
-                Spacer(modifier = Modifier.width(20.dp))
-                Text("TU ESPACIO ZEN", fontSize = 20.sp, fontWeight = FontWeight.Black, color = cafeProfundo, letterSpacing = 1.5.sp)
-            }
+            com.korkoor.pardos.ui.design.PardosTopBar(
+                title = "Mi perfil",
+                eyebrow = "Tu espacio zen",
+                onBack = onBack,
+                horizontalPadding = 0.dp
+            )
+            Spacer(Modifier.height(4.dp))
 
             // --- PERFIL CARD PRINCIPAL ---
             Surface(
@@ -325,7 +314,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
             containerColor = Color.White,
-            title = { Text("Tu Identidad Zen", fontWeight = FontWeight.Black, color = Color(0xFF5D4037)) },
+            title = { Text("Tu Identidad Zen", fontWeight = FontWeight.Black, color = Color(0xFF3D405B)) },
             text = {
                 OutlinedTextField(
                     value = tempName,
@@ -400,7 +389,7 @@ fun StatCard(modifier: Modifier, icon: ImageVector, title: String, value: String
         ) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF5D4037))
+            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B))
             Spacer(modifier = Modifier.height(2.dp))
             Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
         }

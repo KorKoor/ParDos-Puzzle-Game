@@ -27,7 +27,7 @@ fun ProfileSetupDialog(
     onProfileSaved: (String, Int) -> Unit
 ) {
     // --- NUEVA PALETA DE COLORES ---
-    val cafeOscuro = Color(0xFF5D4037)
+    val cafeOscuro = Color(0xFF3D405B)
     val cafeSuave = Color(0xFF8D6E63)
     val cremaFondo = Color(0xFFFDF8F1)
     val terracota = Color(0xFFE07A5F)

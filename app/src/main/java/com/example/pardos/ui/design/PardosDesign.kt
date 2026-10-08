@@ -114,10 +114,11 @@ fun PardosTopBar(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     eyebrow: String? = null,
+    horizontalPadding: Dp = 20.dp,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = horizontalPadding, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         PardosBackButton(onBack)

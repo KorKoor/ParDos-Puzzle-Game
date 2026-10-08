@@ -54,7 +54,7 @@ fun AvatarSelectorDialog(
     onDismissRequest: () -> Unit
 ) {
     // Colores ParDos Zen
-    val cafeOscuro = Color(0xFF5D4037)
+    val cafeOscuro = Color(0xFF3D405B)
     val cafeSuave = Color(0xFF8D6E63)
     val cremaFondo = Color(0xFFFDF8F1)
     val blancoPuro = Color(0xFFFFFFFF)

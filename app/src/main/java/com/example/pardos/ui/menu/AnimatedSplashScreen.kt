@@ -24,11 +24,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 🎨 PALETA DE COLORES "COFFEE ZEN"
-private val CoffeeCream = Color(0xFFFDFBF7) // Fondo crema suave
-private val CoffeeLatte = Color(0xFFEFEBE9) // Círculo decorativo
-private val CoffeeDark = Color(0xFF4E342E)  // Texto principal (Café expreso)
-private val CoffeeMedium = Color(0xFF795548) // Texto secundario (Moca)
-private val GoldAccent = Color(0xFFD7CCC8)  // Detalles sutiles
+private val CoffeeCream = Color(0xFFFFFBF5) // Fondo crema suave
+private val CoffeeLatte = Color(0xFFF3EFE6) // Círculo decorativo
+private val CoffeeDark = Color(0xFF3D405B)  // Texto principal (Café expreso)
+private val CoffeeMedium = Color(0xFF6B9E86) // Texto secundario (Moca)
+private val GoldAccent = Color(0xFFF2CC8F)  // Detalles sutiles
 
 @Composable
 fun AnimatedSplashScreen(onAnimationFinished: () -> Unit) {
