@@ -11,6 +11,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -60,6 +63,16 @@ sealed class Screen {
     data object Profile : Screen()
     data object Friends : Screen()
     data object Shop : Screen()
+}
+
+/** Nivel de profundidad de cada pantalla, para animar entrar/volver. */
+private fun Screen.navDepth(): Int = when (this) {
+    Screen.Splash -> 0
+    Screen.Menu -> 1
+    Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements,
+    Screen.Profile, Screen.Friends, Screen.Shop, Screen.AccessibilityGame -> 2
+    Screen.LevelSelector -> 3
+    Screen.Game -> 4
 }
 
 class MainActivity : ComponentActivity() {
@@ -175,7 +188,25 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AnimatedContent(
                         targetState = currentScreen,
-                        transitionSpec = { fadeIn(animationSpec = tween(600)) togetherWith fadeOut(animationSpec = tween(600)) },
+                        transitionSpec = {
+                            // Profundidad: entrar a una pantalla más profunda desliza hacia la izquierda,
+                            // volver desliza hacia la derecha. Splash y juego usan fundido.
+                            val from = initialState.navDepth()
+                            val to = targetState.navDepth()
+                            when {
+                                initialState == Screen.Splash || targetState == Screen.Splash ->
+                                    fadeIn(tween(500)) togetherWith fadeOut(tween(500))
+                                targetState == Screen.Game || initialState == Screen.Game ->
+                                    (fadeIn(tween(350)) + scaleIn(initialScale = 0.96f, animationSpec = tween(350))) togetherWith
+                                        fadeOut(tween(250))
+                                to > from ->
+                                    (slideInHorizontally(tween(320)) { it / 4 } + fadeIn(tween(320))) togetherWith
+                                        (slideOutHorizontally(tween(320)) { -it / 6 } + fadeOut(tween(220)))
+                                else ->
+                                    (slideInHorizontally(tween(320)) { -it / 4 } + fadeIn(tween(320))) togetherWith
+                                        (slideOutHorizontally(tween(320)) { it / 6 } + fadeOut(tween(220)))
+                            }
+                        },
                         label = "MainNavigation"
                     ) { target ->
                         when (target) {
