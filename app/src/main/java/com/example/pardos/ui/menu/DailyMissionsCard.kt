@@ -181,7 +181,8 @@ fun MissionItemRow(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = cafeOscuro,
-                maxLines = 1
+                maxLines = 2,
+                lineHeight = 16.sp
             )
             Spacer(modifier = Modifier.height(6.dp))
 

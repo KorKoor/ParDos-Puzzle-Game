@@ -191,14 +191,14 @@ fun ProfileScreen(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Rounded.Whatshot, // Fuego
                     title = "RACHA ACTUAL",
-                    value = "${profile.currentStreak} días",
+                    value = if (profile.currentStreak == 1) "1 día" else "${profile.currentStreak} días",
                     color = terracota
                 )
                 StatCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Rounded.EmojiEvents, // Copa/Trofeo
                     title = "MEJOR RACHA",
-                    value = "${profile.bestStreak} días",
+                    value = if (profile.bestStreak == 1) "1 día" else "${profile.bestStreak} días",
                     color = dorado
                 )
             }
