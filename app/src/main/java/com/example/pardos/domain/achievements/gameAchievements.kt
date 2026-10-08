@@ -246,7 +246,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_60_desc,
             icon = Icons.Default.Timer,
             color = Color(0xFFFFD700),
-            condition = { it.isLevelCompleted && it.elapsedTime < 60 }
+            condition = { it.isLevelCompleted && it.elapsedTime < 60_000 }
         ),
         Achievement(
             id = "time_45",
@@ -254,7 +254,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_45_desc,
             icon = Icons.Default.TimerOff,
             color = Color(0xFFFFD700),
-            condition = { it.isLevelCompleted && it.elapsedTime < 45 }
+            condition = { it.isLevelCompleted && it.elapsedTime < 45_000 }
         ),
         Achievement(
             id = "time_30",
@@ -262,7 +262,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_30_desc,
             icon = Icons.Default.Alarm,
             color = Color(0xFFFF9800),
-            condition = { it.isLevelCompleted && it.elapsedTime < 30 }
+            condition = { it.isLevelCompleted && it.elapsedTime < 30_000 }
         ),
         Achievement(
             id = "time_15",
@@ -270,7 +270,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_15_desc,
             icon = Icons.Filled.Bolt,
             color = Color(0xFFFF6B6B),
-            condition = { it.isLevelCompleted && it.elapsedTime < 15 }
+            condition = { it.isLevelCompleted && it.elapsedTime < 15_000 }
         ),
 
         // ========== LOGROS DE RESISTENCIA ==========
@@ -320,7 +320,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_5min_desc,
             icon = Icons.Default.AccessTime,
             color = Color(0xFF81B29A),
-            condition = { it.elapsedTime >= 300 }
+            condition = { it.elapsedTime >= 300_000 }
         ),
         Achievement(
             id = "time_10min",
@@ -328,7 +328,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_10min_desc,
             icon = Icons.Default.Schedule,
             color = Color(0xFF6C63FF),
-            condition = { it.elapsedTime >= 600 }
+            condition = { it.elapsedTime >= 600_000 }
         ),
         Achievement(
             id = "time_20min",
@@ -336,7 +336,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_20min_desc,
             icon = Icons.Default.MoreTime,
             color = Color(0xFF9C27B0),
-            condition = { it.elapsedTime >= 1200 }
+            condition = { it.elapsedTime >= 1200_000 }
         ),
         Achievement(
             id = "time_30min",
@@ -344,7 +344,7 @@ object gameAchievements {
             descriptionResId = R.string.ach_time_30min_desc,
             icon = Icons.Default.HourglassFull,
             color = Color(0xFFFF6B6B),
-            condition = { it.elapsedTime >= 1800 }
+            condition = { it.elapsedTime >= 1800_000 }
         ),
 
         // ========== LOGROS DE PUNTUACIÓN ==========

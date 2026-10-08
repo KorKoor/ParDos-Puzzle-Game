@@ -32,7 +32,7 @@ data class BoardState(
     // --- PROPIEDADES CALCULADAS ---
 
     val isTimeLow: Boolean
-        get() = maxTime?.let { elapsedTime in 1..10 } ?: false
+        get() = maxTime?.let { elapsedTime in 1..10_000 } ?: false
 
     val remainingTime: Long
         get() = elapsedTime

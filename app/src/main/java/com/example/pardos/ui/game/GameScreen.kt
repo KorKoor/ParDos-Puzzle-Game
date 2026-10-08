@@ -113,7 +113,7 @@ fun GameScreen(
     // 🔥 OPTIMIZACIÓN: Solo recalcula el gradiente si el tema cambia
     val bgGradient = remember(currentTheme) { Brush.verticalGradient(colors = currentTheme.colors) }
 
-    val isTimeLow = state.maxTime != null && state.elapsedTime <= 10L
+    val isTimeLow = state.maxTime != null && state.elapsedTime <= 10_000L
 
     val shouldBlur = viewModel.showLevelSummary || state.isGameOver || showExitDialog || showThemeMenu
     val blurRadius by animateDpAsState(
@@ -262,7 +262,7 @@ fun GameScreen(
 
                                 TimerDisplay(
                                     seconds = state.elapsedTime,
-                                    isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10,
+                                    isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10_000,
                                     modifier = Modifier.scale(0.9f)
                                 )
 
@@ -524,33 +524,6 @@ fun GameScreen(
                     isManualMerge = viewModel.pendingPowerUpType == "MANUAL_MERGE",
                     accentColor = currentTheme.accentColor,
                     onCancel = { viewModel.cancelSelectMode() }
-                )
-            }
-        }
-
-        // --- BANNER DE ANUNCIOS ---
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp)
-                .height(58.dp)
-                .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.3f)),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White.copy(alpha = 0.85f),
-            border = BorderStroke(1.dp, currentTheme.accentColor.copy(alpha = 0.3f))
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                androidx.compose.ui.viewinterop.AndroidView(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    factory = { context ->
-                        com.google.android.gms.ads.AdView(context).apply {
-                            setAdSize(com.google.android.gms.ads.AdSize.BANNER)
-                            adUnitId = "ca-app-pub-3851960142449906/9416268397"
-                            loadAd(com.google.android.gms.ads.AdRequest.Builder().build())
-                        }
-                    }
                 )
             }
         }
@@ -1058,8 +1031,8 @@ private fun TimeDisplay(
     accentColor: Color,
     textColor: Color
 ) {
-    val isUrgent = elapsedTime <= 10
-    val isCritical = elapsedTime <= 5
+    val isUrgent = elapsedTime <= 10_000
+    val isCritical = elapsedTime <= 5_000
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
@@ -1196,7 +1169,7 @@ private fun GameFooter(
         Box(modifier = Modifier.padding(horizontal = 8.dp)) {
             TimerDisplay(
                 seconds = state.elapsedTime,
-                isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10,
+                isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10_000,
                 modifier = Modifier.scale(0.85f)
             )
         }

@@ -264,19 +264,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Único reloj del juego (segundos). Cuenta atrás si hay maxTime, hacia arriba si no.
-     * Respeta los bonus de tiempo aplicados al estado y evita bucles duplicados.
+     * Único reloj del juego. Todos los tiempos del estado están en MILISEGUNDOS.
+     * Cuenta atrás si hay maxTime, hacia arriba si no. Respeta bonus de tiempo y
+     * evita bucles duplicados (un solo Job).
      */
     fun startLevelTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
+            var last = System.currentTimeMillis()
             while (isActive) {
-                delay(1000)
+                delay(250)
+                val now = System.currentTimeMillis()
+                val delta = now - last
+                last = now
+
                 val state = _boardState.value
                 if (state.isGameOver || state.isLevelCompleted || state.isPaused) continue
 
                 if (state.maxTime != null) {
-                    val next = (state.elapsedTime - 1).coerceAtLeast(0L)
+                    val next = (state.elapsedTime - delta).coerceAtLeast(0L)
                     _boardState.update { it.copy(elapsedTime = next) }
                     if (next <= 0L) {
                         isGameStarted = false
@@ -284,7 +290,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         break
                     }
                 } else {
-                    _boardState.update { it.copy(elapsedTime = it.elapsedTime + 1) }
+                    _boardState.update { it.copy(elapsedTime = it.elapsedTime + delta) }
                 }
             }
         }
@@ -781,7 +787,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _boardState.update { state ->
                 val limit = state.maxTime
                 if (limit != null) {
-                    val newTime = (state.elapsedTime + bonusSeconds).coerceAtMost(limit)
+                    val newTime = (state.elapsedTime + bonusSeconds * 1000L).coerceAtMost(limit)
                     state.copy(elapsedTime = newTime)
                 } else {
                     state
@@ -1116,8 +1122,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     _boardState.update { state ->
-                        // ⏳ BALANCE DE TIEMPO: +30 segundos al revivir (el reloj trabaja en segundos)
-                        val bonusTimeSec = 30L
+                        // ⏳ BALANCE DE TIEMPO: +30 segundos al revivir (el reloj trabaja en milisegundos)
+                        val bonusTimeSec = 30_000L
                         val newTime = if (state.maxTime != null) {
                             (state.elapsedTime + bonusTimeSec).coerceAtMost(state.maxTime)
                         } else {
