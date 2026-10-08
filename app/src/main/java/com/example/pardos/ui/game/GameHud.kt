@@ -102,17 +102,24 @@ internal fun GameHeader(
         AnimatedLevelDisplay(
             level = state.currentLevel,
             textColor = currentTheme.mainTextColor,
-            isRace = state.gameMode == GameMode.CARRERA
+            labelRes = when (state.gameMode) {
+                GameMode.CARRERA -> R.string.stage_label
+                GameMode.DUELO -> R.string.player_label
+                else -> R.string.level_label
+            }
         )
 
         Spacer(Modifier.height(6.dp))
 
-        ObjectiveCard(
-            targetPiece = state.levelLimit,
-            boardSize = state.boardSize,
-            progress = state.levelProgress,
-            theme = currentTheme
-        )
+        // En el duelo no hay meta que mostrar: solo cuenta el puntaje
+        if (state.gameMode != GameMode.DUELO) {
+            ObjectiveCard(
+                targetPiece = state.levelLimit,
+                boardSize = state.boardSize,
+                progress = state.levelProgress,
+                theme = currentTheme
+            )
+        }
 
         if (state.maxTime != null) {
             Box(
@@ -362,7 +369,7 @@ internal fun AnimatedLevelDisplay(
     level: Int,
     modifier: Modifier = Modifier,
     textColor: Color,
-    isRace: Boolean = false
+    labelRes: Int = R.string.level_label
 ) {
     AnimatedContent(
         targetState = level,
@@ -373,7 +380,7 @@ internal fun AnimatedLevelDisplay(
         label = "LevelSlotAnimation"
     ) { targetLevel ->
         Text(
-            text = stringResource(if (isRace) R.string.stage_label else R.string.level_label, targetLevel),
+            text = stringResource(labelRes, targetLevel),
             modifier = modifier,
             fontSize = 34.sp,
             fontWeight = FontWeight.Black,

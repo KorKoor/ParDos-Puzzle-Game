@@ -67,6 +67,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     var firstSelectedTileId by mutableStateOf<String?>(null)
         private set
+    // --- DUELO LOCAL ---
+    var duelPlayer by mutableIntStateOf(1)
+        private set
+    var duelPhase by mutableStateOf(DuelPhase.PLAYING)
+        private set
+    val duelScores = mutableStateListOf(0, 0)
+    private var duelSeed = 0L
+
     // --- MODO CARRERA ---
     var raceStage by mutableIntStateOf(1)
         private set
@@ -312,8 +320,54 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
 
         if (currentMode == GameMode.CARRERA) finishRace()
+        if (currentMode == GameMode.DUELO) finishDuelRound()
 
         soundManager.playGameOver()
+    }
+
+    // ============================ DUELO LOCAL ============================
+
+    /** Empieza un duelo nuevo: el jugador 1 juega primero con una semilla que luego repetirá el jugador 2. */
+    fun startDuel() {
+        currentMode = GameMode.DUELO
+        dailyChallengeThemeIndex = null
+        currentMultiplierBase = 2
+        duelSeed = System.nanoTime()
+        duelPlayer = 1
+        duelScores[0] = 0
+        duelScores[1] = 0
+        duelPhase = DuelPhase.PLAYING
+        setupDuelRound()
+    }
+
+    private fun setupDuelRound() {
+        val rules = com.korkoor.pardos.domain.logic.DuelRules
+        setupCustomGame(
+            size = rules.BOARD_SIZE,
+            target = rules.TARGET,
+            allowPowerUps = false,
+            difficulty = "Normal",
+            level = duelPlayer,           // la cabecera muestra "JUGADOR n"
+            initialScore = 0,
+            isCustom = false,
+            seed = duelSeed,              // misma tabla para los dos
+            timeLimitMs = rules.ROUND_MS
+        )
+        // Sin anuncio de segunda oportunidad ni mano de tutorial en duelo
+        _boardState.update { it.copy(secondChanceUsed = true, showTutorialHand = false) }
+    }
+
+    fun duelStartSecondPlayer() {
+        duelPlayer = 2
+        duelPhase = DuelPhase.PLAYING
+        setupDuelRound()
+    }
+
+    fun duelRematch() = startDuel()
+
+    private fun finishDuelRound() {
+        duelScores[duelPlayer - 1] = _boardState.value.score
+        duelPhase = if (duelPlayer == 1) DuelPhase.HANDOVER else DuelPhase.RESULT
     }
 
     // =========================== MODO CARRERA ===========================
@@ -416,6 +470,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun startNewGame(mode: GameMode) {
         if (mode == GameMode.CARRERA) {
             startRace()
+            return
+        }
+        if (mode == GameMode.DUELO) {
+            startDuel()
             return
         }
         currentMode = mode
@@ -945,6 +1003,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun getBestStats(level: Int): Pair<Int, Long> = levelStore.bestStats(currentMode, level)
 
     fun retryLevel() {
+        if (currentMode == GameMode.DUELO) {
+            isMoving = false
+            isGameStarted = false
+            timerJob?.cancel()
+            startDuel()
+            return
+        }
         if (currentMode == GameMode.CARRERA) {
             showLevelSummary = false
             isMoving = false
@@ -1294,3 +1359,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+
+
+/** Fases del duelo local: jugando, entrega del teléfono al jugador 2, y resultado final. */
+enum class DuelPhase { PLAYING, HANDOVER, RESULT }

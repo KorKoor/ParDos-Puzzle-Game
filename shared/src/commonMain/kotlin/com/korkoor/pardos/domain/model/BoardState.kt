@@ -193,6 +193,7 @@ enum class GameMode(
     RAPIDO(64, 60_000L),
     TABLAS(0, 150_000L),
     CARRERA(16, 90_000L),
+    DUELO(4096, 60_000L),
 
     // 🔥 NUEVO MODO AGREGADO (Arregla el bug del tablero 3x3)
     CUSTOM(2048, null);

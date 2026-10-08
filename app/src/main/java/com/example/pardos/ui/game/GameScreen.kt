@@ -410,7 +410,15 @@ fun GameScreen(
                 enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
-                if (viewModel.loadingAdType == "REVIVE") {
+                if (state.gameMode == GameMode.DUELO) {
+                    DuelOverlay(
+                        phase = viewModel.duelPhase,
+                        scores = viewModel.duelScores,
+                        onNext = { viewModel.duelStartSecondPlayer() },
+                        onRematch = { viewModel.duelRematch() },
+                        onExit = { onBackToMenu() }
+                    )
+                } else if (viewModel.loadingAdType == "REVIVE") {
                     AdLoadingOverlay(currentTheme)
                 }
                 else if (state.secondChanceUsed == false) {

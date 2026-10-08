@@ -377,4 +377,17 @@
     <string name="race_over_title">Race over!</string>
     <string name="race_stages_cleared">Stages cleared</string>
     <string name="race_time_bonus">+%1$d s</string>
+    <string name="mode_duel">Duel</string>
+    <string name="mode_duel_title">LOCAL DUEL</string>
+    <string name="mode_duel_desc">Two players, one phone. Same board and 60 seconds each: highest score wins.</string>
+    <string name="player_label">PLAYER %1$d</string>
+    <string name="duel_pass_title">Pass the phone</string>
+    <string name="duel_pass_desc">Player %1$d\'s turn. Same board, 60 seconds!</string>
+    <string name="duel_score_of">Player %1$d: %2$d pts</string>
+    <string name="duel_ready">READY, PLAY</string>
+    <string name="duel_winner">Player %1$d wins!</string>
+    <string name="duel_tie">It\'s a tie!</string>
+    <string name="duel_margin">by %1$d points</string>
+    <string name="duel_rematch">REMATCH</string>
+    <string name="duel_exit">EXIT</string>
 </resources>

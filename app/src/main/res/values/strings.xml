@@ -379,4 +379,17 @@
     <string name="race_over_title">¡Fin de la carrera!</string>
     <string name="race_stages_cleared">Etapas superadas</string>
     <string name="race_time_bonus">+%1$d s</string>
+    <string name="mode_duel">Duelo</string>
+    <string name="mode_duel_title">DUELO LOCAL</string>
+    <string name="mode_duel_desc">Dos jugadores, un teléfono. Misma tabla y 60 segundos cada uno: gana quien sume más puntos.</string>
+    <string name="player_label">JUGADOR %1$d</string>
+    <string name="duel_pass_title">Pasa el teléfono</string>
+    <string name="duel_pass_desc">Turno del Jugador %1$d. ¡Misma tabla, 60 segundos!</string>
+    <string name="duel_score_of">Jugador %1$d: %2$d pts</string>
+    <string name="duel_ready">LISTO, JUGAR</string>
+    <string name="duel_winner">¡Gana el Jugador %1$d!</string>
+    <string name="duel_tie">¡Empate!</string>
+    <string name="duel_margin">por %1$d puntos</string>
+    <string name="duel_rematch">REVANCHA</string>
+    <string name="duel_exit">SALIR</string>
 </resources>

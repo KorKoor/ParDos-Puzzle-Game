@@ -30,6 +30,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.ui.Modifier
@@ -295,6 +296,105 @@ internal fun AchievementManagerPopup(viewModel: GameViewModel) {
     ) {
         viewModel.activeAchievementPopup?.let { achievement ->
             AchievementPopUp(achievement = achievement)
+        }
+    }
+}
+
+
+/** Entrega del teléfono (tras el jugador 1) y resultado final del duelo local. */
+@Composable
+fun DuelOverlay(
+    phase: DuelPhase,
+    scores: List<Int>,
+    onNext: () -> Unit,
+    onRematch: () -> Unit,
+    onExit: () -> Unit
+) {
+    val navy = com.korkoor.pardos.ui.design.Navy
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.86f).padding(16.dp),
+            color = com.korkoor.pardos.ui.design.Cream,
+            shape = RoundedCornerShape(32.dp),
+            shadowElevation = 16.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (phase == DuelPhase.HANDOVER) {
+                    Text(stringResource(R.string.duel_pass_title), fontSize = 24.sp, fontWeight = FontWeight.Black, color = navy)
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        stringResource(R.string.duel_score_of, 1, scores[0]),
+                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = com.korkoor.pardos.ui.design.Sage
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        stringResource(R.string.duel_pass_desc, 2),
+                        fontSize = 14.sp, textAlign = TextAlign.Center, color = navy.copy(alpha = 0.6f)
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    com.korkoor.pardos.ui.design.PrimaryButton(
+                        text = stringResource(R.string.duel_ready),
+                        onClick = onNext,
+                        icon = androidx.compose.material.icons.Icons.Default.PlayArrow
+                    )
+                } else {
+                    val winner = com.korkoor.pardos.domain.logic.DuelRules.winner(scores[0], scores[1])
+                    val margin = com.korkoor.pardos.domain.logic.DuelRules.margin(scores[0], scores[1])
+                    Text(
+                        text = when (winner) {
+                            com.korkoor.pardos.domain.logic.DuelWinner.PLAYER_1 -> stringResource(R.string.duel_winner, 1)
+                            com.korkoor.pardos.domain.logic.DuelWinner.PLAYER_2 -> stringResource(R.string.duel_winner, 2)
+                            com.korkoor.pardos.domain.logic.DuelWinner.TIE -> stringResource(R.string.duel_tie)
+                        },
+                        fontSize = 24.sp, fontWeight = FontWeight.Black, color = navy, textAlign = TextAlign.Center
+                    )
+                    if (winner != com.korkoor.pardos.domain.logic.DuelWinner.TIE) {
+                        Text(
+                            stringResource(R.string.duel_margin, margin),
+                            fontSize = 13.sp, color = navy.copy(alpha = 0.5f)
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        listOf(1, 2).forEach { p ->
+                            val won = (p == 1 && winner == com.korkoor.pardos.domain.logic.DuelWinner.PLAYER_1) ||
+                                (p == 2 && winner == com.korkoor.pardos.domain.logic.DuelWinner.PLAYER_2)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (won) com.korkoor.pardos.ui.design.Gold.copy(alpha = 0.18f) else navy.copy(alpha = 0.05f))
+                                    .padding(vertical = 14.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    stringResource(R.string.player_label, p),
+                                    fontSize = 10.sp, fontWeight = FontWeight.Black, color = navy.copy(alpha = 0.5f), letterSpacing = 1.sp
+                                )
+                                Text("${scores[p - 1]}", fontSize = 30.sp, fontWeight = FontWeight.Black, color = navy)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(22.dp))
+                    com.korkoor.pardos.ui.design.PrimaryButton(
+                        text = stringResource(R.string.duel_rematch),
+                        onClick = onRematch,
+                        icon = androidx.compose.material.icons.Icons.Default.Refresh
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.duel_exit),
+                        modifier = Modifier.clickable(onClick = onExit).padding(10.dp),
+                        fontSize = 13.sp, fontWeight = FontWeight.Black, color = navy.copy(alpha = 0.5f), letterSpacing = 2.sp
+                    )
+                }
+            }
         }
     }
 }
