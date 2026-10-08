@@ -3,6 +3,7 @@ package com.korkoor.pardos.ui.menu
 import com.korkoor.pardos.ui.design.*
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +33,12 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.korkoor.pardos.data.local.EconomyManager
+import com.korkoor.pardos.domain.rewards.ChapterRewards
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -70,6 +77,8 @@ private fun chapterColor(chapter: Int) = chapterColors[chapter % chapterColors.s
 private sealed interface MapItem {
     data class Node(val level: LevelInfo) : MapItem
     data class Banner(val chapter: Int, val stars: Int, val maxStars: Int, val completed: Int) : MapItem
+    /** Cofre al final de un capítulo. [ready] = último nivel superado; [claimed] = ya abierto. */
+    data class Chest(val chapter: Int, val ready: Boolean, val claimed: Boolean) : MapItem
 }
 
 /** Posición horizontal (0..1) del nodo: un zigzag suave. */
@@ -86,9 +95,14 @@ fun LevelSelectorScreen(
     // Al volver del juego se relee el progreso guardado
     LaunchedEffect(Unit) { onRefresh() }
 
+    val context = LocalContext.current
+    val economy = remember { EconomyManager(context) }
+    val haptic = LocalHapticFeedback.current
+    var claimTick by remember { mutableIntStateOf(0) }
+
     // Lista plana ascendente: banner de capítulo antes de su primer nivel.
     // La LazyColumn va en reverseLayout: el nivel 1 queda abajo y el mapa "sube".
-    val items = remember(levels) {
+    val items = remember(levels, claimTick) {
         buildList<MapItem> {
             levels.forEach { lvl ->
                 if ((lvl.id - 1) % CHAPTER_SIZE == 0) {
@@ -104,6 +118,11 @@ fun LevelSelectorScreen(
                     )
                 }
                 add(MapItem.Node(lvl))
+                // Cofre tras el último nivel de cada capítulo
+                if (lvl.id % CHAPTER_SIZE == 0) {
+                    val ch = chapterOf(lvl.id)
+                    add(MapItem.Chest(ch, ready = lvl.starsEarned > 0, claimed = economy.isChapterChestClaimed(ch)))
+                }
             }
         }
     }
@@ -134,6 +153,7 @@ fun LevelSelectorScreen(
             when (val it = items.getOrNull(first)) {
                 is MapItem.Node -> chapterOf(it.level.id)
                 is MapItem.Banner -> it.chapter
+                is MapItem.Chest -> it.chapter
                 null -> 0
             }
         }
@@ -151,6 +171,10 @@ fun LevelSelectorScreen(
     Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(currentTheme.colors))) {
         PicnicBackgroundOptimized(color = currentTheme.accentColor.copy(alpha = 0.05f))
 
+        // Ambiente: el fondo se tiñe suavemente con el color del capítulo que estás viendo
+        val ambient by animateColorAsState(chapterColor(visibleChapter).copy(alpha = 0.10f), tween(700), label = "ambient")
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ambient, Color.Transparent, ambient))))
+
         LazyColumn(
             state = listState,
             reverseLayout = true,
@@ -161,10 +185,28 @@ fun LevelSelectorScreen(
                 when (item) {
                     is MapItem.Node -> "n${item.level.id}"
                     is MapItem.Banner -> "b${item.chapter}"
+                    is MapItem.Chest -> "c${item.chapter}"
                 }
             }) { _, item ->
                 when (item) {
                     is MapItem.Banner -> ChapterBanner(item)
+                    is MapItem.Chest -> ChapterChest(
+                        chest = item,
+                        onClick = {
+                            when {
+                                item.claimed -> hint = "Ya abriste este cofre"
+                                !item.ready -> hint = "Supera el nivel ${ChapterRewards.lastLevelOf(item.chapter)} para abrirlo"
+                                else -> {
+                                    val reward = economy.claimChapterChest(item.chapter)
+                                    if (reward != null) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        hint = "¡Cofre abierto! +${reward.coins} monedas y +${reward.gems} gemas"
+                                        claimTick++
+                                    }
+                                }
+                            }
+                        }
+                    )
                     is MapItem.Node -> MapNode(
                         level = item.level,
                         nextUnlocked = levels.getOrNull(item.level.id)?.isLocked == false,
@@ -358,7 +400,7 @@ private fun MapNode(level: LevelInfo, nextUnlocked: Boolean, isLast: Boolean, is
                     val x0 = size.width * myX
                     val x1 = size.width * nextX
                     val y0 = size.height / 2f
-                    val y1 = if (endsAtBanner) 0f else -size.height / 2f
+                    val y1 = -size.height / 2f
                     val xEnd = if (endsAtBanner) x0 else x1
                     val path = Path().apply {
                         moveTo(x0, y0)
@@ -532,5 +574,73 @@ private fun PreviewStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
         Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.4f), letterSpacing = 1.5.sp)
+    }
+}
+
+
+@Composable
+private fun ChapterChest(chest: MapItem.Chest, onClick: () -> Unit) {
+    val color = chapterColor(chest.chapter)
+    val state = when {
+        chest.claimed -> 2
+        chest.ready -> 1
+        else -> 0
+    }
+    val lineColor = if (chest.ready) color.copy(alpha = 0.55f) else Navy.copy(alpha = 0.12f)
+    val x = nodeX(ChapterRewards.lastLevelOf(chest.chapter))
+
+    val bounce by rememberInfiniteTransition(label = "chest").animateFloat(
+        initialValue = 0f,
+        targetValue = if (state == 1) -6f else 0f,
+        animationSpec = infiniteRepeatable(tween(650, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "chestBounce"
+    )
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(ROW_HEIGHT)
+            .drawBehind {
+                // Tramo hacia el banner del siguiente capítulo
+                val x0 = size.width * x
+                drawLine(
+                    color = lineColor,
+                    start = Offset(x0, size.height / 2f),
+                    end = Offset(x0, 0f),
+                    strokeWidth = 7.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    pathEffect = if (!chest.ready) PathEffect.dashPathEffect(floatArrayOf(14.dp.toPx(), 12.dp.toPx())) else null
+                )
+            }
+    ) {
+        val size = 64.dp
+        Box(
+            modifier = Modifier
+                .offset(x = maxWidth * x - size / 2, y = (ROW_HEIGHT - size) / 2 + bounce.dp)
+                .size(size)
+                .then(if (state == 1) Modifier.shadow(14.dp, RoundedCornerShape(20.dp), spotColor = Gold) else Modifier.shadow(4.dp, RoundedCornerShape(20.dp)))
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    when (state) {
+                        1 -> Brush.linearGradient(listOf(Color(0xFFF2CC8F), Gold))
+                        2 -> Brush.linearGradient(listOf(Color(0xFFE4EEE8), Color(0xFFE4EEE8)))
+                        else -> Brush.linearGradient(listOf(Color(0xFFEDEBE6), Color(0xFFEDEBE6)))
+                    }
+                )
+                .border(2.dp, if (state == 1) Color.White else Navy.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (state == 2) Icons.Rounded.CheckCircle else Icons.Rounded.Inventory2,
+                contentDescription = "Cofre del capítulo ${chest.chapter + 1}",
+                tint = when (state) {
+                    1 -> Color.White
+                    2 -> Sage
+                    else -> Navy.copy(alpha = 0.28f)
+                },
+                modifier = Modifier.size(32.dp)
+            )
+        }
     }
 }

@@ -50,6 +50,18 @@ class EconomyManager(context: Context) {
         return true
     }
 
+    fun isChapterChestClaimed(chapter: Int): Boolean = prefs.getBoolean("chapter_chest_$chapter", false)
+
+    /** Abre el cofre de un capítulo una sola vez y entrega el premio. Devuelve null si ya estaba reclamado. */
+    fun claimChapterChest(chapter: Int): com.korkoor.pardos.domain.rewards.Reward? {
+        if (isChapterChestClaimed(chapter)) return null
+        val reward = com.korkoor.pardos.domain.rewards.ChapterRewards.forChapter(chapter)
+        prefs.edit().putBoolean("chapter_chest_$chapter", true).apply()
+        addCoins(reward.coins)
+        addGems(reward.gems)
+        return reward
+    }
+
     /** Cambia gemas por monedas. */
     fun exchangeGems(gems: Int): Boolean {
         if (!spendGems(gems)) return false
