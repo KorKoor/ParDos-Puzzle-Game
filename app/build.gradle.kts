@@ -76,6 +76,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.5")
 
     implementation("com.google.android.gms:play-services-ads:24.9.0")
+    implementation("com.android.billingclient:billing-ktx:8.0.0")
 
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
     implementation("com.google.firebase:firebase-auth")

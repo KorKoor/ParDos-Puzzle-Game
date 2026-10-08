@@ -59,6 +59,7 @@ sealed class Screen {
     data object LevelSelector : Screen()
     data object Profile : Screen()
     data object Friends : Screen()
+    data object Shop : Screen()
 }
 
 class MainActivity : ComponentActivity() {
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
     private val gameViewModel: GameViewModel by viewModels()
     private val themeViewModel: ThemeViewModel by viewModels()
     private lateinit var notificationManager: ZenNotificationManager
+    private val billingManager by lazy { com.korkoor.pardos.data.billing.BillingManager(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -229,7 +231,8 @@ class MainActivity : ComponentActivity() {
                                         onDailyChallengeClick = onDailyChallengeAction,
                                         onProfileClick = onProfileAction,
                                         onFriendsClick = onFriendsAction,
-                                        themeViewModel = themeViewModel
+                                        themeViewModel = themeViewModel,
+                                        onShopClick = { currentScreen = Screen.Shop }
                                     )
                                 }
                             }
@@ -311,6 +314,12 @@ class MainActivity : ComponentActivity() {
 
                             Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(onBack = { currentScreen = Screen.Menu })
                             Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
+                            Screen.Shop -> com.korkoor.pardos.ui.shop.ShopScreen(
+                                activity = this@MainActivity,
+                                billing = billingManager,
+                                economy = com.korkoor.pardos.data.local.EconomyManager(this@MainActivity),
+                                onBack = { currentScreen = Screen.Menu }
+                            )
                         }
                     }
                 }

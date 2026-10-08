@@ -26,6 +26,7 @@ class EconomyManager(context: Context) {
             _coins.value = prefs.getInt(KEY_COINS, 0)
             _gems.value = prefs.getInt(KEY_GEMS, 0)
             _freezes.value = prefs.getInt(KEY_FREEZES, 0)
+            _vip.value = prefs.getBoolean(KEY_VIP, false)
             loaded = true
         }
     }
@@ -33,6 +34,28 @@ class EconomyManager(context: Context) {
     val coins: StateFlow<Int> = _coins.asStateFlow()
     val gems: StateFlow<Int> = _gems.asStateFlow()
     val streakFreezes: StateFlow<Int> = _freezes.asStateFlow()
+    /** VIP (compra única): los poderes que piden anuncio se usan gratis. */
+    val isVip: StateFlow<Boolean> = _vip.asStateFlow()
+
+    fun setVip(value: Boolean) {
+        _vip.value = value
+        prefs.edit().putBoolean(KEY_VIP, value).apply()
+    }
+
+    /** Compra un escudo de racha con monedas. Devuelve false si no se puede. */
+    fun buyStreakFreeze(): Boolean {
+        if (!com.korkoor.pardos.domain.shop.CoinShop.canBuyStreakFreeze(_coins.value, _freezes.value)) return false
+        if (!spendCoins(com.korkoor.pardos.domain.shop.CoinShop.STREAK_FREEZE_PRICE_COINS)) return false
+        addStreakFreezes(1)
+        return true
+    }
+
+    /** Cambia gemas por monedas. */
+    fun exchangeGems(gems: Int): Boolean {
+        if (!spendGems(gems)) return false
+        addCoins(com.korkoor.pardos.domain.shop.CoinShop.coinsForGems(gems))
+        return true
+    }
 
     fun addCoins(amount: Int) {
         if (amount <= 0) return
@@ -76,9 +99,11 @@ class EconomyManager(context: Context) {
         const val KEY_COINS = "coins"
         const val KEY_GEMS = "gems"
         const val KEY_FREEZES = "streak_freezes"
+        const val KEY_VIP = "vip"
         val _coins = MutableStateFlow(0)
         val _gems = MutableStateFlow(0)
         val _freezes = MutableStateFlow(0)
+        val _vip = MutableStateFlow(false)
         var loaded = false
     }
 }

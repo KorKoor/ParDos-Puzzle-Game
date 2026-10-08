@@ -35,12 +35,13 @@ private val Gold = Color(0xFFE0A93B)
 private val GemBlue = Color(0xFF4E8FA6)
 
 @Composable
-fun CurrencyPill(icon: ImageVector, value: Int, color: Color, modifier: Modifier = Modifier) {
+fun CurrencyPill(icon: ImageVector, value: Int, color: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(Color.White)
             .border(1.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

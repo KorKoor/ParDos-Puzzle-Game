@@ -65,7 +65,8 @@ fun MenuScreen(
     onDailyChallengeClick: () -> Unit,
     onProfileClick: () -> Unit,
     onFriendsClick: () -> Unit,
-    themeViewModel: ThemeViewModel
+    themeViewModel: ThemeViewModel,
+    onShopClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -236,8 +237,8 @@ fun MenuScreen(
                         if (rewardClaimable) {
                             ClaimGiftChip(onClick = { showDailyReward = true })
                         }
-                        CurrencyPill(Icons.Rounded.MonetizationOn, coins, Color(0xFFE0A93B))
-                        CurrencyPill(Icons.Rounded.Diamond, gems, Color(0xFF4E8FA6))
+                        CurrencyPill(Icons.Rounded.MonetizationOn, coins, Color(0xFFE0A93B), onClick = onShopClick)
+                        CurrencyPill(Icons.Rounded.Diamond, gems, Color(0xFF4E8FA6), onClick = onShopClick)
                     }
 
                     Spacer(Modifier.height(20.dp))

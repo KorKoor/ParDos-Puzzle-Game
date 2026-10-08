@@ -47,6 +47,12 @@ fun PowerUpBar(
     activity: Activity?,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isVip by remember { com.korkoor.pardos.data.local.EconomyManager(context).isVip }.collectAsState()
+    // VIP: los poderes que piden anuncio se activan directo
+    fun withAd(action: () -> Unit) {
+        if (isVip) action() else activity?.let { act -> AdManager.showRewardedAd(act) { action() } }
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -77,11 +83,7 @@ fun PowerUpBar(
             lastUseTime = 0L,
             viewModel = viewModel,
             forceAdMode = true,
-            onClick = {
-                activity?.let { act ->
-                    AdManager.showRewardedAd(act) { viewModel.activateSelectMode("SINGLE_CLEAN") }
-                }
-            }
+            onClick = { withAd { viewModel.activateSelectMode("SINGLE_CLEAN") } }
         )
         PowerUpButton(
             label = stringResource(R.string.powerup_merge_manual),
@@ -90,11 +92,7 @@ fun PowerUpBar(
             lastUseTime = 0L,
             viewModel = viewModel,
             forceAdMode = true,
-            onClick = {
-                activity?.let { act ->
-                    AdManager.showRewardedAd(act) { viewModel.activateSelectMode("MANUAL_MERGE") }
-                }
-            }
+            onClick = { withAd { viewModel.activateSelectMode("MANUAL_MERGE") } }
         )
     }
 }
