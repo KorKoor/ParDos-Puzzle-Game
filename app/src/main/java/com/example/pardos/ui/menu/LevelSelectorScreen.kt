@@ -140,19 +140,17 @@ fun LevelCardAesthetic(
     val isLocked = level.isLocked
     val isCurrent = !isLocked && level.starsEarned == 0
 
-    val cardColor = if (isLocked) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.7f)
+    // Colores opacos: una superficie translúcida con sombra dibuja un recuadro raro detrás del contenido
+    val cardColor = if (isLocked) Color(0xFFF6F5F1) else Color.White
 
     Surface(
         onClick = if (!isLocked) onClick else ({}),
         modifier = Modifier
             .aspectRatio(0.85f)
-            .shadow(
-                elevation = if (isCurrent) 12.dp else 0.dp,
-                shape = RoundedCornerShape(32.dp),
-                spotColor = accentColor.copy(alpha = 0.4f)
-            ),
+        ,
         shape = RoundedCornerShape(32.dp),
         color = cardColor,
+        shadowElevation = if (isCurrent) 10.dp else if (isLocked) 0.dp else 3.dp,
         border = if (isCurrent) BorderStroke(2.dp, accentColor) else null
     ) {
         Column(
