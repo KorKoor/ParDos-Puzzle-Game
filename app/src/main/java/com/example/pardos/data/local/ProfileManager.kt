@@ -109,9 +109,20 @@ class ProfileManager(private val context: Context) {
             titleId = PrestigeManager.cachedTitleId(context),
             platinum = PrestigeManager.cachedPlatinum(context),
             towerBest = PrestigeManager.cachedTower(context),
-            pieces = PrestigeManager.cachedPieces(context)
+            pieces = PrestigeManager.cachedPieces(context),
+            showcase = albumCollection.showcase.value,
+            albumBits = com.korkoor.pardos.domain.collection.AlbumBits.encode(albumCollection.owned.value),
+            spareBits = com.korkoor.pardos.domain.collection.AlbumBits.encode(
+                com.korkoor.pardos.domain.collection.Copies.spares(albumCollection.copies.value).keys
+            )
         )
     }
+
+    private val albumCollection: CollectionManager by lazy { CollectionManager(context) }
+
+    /** Para el intercambio: el usuario con sesión (null si juega sin cuenta) y la base de datos de la nube. */
+    fun signedInUid(): String? = signedUid
+    fun cloudDatabase(): FirebaseFirestore? = db
 
     /** Pide subir el perfil (con la espera de siempre): lo usan el prestigio y los títulos cuando cambian. */
     fun requestSync() = syncToFirebase()
@@ -155,10 +166,11 @@ class ProfileManager(private val context: Context) {
     fun addXpForLevelVictory(starsEarned: Int) {
         val profile = getProfile()
         val today = LocalDay.today()
-        val xpGained = com.korkoor.pardos.domain.events.EventCalendar.apply(
+        val collection = CollectionManager(context)
+        val xpGained = (com.korkoor.pardos.domain.events.EventCalendar.apply(
             15 + (starsEarned * 10),
             com.korkoor.pardos.domain.events.EventCalendar.xpMultiplier(today)
-        )
+        ) * com.korkoor.pardos.domain.collection.PerkRules.xpMultiplier(collection.owned.value, collection.foil.value)).toInt()
 
         var newXp = profile.currentXp + xpGained
         var newLevel = profile.playerLevel
@@ -306,7 +318,7 @@ class ProfileManager(private val context: Context) {
         listOf(
             p.uid, p.name, p.avatarId, p.playerLevel, p.currentCampaignLevel, p.currentXp, p.xpToNextLevel,
             p.currentStreak, p.bestStreak, p.friendsUids, p.unlockedBadges, p.pinnedRecords, p.weeklyStars, p.weekId, p.friendCode, p.bannerId,
-            p.prestige, p.titleId, p.platinum, p.towerBest, p.pieces
+            p.prestige, p.titleId, p.platinum, p.towerBest, p.pieces, p.showcase, p.albumBits, p.spareBits
         )
     )
 
@@ -610,7 +622,10 @@ class ProfileManager(private val context: Context) {
             titleId = doc.getString("titleId") ?: "default",
             platinum = doc.getBoolean("platinum") ?: false,
             towerBest = doc.getLong("towerBest")?.toInt() ?: 0,
-            pieces = doc.getLong("pieces")?.toInt() ?: 0
+            pieces = doc.getLong("pieces")?.toInt() ?: 0,
+            showcase = (doc.get("showcase") as? List<String>) ?: emptyList(),
+            albumBits = doc.getString("albumBits") ?: "",
+            spareBits = doc.getString("spareBits") ?: ""
         )
     } catch (e: Exception) { null }
 
@@ -657,6 +672,7 @@ class ProfileManager(private val context: Context) {
         .put("pinnedRecords", org.json.JSONArray(p.pinnedRecords))
         .put("weeklyStars", p.weeklyStars).put("weekId", p.weekId).put("friendCode", p.friendCode)
         .put("prestige", p.prestige).put("titleId", p.titleId).put("platinum", p.platinum).put("towerBest", p.towerBest).put("pieces", p.pieces)
+        .put("showcase", org.json.JSONArray(p.showcase)).put("albumBits", p.albumBits).put("spareBits", p.spareBits)
 
     private fun profileFromJson(o: org.json.JSONObject): UserProfile {
         fun list(key: String): List<String> = o.optJSONArray(key)?.let { a -> List(a.length()) { a.optString(it) } } ?: emptyList()
@@ -671,7 +687,8 @@ class ProfileManager(private val context: Context) {
             pinnedRecords = list("pinnedRecords").ifEmpty { listOf("", "", "") },
             weeklyStars = o.optInt("weeklyStars", 0), weekId = o.optInt("weekId", 0), friendCode = o.optString("friendCode", ""),
             prestige = o.optInt("prestige", 0), titleId = o.optString("titleId", "default"), platinum = o.optBoolean("platinum", false),
-            towerBest = o.optInt("towerBest", 0), pieces = o.optInt("pieces", 0)
+            towerBest = o.optInt("towerBest", 0), pieces = o.optInt("pieces", 0),
+            showcase = list("showcase"), albumBits = o.optString("albumBits", ""), spareBits = o.optString("spareBits", "")
         )
     }
 

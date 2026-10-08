@@ -186,6 +186,7 @@ class PrestigeManager(context: Context) {
             economy.addCoins(Platinum.REWARD_COINS)
             economy.addGems(Platinum.REWARD_GEMS)
             collection.addChests(com.korkoor.pardos.domain.collection.ChestType.EPIC, 2)
+            collection.addTokens(com.korkoor.pardos.domain.collection.TokenRules.PLATINUM)
             events += PrestigeEvent.PlatinumEarned
             stats = stats.copy(platinum = true)
         }
@@ -202,6 +203,7 @@ class PrestigeManager(context: Context) {
                 economy.addCoins(r.rewardCoins)
                 economy.addGems(r.rewardGems)
                 r.rewardChest?.let { collection.addChests(it, 1) }
+                collection.addTokens(com.korkoor.pardos.domain.collection.TokenRules.RANK_UP)
                 events += PrestigeEvent.RankUp(r)
             }
             prefs.edit().putInt(K_RANK_SEEN, rank.ordinal).apply()

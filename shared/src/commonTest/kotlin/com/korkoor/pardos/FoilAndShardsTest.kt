@@ -31,17 +31,17 @@ class FoilAndShardsTest {
         assertFalse(FoilRules.canUpgrade(c, setOf(c.id), setOf(c.id), 9999), "ya es brillante")
     }
 
-    @Test fun foilBonusIsOnePercentPerSixPieces() {
+    @Test fun foilBonusIsOnePercentPerSixteenPieces() {
         assertEquals(0, FoilRules.coinPercent(emptySet()))
-        assertEquals(0, FoilRules.coinPercent(all.take(5).toSet()))
-        assertEquals(1, FoilRules.coinPercent(all.take(6).toSet()))
-        assertEquals(12, FoilRules.coinPercent(all))
+        assertEquals(0, FoilRules.coinPercent(all.take(15).toSet()))
+        assertEquals(1, FoilRules.coinPercent(all.take(16).toSet()))
+        assertEquals(20, FoilRules.coinPercent(all))
         assertEquals(0, FoilRules.coinPercent((1..30).map { "zz$it" }.toSet()), "ids desconocidos no cuentan")
     }
 
     @Test fun totalAlbumBonusStaysUnderTheCap() {
         assertEquals(AlbumBonus.MAX_PERCENT, AlbumBonus.coinPercent(all, all))
-        assertTrue(AlbumBonus.MAX_PERCENT <= 45)
+        assertTrue(AlbumBonus.MAX_PERCENT <= 60)
         assertTrue(AlbumBonus.coinPercent(all) < AlbumBonus.MAX_PERCENT, "sin brillantes no llega al tope: hay algo que perseguir")
     }
 

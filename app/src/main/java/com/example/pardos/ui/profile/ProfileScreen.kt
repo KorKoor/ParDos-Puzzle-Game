@@ -267,6 +267,10 @@ fun ProfileScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Vitrina de cartas: lo mejor de tu colección, a la vista de tus amigos
+            com.korkoor.pardos.ui.collection.CardShowcase()
+            Spacer(modifier = Modifier.height(24.dp))
+
             // 🔥 SECCIÓN: VITRINA DE GLORIA 🔥
             SectionLabel("Vitrina de gloria", Modifier.align(Alignment.Start).padding(start = 4.dp))
             Spacer(modifier = Modifier.height(12.dp))

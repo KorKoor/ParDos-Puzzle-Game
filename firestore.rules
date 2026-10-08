@@ -45,6 +45,28 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
+    // ---- Intercambio de cartas repetidas entre amigos ----
+    // Una propuesta la crea quien la envía; solo el destinatario puede aceptarla o rechazarla y solo el remitente cancelarla.
+    // Los dos pueden leerla; nadie puede borrarla ni cambiar nada que no sea el estado.
+    match /trades/{tradeId} {
+      allow get: if signedIn() && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow list: if signedIn() && request.query.limit <= 20
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(['from', 'fromName', 'to', 'give', 'want', 'status', 'createdAt'])
+        && request.resource.data.give is string && request.resource.data.give.size() <= 24
+        && request.resource.data.want is string && request.resource.data.want.size() <= 24
+        && request.resource.data.to is string && request.resource.data.to != request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt'])
+        && ((resource.data.to == request.auth.uid && request.resource.data.status in ['accepted', 'declined'])
+            || (resource.data.from == request.auth.uid && request.resource.data.status == 'cancelled'));
+      allow delete: if false;
+    }
+
     // ---- Legacy (app sin cuenta): abiertas, pero sin borrados ----
     match /users/{userId} {
       allow read, create, update: if true;

@@ -33,7 +33,21 @@ import com.korkoor.pardos.domain.shop.Banners
 @Composable
 fun CosmeticsGallery(kind: Int, page: Int) {
     Column(Modifier.fillMaxSize().background(Color(0xFFF4EFE6)).statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
-        if (kind == 1) {
+        if (kind == 3) {
+            val items = com.korkoor.pardos.domain.collection.CollectibleCatalog.all.drop(page * 12).take(12)
+            Text("Cartas ${page * 12 + 1}–${page * 12 + items.size} de 320", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF2B2B3A))
+            Spacer(Modifier.height(6.dp))
+            items.chunked(3).forEach { row ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEach { c ->
+                        Box(Modifier.weight(1f)) {
+                            com.korkoor.pardos.ui.collection.CollectibleCard(c, Modifier.fillMaxWidth(), owned = c.number % 5 != 0, foil = c.number == 8, copies = if (c.number == 2) 3 else 1, animate = false)
+                        }
+                    }
+                    repeat(3 - row.size) { Box(Modifier.weight(1f)) }
+                }
+            }
+        } else if (kind == 1) {
             val items = Avatars.all.drop(page * 20).take(20)
             Text("Avatares ${page * 20 + 1}–${page * 20 + items.size} de ${Avatars.all.size}", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF2B2B3A))
             Spacer(Modifier.height(6.dp))

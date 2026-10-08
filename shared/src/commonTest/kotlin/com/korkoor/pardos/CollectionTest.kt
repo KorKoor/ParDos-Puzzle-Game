@@ -14,16 +14,16 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CollectionTest {
-    @Test fun catalogHasNineSeriesOfEightWithFixedRarityShape() {
-        assertEquals(9, Series.entries.size)
-        assertEquals(72, CollectibleCatalog.all.size)
-        assertEquals(72, CollectibleCatalog.all.map { it.id }.toSet().size)
+    @Test fun catalogHas32SeriesOfTenWithFixedRarityShape() {
+        assertEquals(32, Series.entries.size)
+        assertEquals(320, CollectibleCatalog.all.size)
+        assertEquals(320, CollectibleCatalog.all.map { it.id }.toSet().size)
         Series.entries.forEach { s ->
             val items = CollectibleCatalog.inSeries(s)
-            assertEquals(8, items.size, s.id)
+            assertEquals(10, items.size, s.id)
             assertEquals(4, items.count { it.rarity == Rarity.COMMON })
-            assertEquals(2, items.count { it.rarity == Rarity.RARE })
-            assertEquals(1, items.count { it.rarity == Rarity.EPIC })
+            assertEquals(3, items.count { it.rarity == Rarity.RARE })
+            assertEquals(2, items.count { it.rarity == Rarity.EPIC })
             assertEquals(1, items.count { it.rarity == Rarity.LEGENDARY })
         }
     }
@@ -107,19 +107,19 @@ class CollectionTest {
     }
 
     @Test fun openingChestsEventuallyCompletesTheAlbum() {
-        // Con garantías y preferencia por piezas nuevas, ~120 cofres normales deben bastar
+        // Con garantías y preferencia por piezas nuevas, el álbum de 320 se completa en unos cientos de cofres
         val rng = Random(2026)
         val owned = mutableSetOf<String>()
         var pity = PityState()
         var chests = 0
-        while (!CollectibleCatalog.isAlbumComplete(owned) && chests < 600) {
+        while (!CollectibleCatalog.isAlbumComplete(owned) && chests < 3000) {
             val res = ChestRules.open(ChestType.RARE, owned, pity, rng)
             res.drops.forEach { owned += it.collectible.id }
             pity = res.pity
             chests++
         }
         assertTrue(CollectibleCatalog.isAlbumComplete(owned), "no se completó tras $chests cofres")
-        assertTrue(chests in 20..250, "cofres necesarios: $chests")
+        assertTrue(chests in 100..1500, "cofres necesarios: $chests")
     }
 
     @Test fun craftingRules() {
@@ -131,7 +131,7 @@ class CollectionTest {
 
     @Test fun seriesProgressAndCompletion() {
         val garden = CollectibleCatalog.inSeries(Series.GARDEN).map { it.id }
-        assertEquals(3 to 8, CollectibleCatalog.progress(Series.GARDEN, garden.take(3).toSet()))
+        assertEquals(3 to 10, CollectibleCatalog.progress(Series.GARDEN, garden.take(3).toSet()))
         assertTrue(CollectibleCatalog.isSeriesComplete(Series.GARDEN, garden.toSet()))
         assertFalse(CollectibleCatalog.isSeriesComplete(Series.SKY, garden.toSet()))
     }

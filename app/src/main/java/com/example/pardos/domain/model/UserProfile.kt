@@ -29,7 +29,11 @@ data class UserProfile(
     val titleId: String = "default",
     val platinum: Boolean = false,
     val towerBest: Int = 0,
-    val pieces: Int = 0
+    val pieces: Int = 0,
+    // Álbum: piezas exhibidas en la vitrina, las que tienes y las que te sobran (en bits, ver AlbumBits) para intercambiar
+    val showcase: List<String> = emptyList(),
+    val albumBits: String = "",
+    val spareBits: String = ""
 ) {
     // Constructor vacío requerido por Firestore para leer los datos
     constructor() : this("", "Jugador Zen", 1, 1, 1, 0, 100, 0, 0, 0L, emptyList(), emptyList())

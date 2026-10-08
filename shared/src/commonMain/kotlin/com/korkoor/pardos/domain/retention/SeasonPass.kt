@@ -69,9 +69,11 @@ data class SeasonReward(
     /** Id de un banner de perfil exclusivo (0 = ninguno). */
     val banner: Int = 0,
     /** Efecto de fusión exclusivo (null = ninguno). */
-    val fx: com.korkoor.pardos.domain.shop.MergeFx? = null
+    val fx: com.korkoor.pardos.domain.shop.MergeFx? = null,
+    /** Fichas de intercambio (para cambiar cartas repetidas con amigos). */
+    val tokens: Int = 0
 ) {
-    val isEmpty: Boolean get() = coins == 0 && gems == 0 && chest == null && freezes == 0 && undos == 0 && skin == null && avatar == 0 && banner == 0 && fx == null
+    val isEmpty: Boolean get() = coins == 0 && gems == 0 && chest == null && freezes == 0 && undos == 0 && skin == null && avatar == 0 && banner == 0 && fx == null && tokens == 0
 
     /** Valor aproximado en monedas (para balancear). */
     val coinValue: Int
@@ -172,7 +174,8 @@ object SeasonPass {
             undos = if (tier == 7 || tier == 17 || tier == 27) 2 else 0,
             avatar = freeAvatar(tier, seasonId),
             banner = freeBanner(tier, seasonId),
-            fx = if (tier == FREE_FX_TIER) FREE_FX else null
+            fx = if (tier == FREE_FX_TIER) FREE_FX else null,
+            tokens = if (tier == TIERS) 2 else if (tier % 10 == 5) 1 else 0
         )
     }
 
@@ -193,7 +196,8 @@ object SeasonPass {
             skin = if (tier == TIERS) SeasonCalendar.skinFor(seasonId) else null,
             avatar = premiumAvatar(tier, seasonId),
             banner = premiumBanner(tier, seasonId),
-            fx = if (tier == PREMIUM_FX_TIER) PREMIUM_FX else null
+            fx = if (tier == PREMIUM_FX_TIER) PREMIUM_FX else null,
+            tokens = if (tier == TIERS) 3 else if (tier % 5 == 0) 1 else 0
         )
     }
 

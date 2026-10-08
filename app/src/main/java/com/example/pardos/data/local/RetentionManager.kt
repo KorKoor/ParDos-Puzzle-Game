@@ -99,6 +99,7 @@ class RetentionManager(context: Context) {
         if (r.avatar != 0) economy.grantAvatar(r.avatar)
         if (r.banner != 0) economy.grantBanner(r.banner)
         r.fx?.let { economy.grantFx(it) }
+        if (r.tokens > 0) collection.addTokens(r.tokens)
     }
 
     // ============================ Al entrar / regresar ============================
@@ -114,6 +115,7 @@ class RetentionManager(context: Context) {
         prefs.edit().putInt(K_LAST_OPEN, today).apply()
 
         addSeasonPoints(SeasonPoints.DAILY_LOGIN)
+        collection.onDailyCheckIn(today)
         addWeekly(WeeklyType.LOGIN_DAYS, 1)
         prefs.edit().putInt(K_DAYS_PLAYED, prefs.getInt(K_DAYS_PLAYED, 0) + 1).apply()
 
@@ -315,6 +317,7 @@ class RetentionManager(context: Context) {
         if (!item.done || item.claimed) return null
         prefs.edit().putBoolean(wkClaimKey(id), true).apply()
         economy.addCoins(item.mission.coins)
+        collection.addTokens(com.korkoor.pardos.domain.collection.TokenRules.WEEKLY_MISSION)
         addSeasonPoints(SeasonPoints.WEEKLY_MISSION)
         bump()
         return item.mission
@@ -404,6 +407,7 @@ class RetentionManager(context: Context) {
         if (allClaimed && prefs.getInt(K_ALL_MISSIONS_DAY, -1) != today()) {
             prefs.edit().putInt(K_ALL_MISSIONS_DAY, today()).apply()
             collection.addChests(ChestType.COMMON, 1)
+            collection.addTokens(com.korkoor.pardos.domain.collection.TokenRules.ALL_DAILY_MISSIONS)
             economy.addGems(Economy.DAILY_MISSIONS_BONUS_GEMS)
             addSeasonPoints(SeasonPoints.ALL_DAILY_MISSIONS)
             // Racha de días perfectos: encadenar días con las tres misiones cobradas da premios por hitos

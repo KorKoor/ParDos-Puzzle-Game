@@ -313,6 +313,9 @@ private fun RankRow(player: RankedPlayer, profile: UserProfile?) {
                     }
                 }
             }
+            profile?.takeIf { it.showcase.isNotEmpty() }?.let {
+                com.korkoor.pardos.ui.collection.MiniShowcase(it.showcase, Modifier.padding(vertical = 3.dp))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("NV ${profile?.playerLevel ?: 1}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Sage)
                 val streak = profile?.currentStreak ?: 0

@@ -28,23 +28,27 @@ class ReminderAndAlbumTest {
 
     @Test fun eachSeriesCompleteAddsBonus() {
         val owned = CollectibleCatalog.inSeries(Series.GARDEN).map { it.id }.toSet()
-        // 8 piezas = +1 % y una serie completa = +3 %
-        assertEquals(4, AlbumBonus.coinPercent(owned))
+        // 10 piezas no suman por piezas, la serie completa da +1 % y sus mejoras de monedas (Jardín da monedas) otro +1 %
+        val b = AlbumBonus.breakdown(owned)
+        assertEquals(0, b.pieces)
+        assertEquals(1, b.series)
+        assertEquals(1, b.perks)
+        assertEquals(2, AlbumBonus.coinPercent(owned))
     }
 
     @Test fun fullAlbumReachesTheCap() {
         val all = CollectibleCatalog.all.map { it.id }.toSet()
         assertEquals(AlbumBonus.MAX_PERCENT, AlbumBonus.coinPercent(all, all), "con todas brillantes se llega al tope")
-        // 9 % por piezas + 27 % por series + 6 % del álbum = 42 % (sin brillantes)
-        assertEquals(9 + 27 + 6, AlbumBonus.breakdown(all).total)
+        // 8 % por piezas + 32 % por series + 8 % del álbum + 8 % de mejoras de monedas = 56 % (sin brillantes)
+        assertEquals(8 + 32 + 8 + 8, AlbumBonus.breakdown(all).total)
     }
 
     @Test fun unknownIdsAreIgnored() = assertEquals(0, AlbumBonus.coinPercent((1..40).map { "x$it" }.toSet()))
 
     @Test fun albumBonusAddsToEventMultiplier() {
         val all = CollectibleCatalog.all.map { it.id }.toSet()
-        assertEquals(2.45, AlbumBonus.combine(2.0, all, all), 1e-9)
-        assertEquals(2.42, AlbumBonus.combine(2.0, all), 1e-9)
+        assertEquals(2.60, AlbumBonus.combine(2.0, all, all), 1e-9)
+        assertEquals(2.56, AlbumBonus.combine(2.0, all), 1e-9)
         assertEquals(1.0, AlbumBonus.combine(1.0, emptySet()), 1e-9)
     }
 

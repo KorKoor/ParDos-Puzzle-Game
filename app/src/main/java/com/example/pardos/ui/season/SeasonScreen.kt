@@ -89,6 +89,7 @@ internal fun rewardLines(r: SeasonReward): List<RewardLine> = buildList {
     if (r.avatar != 0) add(RewardLine(Icons.Rounded.Palette, Avatars.byId(r.avatar).name, Terracotta, avatarId = r.avatar))
     if (r.banner != 0) add(RewardLine(Icons.Rounded.Palette, Banners.byId(r.banner).name, Violet))
     r.fx?.let { add(RewardLine(Icons.Rounded.AutoAwesome, "Efecto ${it.displayName}", Violet)) }
+    if (r.tokens > 0) add(RewardLine(Icons.Rounded.SwapHoriz, "${r.tokens} ficha${if (r.tokens > 1) "s" else ""}", Violet))
 }
 
 /** Colores de la pantalla: salen de la skin exclusiva de la temporada, así cada mes se siente distinto. */

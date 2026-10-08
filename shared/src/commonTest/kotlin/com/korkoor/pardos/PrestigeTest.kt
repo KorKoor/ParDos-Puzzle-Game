@@ -72,7 +72,7 @@ class PrestigeTest {
             foil = 30, seriesComplete = 7, campaignStars = 4000, towerBest = 60, playerLevel = 80, milestonesDone = 55
         )
         assertTrue(PrestigeScore.score(almost) < PrestigeRank.MYTHIC.minScore)
-        val everything = almost.copy(albumComplete = true, seriesComplete = 9, foil = 72, platinum = true, milestonesDone = PrestigeMilestones.all.size,
+        val everything = almost.copy(albumComplete = true, seriesComplete = 32, foil = 320, platinum = true, milestonesDone = PrestigeMilestones.all.size,
             campaignStars = 7000, towerBest = 100, piecesByRarity = mapOf(Rarity.COMMON to 36, Rarity.RARE to 18, Rarity.EPIC to 9, Rarity.LEGENDARY to 9))
         assertEquals(PrestigeRank.MYTHIC, PrestigeRank.forScore(PrestigeScore.score(everything)))
     }

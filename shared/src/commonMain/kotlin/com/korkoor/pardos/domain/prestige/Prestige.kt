@@ -87,7 +87,7 @@ enum class Metric { PIECES, EPIC_PLUS, FOIL, SERIES, ALBUM, CAMPAIGN_LEVEL, CAMP
 // ============================== PUNTOS ==============================
 
 object PrestigeScore {
-    private val PIECE_POINTS = mapOf(Rarity.COMMON to 2, Rarity.RARE to 5, Rarity.EPIC to 12, Rarity.LEGENDARY to 30)
+    private val PIECE_POINTS = mapOf(Rarity.COMMON to 1, Rarity.RARE to 3, Rarity.EPIC to 6, Rarity.LEGENDARY to 15)
     const val FOIL_POINTS = 8
     const val SERIES_POINTS = 60
     const val ALBUM_POINTS = 500
@@ -184,11 +184,11 @@ object PrestigeMilestones {
 
     val all: List<Milestone> = buildList {
         val C = MilestoneGroup.COLLECTION
-        addAll(series(Metric.PIECES, C, "pieces", listOf(5, 12, 24, 36, 48, 60, 72), { "Coleccionista · $it" }, { "Consigue $it piezas del álbum" }))
-        addAll(series(Metric.EPIC_PLUS, C, "epic", listOf(2, 5, 9, 14, 18), { "Ojo de águila · $it" }, { "Ten $it piezas épicas o legendarias" }))
-        addAll(series(Metric.FOIL, C, "foil", listOf(3, 6, 12, 24, 48, 72), { "Brillante · $it" }, { "Convierte $it piezas en brillantes" }))
-        addAll(series(Metric.SERIES, C, "series", listOf(1, 3, 5, 7, 9), { "Series completas · $it" }, { "Completa $it series del álbum" }))
-        addAll(series(Metric.ALBUM, C, "album", listOf(1), { "Álbum completo" }, { "Completa las 9 series del álbum" }))
+        addAll(series(Metric.PIECES, C, "pieces", listOf(5, 12, 24, 48, 80, 120, 160, 200, 250, 320), { "Coleccionista · $it" }, { "Consigue $it piezas del álbum" }))
+        addAll(series(Metric.EPIC_PLUS, C, "epic", listOf(2, 5, 9, 14, 20, 30, 45, 60, 80, 96), { "Ojo de águila · $it" }, { "Ten $it piezas épicas o legendarias" }))
+        addAll(series(Metric.FOIL, C, "foil", listOf(3, 6, 12, 24, 48, 96, 200), { "Brillante · $it" }, { "Convierte $it piezas en brillantes" }))
+        addAll(series(Metric.SERIES, C, "series", listOf(1, 3, 5, 7, 9, 12, 16, 20, 26, 32), { "Series completas · $it" }, { "Completa $it series del álbum" }))
+        addAll(series(Metric.ALBUM, C, "album", listOf(1), { "Álbum completo" }, { "Completa las 32 series del álbum" }))
 
         val G = MilestoneGroup.CAMPAIGN
         addAll(series(Metric.CAMPAIGN_LEVEL, G, "level", listOf(20, 60, 120, 240, 480, 800, 1200, 1800, 2400), { "Nivel $it" }, { "Supera el nivel $it de la campaña" }))
@@ -248,7 +248,7 @@ object ProfileTitles {
         add(ProfileTitle("rank_mythic", "Mítico", Rarity.LEGENDARY, TitleUnlock.Rank(PrestigeRank.MYTHIC)))
         // por hitos
         add(ProfileTitle("t_collector", "Coleccionista", Rarity.RARE, TitleUnlock.Milestone("pieces_24")))
-        add(ProfileTitle("t_curator", "Curador del álbum", Rarity.EPIC, TitleUnlock.Milestone("pieces_60")))
+        add(ProfileTitle("t_curator", "Curador del álbum", Rarity.EPIC, TitleUnlock.Milestone("pieces_120")))
         add(ProfileTitle("t_album", "Dueño del álbum", Rarity.LEGENDARY, TitleUnlock.Milestone("album_1")))
         add(ProfileTitle("t_shiny", "Cazador de brillos", Rarity.EPIC, TitleUnlock.Milestone("foil_24")))
         add(ProfileTitle("t_eagle", "Ojo de águila", Rarity.RARE, TitleUnlock.Milestone("epic_9")))
