@@ -30,6 +30,7 @@ class EconomyManager(context: Context) {
             _gems.value = prefs.getInt(KEY_GEMS, 0)
             _freezes.value = prefs.getInt(KEY_FREEZES, 0)
             _vip.value = prefs.getBoolean(KEY_VIP, false)
+            _undosFlow.value = prefs.getInt(KEY_UNDOS, 0)
             _ownedSkins.value = prefs.getStringSet(KEY_OWNED_SKINS, null)?.toSet() ?: setOf(TileSkin.DEFAULT.id)
             _equippedSkin.value = TileSkin.fromId(prefs.getString(KEY_EQUIPPED_SKIN, null))
             loaded = true
@@ -49,8 +50,8 @@ class EconomyManager(context: Context) {
     private fun skinInventory() = SkinInventory(_ownedSkins.value, _equippedSkin.value.id)
 
     /** Compra una skin con monedas o gemas según su precio. Devuelve el resultado para mostrar el motivo. */
-    fun buySkin(skin: TileSkin): SkinInventory.Purchase {
-        val result = skinInventory().buy(skin, _coins.value, _gems.value)
+    fun buySkin(skin: TileSkin, discountPercent: Int = 0): SkinInventory.Purchase {
+        val result = skinInventory().buy(skin, _coins.value, _gems.value, discountPercent)
         if (result is SkinInventory.Purchase.Ok) {
             _coins.value = result.coinsLeft
             _gems.value = result.gemsLeft
@@ -93,6 +94,26 @@ class EconomyManager(context: Context) {
         addCoins(reward.coins)
         addGems(reward.gems)
         return reward
+    }
+
+    // --- Consumibles (se compran con monedas y se gastan en partida) ---
+    val undos: StateFlow<Int> get() = _undosFlow
+
+    fun addUndos(n: Int) { _undosFlow.value += n.coerceAtLeast(0); prefs.edit().putInt(KEY_UNDOS, _undosFlow.value).apply() }
+
+    fun buyUndos(pack: Int = 3): Boolean {
+        val price = com.korkoor.pardos.domain.economy.Economy.UNDO_PRICE_COINS * pack
+        if (!spendCoins(price)) return false
+        addUndos(pack)
+        return true
+    }
+
+    /** Gasta un "Deshacer". Devuelve false si no quedan. */
+    fun useUndo(): Boolean {
+        if (_undosFlow.value <= 0) return false
+        _undosFlow.value -= 1
+        prefs.edit().putInt(KEY_UNDOS, _undosFlow.value).apply()
+        return true
     }
 
     // --- Pack inicial (compra real, una sola vez) ---
@@ -167,12 +188,14 @@ class EconomyManager(context: Context) {
         const val KEY_GEMS = "gems"
         const val KEY_FREEZES = "streak_freezes"
         const val KEY_VIP = "vip"
+        const val KEY_UNDOS = "undos"
         const val KEY_OWNED_SKINS = "owned_skins"
         const val KEY_EQUIPPED_SKIN = "equipped_skin"
         val _coins = MutableStateFlow(0)
         val _gems = MutableStateFlow(0)
         val _freezes = MutableStateFlow(0)
         val _vip = MutableStateFlow(false)
+        val _undosFlow = MutableStateFlow(0)
         val _ownedSkins = MutableStateFlow(setOf(TileSkin.DEFAULT.id))
         val _equippedSkin = MutableStateFlow(TileSkin.DEFAULT)
         var loaded = false

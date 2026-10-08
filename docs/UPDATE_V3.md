@@ -19,9 +19,12 @@ shared/   (Kotlin Multiplatform: Android + iOS)   <- lógica pura, sin Android
   domain/model      BoardState, TileModel, GameMode, LevelInfo, LevelRepository, DailyMission
   domain/rewards    DailyRewards, StreakCalculator, CoinRewards, ChapterRewards
   domain/shop       ShopCatalog, CoinShop, TileSkins (catálogo + inventario)
-  domain/social     Leaderboard, WeekCalendar
+  domain/social     Leaderboard, WeekCalendar, FriendCode
+  domain/collection Collection (48 piezas, cofres con garantía, crear con esencia)
+  domain/economy    Economy (TODOS los precios y premios en un solo archivo)
 app/      (Android)
-  data/local        EconomyManager, DailyRewardManager, LevelProgressStore, ProfileManager, MissionManager
+  data/local        EconomyManager, CollectionManager, RewardsManager, DailyRewardManager, LevelProgressStore, ProfileManager, MissionManager
+  data/auth         AuthManager (Google + Firebase Auth)
   data/billing      BillingManager (Google Play Billing 8)
   ui/design         PardosDesign.kt  <- colores, formas y componentes base (ÚNICA fuente de verdad)
   ui/menu           MenuScreen/MenuHome, LevelSelectorScreen (mapa), ModelSelectionScreen, DailyRewardDialog
@@ -44,6 +47,14 @@ Eso es lo que permitirá reutilizarla en iOS.
 - **Modo Carrera:** `RaceRules`. Etapas encadenadas (3x3 → 6x6), el reloj sube con cada etapa superada (máx. 180 s).
 - **Duelo local:** `DuelRules`. Misma semilla para los dos jugadores, 60 s cada uno, se pasan el teléfono.
 - **Cofres de capítulo:** `ChapterRewards` (cada 20 niveles del mapa).
+- **Skins con temática (12):** cada `TileSkin` trae un `SkinStyle` con paleta de fichas, acabado, fondo, colores de texto
+  y partículas. Añadir una skin = añadir una entrada en `TileSkins.kt` (no hay que tocar la UI).
+- **Colección:** 48 piezas en 6 series (4 comunes, 2 raras, 1 épica y 1 legendaria por serie). Cofres común/raro/épico con
+  garantía por cofre y por acumulación (`ChestRules.PITY_*`). Las repetidas dan esencia; la esencia crea piezas.
+- **Economía:** todo en `domain/economy/Economy.kt` y `domain/shop/ShopOffers.kt`, con pruebas de balance. Fuentes:
+  niveles, misiones, regalo diario, logros (pagan según rareza), hitos de racha, cofres de capítulo, x2 con anuncio,
+  eventos. Sumideros: skins, cofres, consumibles (Deshacer, escudo de racha), oferta diaria con descuento.
+- **Multijugador** vive en `ui/social/MultiplayerHub` (duelo local, amigos, reto diario), fuera de "Elige tu ritmo".
 
 ## Convenciones importantes
 
@@ -60,7 +71,7 @@ Se usan los **IDs de prueba de Google** hasta publicar. Antes de lanzar, restaur
 ## Compras (Play Console)
 
 Crear 4 *productos administrados* con estos IDs exactos (ver `ShopCatalog`):
-`gems_small`, `gems_medium`, `gems_large`, `vip_forever`.
+`gems_small` (100 gemas), `gems_medium` (550), `gems_large` (1200), `vip_forever` y `starter_pack`.
 Las compras solo se pueden probar con la app subida a una pista de pruebas y una cuenta de probador.
 
 ## Pendiente / decisiones abiertas

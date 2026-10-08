@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.AutoFixNormal
 import androidx.compose.material.icons.filled.PlayArrow
@@ -53,13 +54,18 @@ fun PowerUpBar(
     fun withAd(action: () -> Unit) {
         if (isVip) action() else activity?.let { act -> AdManager.showRewardedAd(act) { action() } }
     }
+    val undos by viewModel.undoCount.collectAsState()
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.Top
     ) {
+        // Deshacer (consumible comprable en la tienda): solo si hay una jugada que revertir
+        if (undos > 0 || viewModel.canUndo) {
+            UndoButton(count = undos, enabled = viewModel.canUndo && undos > 0, labelColor = labelColor) { viewModel.undoLastMove() }
+        }
         PowerUpButton(
             label = stringResource(R.string.clean_powerup),
             icon = Icons.Default.AutoFixHigh,
@@ -133,7 +139,7 @@ private fun PowerUpButton(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(72.dp).scale(scale)
+        modifier = Modifier.width(64.dp).scale(scale)
     ) {
         Surface(
             onClick = onClick,
@@ -142,7 +148,7 @@ private fun PowerUpButton(
             shape = RoundedCornerShape(22.dp),
             shadowElevation = if (isCooldown) 0.dp else if (isPressed) 2.dp else 6.dp,
             border = BorderStroke(1.5.dp, color.copy(alpha = if (isCooldown) 0.15f else 0.35f)),
-            modifier = Modifier.size(62.dp)
+            modifier = Modifier.size(56.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (isCooldown) {
@@ -178,5 +184,36 @@ private fun PowerUpButton(
             modifier = Modifier.padding(top = 6.dp),
             letterSpacing = 0.5.sp
         )
+    }
+}
+
+
+@Composable
+private fun UndoButton(count: Int, enabled: Boolean, labelColor: Color, onClick: () -> Unit) {
+    val color = Color(0xFFE07A5F)
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp)) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            color = if (enabled) Color.White else Color(0xFFEDEBE6),
+            shape = RoundedCornerShape(22.dp),
+            shadowElevation = if (enabled) 6.dp else 0.dp,
+            border = BorderStroke(1.5.dp, color.copy(alpha = if (enabled) 0.35f else 0.15f)),
+            modifier = Modifier.size(56.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.Undo,
+                    contentDescription = null,
+                    tint = if (enabled) color else Color(0xFF3D405B).copy(alpha = 0.3f),
+                    modifier = Modifier.size(28.dp)
+                )
+                Box(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp).background(color, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) { Text("$count", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White) }
+            }
+        }
+        Text("DESHACER", fontSize = 8.sp, fontWeight = FontWeight.Black, color = labelColor.copy(alpha = 0.85f), maxLines = 1, modifier = Modifier.padding(top = 6.dp), letterSpacing = 0.3.sp)
     }
 }

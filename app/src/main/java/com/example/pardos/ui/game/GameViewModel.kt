@@ -67,6 +67,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     var firstSelectedTileId by mutableStateOf<String?>(null)
         private set
+    // --- DESHACER ---
+    private data class UndoSnapshot(val tiles: List<TileModel>, val score: Int, val moves: Int)
+    private var lastSnapshot: UndoSnapshot? = null
+    var canUndo by mutableStateOf(false)
+        private set
+    val undoCount get() = economy.undos
+
+    /** Vuelve a la jugada anterior gastando un "Deshacer". No se permite en duelo ni en carrera (sería ventaja). */
+    fun undoLastMove(): Boolean {
+        val snap = lastSnapshot ?: return false
+        if (currentMode == GameMode.DUELO || currentMode == GameMode.CARRERA) return false
+        if (isMoving || _boardState.value.isGameOver || _boardState.value.isLevelCompleted) return false
+        if (!economy.useUndo()) return false
+        _boardState.update { it.copy(tiles = snap.tiles, score = snap.score, moveCount = snap.moves) }
+        lastSnapshot = null
+        canUndo = false
+        return true
+    }
+
     // --- DUELO LOCAL ---
     var duelPlayer by mutableIntStateOf(1)
         private set
@@ -551,6 +570,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         showLevelSummary = false
 
         // 2. INICIALIZACIÓN DEL MOTOR
+        lastSnapshot = null
+        canUndo = false
         currentSeed = seed
         rng = seed?.let { Random(it) } ?: Random.Default
         gameEngine = GameEngine(boardSize = size, random = rng)
@@ -675,6 +696,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 val reachedTarget = maxTileValue >= currentState.levelLimit
                 val newScore = currentState.score + scoreGained
+
+                // Instantánea para "Deshacer" (solo guardamos la última jugada)
+                lastSnapshot = UndoSnapshot(currentState.tiles, currentState.score, currentState.moveCount)
+                canUndo = true
 
                 _boardState.update { it.copy(tiles = finalTiles, score = newScore, moveCount = it.moveCount + 1) }
 
