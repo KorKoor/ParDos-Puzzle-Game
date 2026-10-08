@@ -5,7 +5,11 @@ import kotlin.random.Random
 
 enum class Direction { UP, DOWN, LEFT, RIGHT }
 
-class GameEngine(val boardSize: Int) {
+/**
+ * Motor del tablero. Con una [random] con semilla, dos partidas con los mismos movimientos
+ * generan exactamente las mismas fichas (retos diarios iguales para todos, duelos, repeticiones).
+ */
+class GameEngine(val boardSize: Int, private val random: Random = Random.Default) {
 
     /**
      * Mueve y combina las fichas.
@@ -108,7 +112,7 @@ class GameEngine(val boardSize: Int) {
             }
         }
 
-        return emptyPositions.randomOrNull()?.let { (r, c) ->
+        return emptyPositions.randomOrNull(random)?.let { (r, c) ->
             TileModel(
                 id = TileModel.generateId(),
                 value = value, // El valor ya viene balanceado (2, 4, 8, 16)
@@ -127,7 +131,7 @@ class GameEngine(val boardSize: Int) {
         fourProbability: Double = 0.1,
         multiplier: Int = 2
     ): TileModel? {
-        val spawnValue = if (Random.nextDouble() < (1.0 - fourProbability)) multiplier else multiplier * 2
+        val spawnValue = if (random.nextDouble() < (1.0 - fourProbability)) multiplier else multiplier * 2
         return spawnTileWithSpecificValue(currentTiles, spawnValue, multiplier)
     }
 

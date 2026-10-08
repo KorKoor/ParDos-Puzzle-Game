@@ -57,13 +57,13 @@ object ProgressionEngine {
      * ✨ AYUDA DIVINA BALANCEADA (ANTI-BLOQUEO)
      * Reducido drásticamente para que sea "de vez en cuando".
      */
-    fun shouldTriggerDivineHelp(target: Int): Boolean {
+    fun shouldTriggerDivineHelp(target: Int, random: Random = Random.Default): Boolean {
         val probability = when {
             target >= 2048 -> 0.08 // 8% en niveles épicos (antes 25%)
             target >= 512  -> 0.05 // 5% en niveles difíciles
             else           -> 0.03 // 3% base (Muy ocasional)
         }
-        return Random.nextDouble() < probability
+        return random.nextDouble() < probability
     }
 
     /**
@@ -77,8 +77,8 @@ object ProgressionEngine {
     /**
      * 🎲 GENERACIÓN DE FICHAS INTELIGENTE
      */
-    fun getNewTileValue(target: Int): Int {
-        val rand = Random.nextDouble()
+    fun getNewTileValue(target: Int, random: Random = Random.Default): Int {
+        val rand = random.nextDouble()
         return when {
             target >= 2048 && rand < 0.04 -> 16
             target >= 1024 && rand < 0.06 -> 8

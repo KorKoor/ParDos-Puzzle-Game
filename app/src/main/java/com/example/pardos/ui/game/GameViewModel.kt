@@ -134,6 +134,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     )
     val boardState = _boardState.asStateFlow()
 
+    // Azar de la partida: con semilla (reto diario, duelos) es reproducible; sin semilla, aleatorio
+    private var rng: Random = Random.Default
+    var currentSeed: Long? = null
+        private set
     private var gameEngine = GameEngine(boardSize = 3)
     private var isMoving = false
     private var timerJob: Job? = null
@@ -361,7 +365,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         difficulty: String = "Zen",
         level: Int = 1,
         initialScore: Int = 0,
-        isCustom: Boolean = false
+        isCustom: Boolean = false,
+        seed: Long? = null
     ) {
         // 1. LIMPIEZA TOTAL DE ESTADOS PREVIOS
         timerJob?.cancel()
@@ -375,7 +380,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         showLevelSummary = false
 
         // 2. INICIALIZACIÓN DEL MOTOR
-        gameEngine = GameEngine(boardSize = size)
+        currentSeed = seed
+        rng = seed?.let { Random(it) } ?: Random.Default
+        gameEngine = GameEngine(boardSize = size, random = rng)
 
         // 3. DETERMINACIÓN DEL MODO (FIX: Evita que la campaña herede el modo Desafío)
         val determinedMode = if (isCustom) {
@@ -472,10 +479,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 // ✨ EVOLUCIÓN ESPONTÁNEA (Solo 4, 8, 16 de vez en cuando)
                 // Probabilidad del 15% para que ocurra
-                if ((1..100).random() <= 15) {
+                if (rng.nextInt(1, 101) <= 15) {
                     val luckyCandidates = finalTiles.filter { it.value == 4 || it.value == 8 || it.value == 16 }
                     if (luckyCandidates.isNotEmpty()) {
-                        val luckyTile = luckyCandidates.random()
+                        val luckyTile = luckyCandidates.random(rng)
                         val index = finalTiles.indexOf(luckyTile)
                         if (index != -1) {
                             val evolvedValue = luckyTile.value * 2
@@ -519,7 +526,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isMoving = false
 
                 // ✨ AYUDA DIVINA (Mantenida exactamente igual)
-                if (ProgressionEngine.shouldTriggerDivineHelp(currentState.levelLimit)) {
+                if (ProgressionEngine.shouldTriggerDivineHelp(currentState.levelLimit, rng)) {
                     delay(150) // Pausa dramática
                     _boardState.update { current ->
                         val tiles = current.tiles.toMutableList()
@@ -529,7 +536,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         val candidates = tiles.filter { ProgressionEngine.isValueEligibleForDivineHelp(it.value) }
 
                         if (candidates.isNotEmpty()) {
-                            val luckyTile = candidates.random()
+                            val luckyTile = candidates.random(rng)
                             val index = tiles.indexOf(luckyTile)
                             if (index != -1) {
                                 val newVal = luckyTile.value * 2
@@ -1080,21 +1087,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setupDailyChallenge() {
-        val calendar = Calendar.getInstance()
-        val dateSeed = calendar.get(Calendar.YEAR) * 10000 + (calendar.get(Calendar.MONTH) + 1) * 100 + calendar.get(Calendar.DAY_OF_MONTH)
-        val randomWithSeed = Random(dateSeed.toLong())
-        val dailySize = if (randomWithSeed.nextInt(100) % 2 == 0) 4 else 5
-        val dailyTarget = if (randomWithSeed.nextBoolean()) 1024 else 2048
-        val randomTheme = randomWithSeed.nextInt(0, 6)
-        dailyChallengeThemeIndex = randomTheme
+        // Misma configuración Y mismas fichas para todos los jugadores del mismo día
+        val daily = com.korkoor.pardos.domain.logic.DailyChallenge.forDay(com.korkoor.pardos.data.local.LocalDay.today())
+        dailyChallengeThemeIndex = daily.themeIndex
         currentMode = GameMode.DESAFIO
-        setupCustomGame(size = dailySize, target = dailyTarget, allowPowerUps = false, difficulty = "Normal", level = 1, isCustom = true)
+        setupCustomGame(
+            size = daily.boardSize,
+            target = daily.target,
+            allowPowerUps = false,
+            difficulty = "Normal",
+            level = 1,
+            isCustom = true,
+            seed = daily.seed
+        )
     }
 
     private fun pickNewTileValue(target: Int): Int {
-        if (!accessibilitySpawnAssist) return ProgressionEngine.getNewTileValue(target)
+        if (!accessibilitySpawnAssist) return ProgressionEngine.getNewTileValue(target, rng)
 
-        val rand = Random.nextDouble()
+        val rand = rng.nextDouble()
         return when {
             target >= 1024 && rand < 0.08 -> 8
             rand < 0.22 -> 4
