@@ -1,7 +1,6 @@
 package com.korkoor.pardos.domain.logic
 
 import com.korkoor.pardos.domain.model.TileModel
-import java.util.UUID
 import kotlin.random.Random
 
 enum class Direction { UP, DOWN, LEFT, RIGHT }
@@ -111,7 +110,7 @@ class GameEngine(val boardSize: Int) {
 
         return emptyPositions.randomOrNull()?.let { (r, c) ->
             TileModel(
-                id = UUID.randomUUID().toString(),
+                id = TileModel.generateId(),
                 value = value, // El valor ya viene balanceado (2, 4, 8, 16)
                 row = r,
                 col = c

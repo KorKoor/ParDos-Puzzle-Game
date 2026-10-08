@@ -1,6 +1,6 @@
 package com.korkoor.pardos.domain.model
 
-import java.util.UUID
+import kotlin.random.Random
 
 data class TileModel(
     val id: String,
@@ -21,7 +21,7 @@ data class TileModel(
     // Eso va en la capa de UI (Tile.kt).
 
     companion object {
-        fun generateId(): String = UUID.randomUUID().toString()
+        fun generateId(): String = Random.nextLong().toULong().toString(16) + Random.nextLong().toULong().toString(16)
 
         fun create(row: Int, col: Int, value: Int = 2): TileModel =
             TileModel(generateId(), value, row, col, isNew = true)

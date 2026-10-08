@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "ParDos"
 include(":app")
+include(":shared")
  
