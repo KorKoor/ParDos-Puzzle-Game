@@ -98,10 +98,10 @@ object ProgressionEngine {
      * ⭐ ESTRELLAS POR EFICIENCIA
      */
     fun calculateStars(timeElapsed: Long, target: Int): Int {
-        val idealTimeSec = 300L // 5 minutos
+        val idealTimeMs = 300000L // 5 minutos
         return when {
-            timeElapsed <= idealTimeSec * 0.7 -> 3
-            timeElapsed <= idealTimeSec -> 2
+            timeElapsed <= idealTimeMs * 0.7 -> 3
+            timeElapsed <= idealTimeMs -> 2
             else -> 1
         }
     }

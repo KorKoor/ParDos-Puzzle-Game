@@ -148,7 +148,7 @@ fun MissionItemRow(
         MissionType.REACH_BLOCK -> Icons.Rounded.LooksOne
         MissionType.EARN_STARS -> Icons.Rounded.Star
         MissionType.WIN_UNDER_TIME -> Icons.Rounded.Timer
-        MissionType.WIN_NO_POWERUPS -> Icons.Rounded.Shield
+        MissionType.WIN_NO_POWERUPS -> Icons.Rounded.Block
     }
 
     Row(

@@ -1327,7 +1327,7 @@ private class GameAudioManager(private val context: android.content.Context) {
 }
 
 fun Long.formatTime(): String {
-    val totalSeconds = this
+    val totalSeconds = this / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)

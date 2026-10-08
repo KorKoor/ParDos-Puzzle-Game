@@ -250,7 +250,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         val updatedLevels = baseLevels.map { level ->
             val stars = prefs.getInt("stars_level_${level.id}", 0)
-            val bestTime = com.korkoor.pardos.ui.game.components.normalizeSeconds(prefs.getLong("best_time_level_${level.id}", 0L))
+            val bestTime = prefs.getLong("best_time_level_${level.id}", 0L)
             val bestMoves = prefs.getInt("best_moves_level_${level.id}", 0)
 
             level.copy(
@@ -722,7 +722,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             profileManager.updateCampaignLevel(currentLvl + 1)
 
             // --- MISIONES DIARIAS ---
-            val finalTimeSecs = finalTimeUsed.toInt()
+            val finalTimeSecs = (finalTimeUsed / 1000).toInt()
             missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
             missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
             missionManager.updateProgress(MissionType.EARN_STARS, _boardState.value.starsEarned)
@@ -830,7 +830,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         val timeKey = "${prefix}best_time_level_$level"
         val prevTime = prefs.getLong(timeKey, Long.MAX_VALUE)
-        val validPrevTime = if (prevTime == 0L || prevTime == Long.MAX_VALUE) Long.MAX_VALUE else com.korkoor.pardos.ui.game.components.normalizeSeconds(prevTime)
+        val validPrevTime = if (prevTime == 0L) Long.MAX_VALUE else prevTime
 
         if (finalTime > 0 && finalTime < validPrevTime) {
             editor.putLong(timeKey, finalTime)
@@ -878,7 +878,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             else -> "custom_"
         }
         val bMoves = prefs.getInt("${prefix}best_moves_level_$level", 0)
-        val bTime = com.korkoor.pardos.ui.game.components.normalizeSeconds(prefs.getLong("${prefix}best_time_level_$level", 0L))
+        val bTime = prefs.getLong("${prefix}best_time_level_$level", 0L)
         return Pair(bMoves, bTime)
     }
 
