@@ -977,7 +977,7 @@ private fun TimerDisplay(
         label = "TimerColor"
     )
 
-    val isCritical = seconds <= 5 && isLowTime
+    val isCritical = seconds <= 5_000 && isLowTime
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
