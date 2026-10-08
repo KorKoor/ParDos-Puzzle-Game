@@ -1,0 +1,141 @@
+package com.korkoor.pardos.ui.settings
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.korkoor.pardos.data.local.SettingsManager
+import com.korkoor.pardos.ui.design.*
+
+/** Ajustes: lo básico que todo jugador espera poder apagar. */
+@Composable
+fun SettingsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val settings = remember { SettingsManager(context) }
+    val sound by settings.soundEnabled.collectAsState()
+    val music by settings.musicEnabled.collectAsState()
+    val haptics by settings.hapticsEnabled.collectAsState()
+    val notifications by settings.notificationsEnabled.collectAsState()
+    val version = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().background(ScreenBackground).statusBarsPadding().navigationBarsPadding()
+    ) {
+        PardosTopBar(title = "Ajustes", eyebrow = "Tu experiencia", onBack = onBack)
+
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SectionLabel("Sonido y tacto")
+            PardosCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    SettingRow(Icons.Rounded.VolumeUp, Sage, "Efectos de sonido", "Fusiones, victoria y derrota", sound) { settings.setSound(it) }
+                    SettingRow(Icons.Rounded.MusicNote, Violet, "Música", "La melodía del menú", music) { settings.setMusic(it) }
+                    SettingRow(Icons.Rounded.Vibration, Terracotta, "Vibración", "Un toque suave al mover y fusionar", haptics) { settings.setHaptics(it) }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            SectionLabel("Avisos")
+            PardosCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    SettingRow(
+                        Icons.Rounded.NotificationsActive, Gold, "Recordatorios",
+                        "Cofre listo, racha en riesgo y premios por cobrar. Nunca de noche.", notifications
+                    ) { settings.setNotifications(it) }
+                    TestNotificationRow()
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "ParDos${if (version.isNotBlank()) " · versión $version" else ""}\nKorKoor Studios",
+                fontSize = 12.sp, color = InkTertiary, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 18.sp
+            )
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun SettingRow(icon: ImageVector, color: Color, title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(icon, color, size = 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Navy)
+            Text(subtitle, fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Switch(
+            checked = checked, onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White, checkedTrackColor = Sage,
+                uncheckedThumbColor = Color.White, uncheckedTrackColor = Navy.copy(alpha = 0.2f),
+                uncheckedBorderColor = Color.Transparent
+            )
+        )
+    }
+}
+
+
+/** Botón para ver cómo llega un aviso (también pide el permiso en Android 13+). */
+@Composable
+private fun TestNotificationRow() {
+    val context = LocalContext.current
+    var note by remember { mutableStateOf<String?>(null) }
+    val halloween = remember {
+        com.korkoor.pardos.domain.retention.SeasonalCopy.isHalloweenWindow(com.korkoor.pardos.data.local.LocalDay.today())
+    }
+    fun send() {
+        val ok = com.korkoor.pardos.notifications.PardosNotifier.show(
+            context,
+            if (halloween) "🎃 ¡Los avisos funcionan!" else "¡Los avisos funcionan!",
+            if (halloween) "Así te avisaremos cuando tu cofre embrujado esté listo." else "Así te avisaremos cuando tu cofre esté listo.",
+            id = 99, key = "free_chest"
+        )
+        note = if (ok) "Enviado. Mira tu barra de notificaciones." else "No hay permiso para mostrar avisos."
+    }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) send() else note = "Sin permiso no podemos avisarte. Actívalo en los ajustes del teléfono." }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable {
+            if (android.os.Build.VERSION.SDK_INT >= 33 && !com.korkoor.pardos.notifications.PardosNotifier.canPost(context)) {
+                launcher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            } else send()
+        }.padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(Icons.Rounded.Send, Sage, size = 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Enviar aviso de prueba", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Navy)
+            Text(note ?: "Comprueba que te llegan y cómo se ven.", fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp)
+        }
+    }
+}

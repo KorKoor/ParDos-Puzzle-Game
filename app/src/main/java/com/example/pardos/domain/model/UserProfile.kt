@@ -21,7 +21,9 @@ data class UserProfile(
     val weeklyStars: Int = 0,
     val weekId: Int = 0,
     // Código corto para que te agreguen (solo cuentas con sesión)
-    val friendCode: String = ""
+    val friendCode: String = "",
+    // Banner de perfil (fondo de tu tarjeta); 1 = el gratuito
+    val bannerId: Int = 1
 ) {
     // Constructor vacío requerido por Firestore para leer los datos
     constructor() : this("", "Jugador Zen", 1, 1, 1, 0, 100, 0, 0, 0L, emptyList(), emptyList())

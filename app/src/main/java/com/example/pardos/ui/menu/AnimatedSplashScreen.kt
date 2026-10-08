@@ -30,8 +30,17 @@ private val CoffeeDark = Color(0xFF3D405B)  // Texto principal (Café expreso)
 private val CoffeeMedium = Color(0xFF6B9E86) // Texto secundario (Moca)
 private val GoldAccent = Color(0xFFF2CC8F)  // Detalles sutiles
 
+/** Inicio de la app: en Noche de brujas (octubre) sale el de Halloween; el resto del año, el crema de siempre. */
 @Composable
 fun AnimatedSplashScreen(onAnimationFinished: () -> Unit) {
+    val halloween = remember {
+        com.korkoor.pardos.domain.retention.SeasonalCopy.isHalloweenWindow(com.korkoor.pardos.data.local.LocalDay.today())
+    }
+    if (halloween) HalloweenSplash(onAnimationFinished) else ClassicSplash(onAnimationFinished)
+}
+
+@Composable
+private fun ClassicSplash(onAnimationFinished: () -> Unit) {
     val context = LocalContext.current
 
     // Estados de animación

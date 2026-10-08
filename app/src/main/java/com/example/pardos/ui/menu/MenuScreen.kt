@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.CozyText
+
 import android.content.res.Configuration
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,7 +75,11 @@ fun MenuScreen(
     themeViewModel: ThemeViewModel,
     onShopClick: () -> Unit = {},
     onCollectionClick: () -> Unit = {},
-    onMultiplayerClick: () -> Unit = {}
+    onMultiplayerClick: () -> Unit = {},
+    onSeasonClick: () -> Unit = {},
+    onWheelClick: () -> Unit = {},
+    piggyPrice: String? = null,
+    onBuyPiggy: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -80,7 +87,10 @@ fun MenuScreen(
 
     // --- INSTANCIAS DE MANAGERS (Para Misiones y Perfil) ---
     val missionManager = remember { MissionManager(context) }
+    val retentionForCards = remember { com.korkoor.pardos.data.local.RetentionManager(context) }
     val profileManager = remember { ProfileManager(context) }
+    // Sube cuando algo cambia el perfil desde un diálogo (p. ej. recuperar la racha)
+    var profileTick by remember { mutableIntStateOf(0) }
 
     val currentTheme = themeViewModel.currentTheme
     val bgBrush = androidx.compose.ui.graphics.Brush.verticalGradient(currentTheme.colors.map { it.copy(alpha = 0.98f) }.let { if (it.size == 1) it + it else it })
@@ -112,6 +122,8 @@ fun MenuScreen(
     // --- EVENTOS PROGRAMADOS ---
     val todayDay = remember { com.korkoor.pardos.data.local.LocalDay.today() }
     val activeEvents = remember { com.korkoor.pardos.domain.events.EventCalendar.activeOn(todayDay) }
+    var eventDialog by remember { mutableStateOf<com.korkoor.pardos.domain.events.GameEvent?>(null) }
+    eventDialog?.let { ev -> com.korkoor.pardos.ui.rewards.EventSkinDialog(ev, retentionForCards) { eventDialog = null } }
 
     // --- ECONOMÍA Y RECOMPENSA DIARIA ---
     val economy = remember { com.korkoor.pardos.data.local.EconomyManager(context) }
@@ -158,7 +170,7 @@ fun MenuScreen(
 
         if (isLandscape) {
             // --- DISEÑO HORIZONTAL (LANDSCAPE) ---
-            val profileL = remember { profileManager.getProfile() }
+            val profileL = remember(profileTick) { profileManager.getProfile() }
             val dockItemsL = listOf(
                 DockItem(stringResource(R.string.menu_profile), Icons.Rounded.Person, Color(0xFF457B9D), onProfileClick),
                 DockItem("Multi", Icons.Rounded.Groups, Color(0xFF2A9D8F), onMultiplayerClick),
@@ -233,15 +245,23 @@ fun MenuScreen(
                             modifier = Modifier.weight(1f)
                         )
                     }
-                    activeEvents.take(2).forEach { ev -> EventBanner(ev, todayDay) }
+                    com.korkoor.pardos.ui.rewards.RetentionSection(
+                        suppress = showPrivacyDisclaimer || showTutorial || showDailyReward,
+                        piggyPrice = piggyPrice, onSeason = onSeasonClick, onWheel = onWheelClick,
+                        onAlbum = onCollectionClick, onBuyPiggy = onBuyPiggy,
+                        onProfileChanged = { profileTick++ }
+                    )
+                    activeEvents.take(2).forEach { ev -> MenuEventBanner(ev, todayDay, retentionForCards) { eventDialog = ev } }
                     BottomDock(items = dockItemsL, modifier = Modifier.padding(horizontal = 0.dp))
+                    com.korkoor.pardos.ui.rewards.LeagueCard(retention = retentionForCards)
                     DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
+                    WeeklyMissionsCard(retention = retentionForCards)
                     Spacer(Modifier.height(8.dp))
                 }
             }
         } else {
             // --- DISEÑO VERTICAL (PORTRAIT) ---
-            val profile = remember { profileManager.getProfile() }
+            val profile = remember(profileTick) { profileManager.getProfile() }
             val dockItems = listOf(
                 DockItem(stringResource(R.string.menu_profile), Icons.Rounded.Person, Color(0xFF457B9D), onProfileClick),
                 DockItem("Multi", Icons.Rounded.Groups, Color(0xFF2A9D8F), onMultiplayerClick),
@@ -310,13 +330,23 @@ fun MenuScreen(
                         )
                     }
 
+                    Spacer(Modifier.height(14.dp))
+                    com.korkoor.pardos.ui.rewards.RetentionSection(
+                        suppress = showPrivacyDisclaimer || showTutorial || showDailyReward,
+                        piggyPrice = piggyPrice, onSeason = onSeasonClick, onWheel = onWheelClick,
+                        onAlbum = onCollectionClick, onBuyPiggy = onBuyPiggy,
+                        onProfileChanged = { profileTick++ }
+                    )
+
                     activeEvents.take(2).forEach { ev ->
                         Spacer(Modifier.height(12.dp))
-                        EventBanner(ev, todayDay)
+                        MenuEventBanner(ev, todayDay, retentionForCards) { eventDialog = ev }
                     }
 
                     Spacer(Modifier.height(20.dp))
+                    com.korkoor.pardos.ui.rewards.LeagueCard(retention = retentionForCards)
                     DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
+                    WeeklyMissionsCard(retention = retentionForCards)
 
                     Spacer(Modifier.height(28.dp))
                     SupportHeartButton(currentTheme.accentColor) { showSupportDialog = true }
@@ -373,7 +403,7 @@ fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
+            CozyText(
                 text = "HECHO CON ❤️ POR KOR (CARLOS) :)",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
@@ -755,5 +785,31 @@ fun TutorialDialog(
                 Text(if (step < totalSteps) "SIGUIENTE" else "¡ENTENDIDO!", fontWeight = FontWeight.Black, color = color as Color)
             }
         }
+    )
+}
+
+/** Banner de un evento activo; si trae skin, muestra tu progreso y al tocarlo abre su ficha. */
+@Composable
+private fun MenuEventBanner(
+    ev: com.korkoor.pardos.domain.events.GameEvent,
+    today: Int,
+    retention: com.korkoor.pardos.data.local.RetentionManager,
+    onOpen: () -> Unit
+) {
+    val skin = com.korkoor.pardos.domain.shop.EventSkins.skinFor(ev.type)
+    if (skin == null) {
+        EventBanner(ev, today)
+        return
+    }
+    val tick by retention.tick.collectAsState()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val economy = remember { com.korkoor.pardos.data.local.EconomyManager(ctx) }
+    val owned by economy.ownedSkins.collectAsState()
+    val has = skin.id in owned
+    val wins = remember(tick) { retention.eventWins(ev) }
+    EventBanner(
+        ev, today,
+        skinProgress = if (has) "Skin ${skin.displayName} · ¡tuya!" else "Skin ${skin.displayName} · $wins/${com.korkoor.pardos.domain.shop.EventSkins.WINS_REQUIRED}",
+        onClick = onOpen
     )
 }

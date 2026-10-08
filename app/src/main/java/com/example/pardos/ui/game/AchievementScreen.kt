@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.game
 
+import com.korkoor.pardos.ui.design.CozyText
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,7 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -352,7 +354,7 @@ private fun AchievementRow(
                 )
                 if (reward.gems > 0) {
                     Spacer(Modifier.width(8.dp))
-                    Text("+${reward.gems}◆", fontSize = 11.sp, fontWeight = FontWeight.Black, color = GemBlue)
+                    CozyText("+${reward.gems}◆", fontSize = 11.sp, fontWeight = FontWeight.Black, color = GemBlue)
                 }
                 if (rarity.ordinal >= com.korkoor.pardos.domain.collection.Rarity.EPIC.ordinal) {
                     Spacer(Modifier.width(8.dp))

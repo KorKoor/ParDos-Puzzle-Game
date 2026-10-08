@@ -6,13 +6,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.korkoor.pardos.domain.shop.SkinInventory
+import com.korkoor.pardos.domain.shop.StudioConfig
+import com.korkoor.pardos.domain.shop.StudioSkin
 import com.korkoor.pardos.domain.shop.TileSkin
 import java.util.TimeZone
 
 /** Día local (días desde epoch en la zona horaria del jugador). Evita romper rachas por UTC. */
 object LocalDay {
+    /** Solo pruebas (builds de depuración): adelanta el calendario para ver fiestas sin esperar. En memoria, nunca se guarda. */
+    @Volatile var debugOffsetDays: Int = 0
+
     fun today(now: Long = System.currentTimeMillis()): Int =
-        ((now + TimeZone.getDefault().getOffset(now)) / 86_400_000L).toInt()
+        ((now + TimeZone.getDefault().getOffset(now)) / 86_400_000L).toInt() + debugOffsetDays
 }
 
 /**
@@ -31,8 +36,13 @@ class EconomyManager(context: Context) {
             _freezes.value = prefs.getInt(KEY_FREEZES, 0)
             _vip.value = prefs.getBoolean(KEY_VIP, false)
             _undosFlow.value = prefs.getInt(KEY_UNDOS, 0)
+            _ownedAvatars.value = (prefs.getStringSet(KEY_OWNED_AVATARS, null) ?: emptySet()).mapNotNull { it.toIntOrNull() }.toSet()
+            _ownedBanners.value = (prefs.getStringSet(KEY_OWNED_BANNERS, null) ?: emptySet()).mapNotNull { it.toIntOrNull() }.toSet()
+            _extraTimesFlow.value = prefs.getInt(KEY_EXTRA_TIMES, 0)
             _ownedSkins.value = prefs.getStringSet(KEY_OWNED_SKINS, null)?.toSet() ?: setOf(TileSkin.DEFAULT.id)
             _equippedSkin.value = TileSkin.fromId(prefs.getString(KEY_EQUIPPED_SKIN, null))
+            _studioConfig.value = StudioConfig.decode(prefs.getString(KEY_STUDIO_CONFIG, null))
+            StudioSkin.config = _studioConfig.value
             loaded = true
         }
     }
@@ -70,6 +80,22 @@ class EconomyManager(context: Context) {
         _equippedSkin.value = TileSkin.fromId(inv.equipped)
         prefs.edit().putString(KEY_EQUIPPED_SKIN, inv.equipped).apply()
     }
+
+    // --- Studio: la skin de pago que el jugador diseña ---
+    /** Configuración actual del editor (se puede probar sin comprar; solo equipar requiere la compra). */
+    val studioConfig: StateFlow<StudioConfig> = _studioConfig.asStateFlow()
+
+    fun isStudioOwned(): Boolean = TileSkin.STUDIO.id in _ownedSkins.value
+
+    /** Guarda el diseño. La skin Studio activa lo refleja al instante. */
+    fun saveStudioConfig(config: StudioConfig) {
+        _studioConfig.value = config
+        StudioSkin.config = config
+        prefs.edit().putString(KEY_STUDIO_CONFIG, config.encode()).apply()
+    }
+
+    /** Compra real de Studio: la skin queda en el inventario. */
+    fun unlockStudio() = grantSkin(TileSkin.STUDIO)
 
     fun setVip(value: Boolean) {
         _vip.value = value
@@ -113,6 +139,65 @@ class EconomyManager(context: Context) {
         if (_undosFlow.value <= 0) return false
         _undosFlow.value -= 1
         prefs.edit().putInt(KEY_UNDOS, _undosFlow.value).apply()
+        return true
+    }
+
+    // --- Banners de perfil (los gratuitos son de todos) ---
+    val ownedBanners: StateFlow<Set<Int>> get() = _ownedBanners
+
+    fun grantBanner(id: Int) {
+        if (id <= 0 || id in _ownedBanners.value) return
+        _ownedBanners.value = _ownedBanners.value + id
+        prefs.edit().putStringSet(KEY_OWNED_BANNERS, _ownedBanners.value.map { it.toString() }.toSet()).apply()
+    }
+
+    /** Compra un banner con monedas o gemas según su precio. */
+    fun buyBanner(id: Int): com.korkoor.pardos.domain.shop.Banners.Purchase {
+        val result = com.korkoor.pardos.domain.shop.Banners.buy(id, _ownedBanners.value, _coins.value, _gems.value)
+        if (result is com.korkoor.pardos.domain.shop.Banners.Purchase.Ok) {
+            _coins.value = result.coinsLeft
+            _gems.value = result.gemsLeft
+            prefs.edit().putInt(KEY_COINS, _coins.value).putInt(KEY_GEMS, _gems.value).apply()
+            grantBanner(id)
+        }
+        return result
+    }
+
+    // --- Avatares comprados / ganados (los clásicos 1..10 son de todos) ---
+    val ownedAvatars: StateFlow<Set<Int>> get() = _ownedAvatars
+
+    fun grantAvatar(id: Int) {
+        if (id <= 0 || id in _ownedAvatars.value) return
+        _ownedAvatars.value = _ownedAvatars.value + id
+        prefs.edit().putStringSet(KEY_OWNED_AVATARS, _ownedAvatars.value.map { it.toString() }.toSet()).apply()
+    }
+
+    /** Compra un avatar con monedas. Devuelve el resultado para mostrar el motivo si falla. */
+    fun buyAvatar(id: Int): com.korkoor.pardos.domain.shop.Avatars.Purchase {
+        val result = com.korkoor.pardos.domain.shop.Avatars.buy(id, _ownedAvatars.value, _coins.value)
+        if (result is com.korkoor.pardos.domain.shop.Avatars.Purchase.Ok) {
+            _coins.value = result.coinsLeft
+            prefs.edit().putInt(KEY_COINS, _coins.value).apply()
+            grantAvatar(id)
+        }
+        return result
+    }
+
+    // "Tiempo extra": segundos de regalo en modos con reloj
+    val extraTimes: StateFlow<Int> get() = _extraTimesFlow
+
+    fun addExtraTimes(n: Int) { _extraTimesFlow.value += n.coerceAtLeast(0); prefs.edit().putInt(KEY_EXTRA_TIMES, _extraTimesFlow.value).apply() }
+
+    fun buyExtraTimes(pack: Int = 3): Boolean {
+        if (!spendCoins(com.korkoor.pardos.domain.economy.Economy.EXTRA_TIME_PRICE_COINS * pack)) return false
+        addExtraTimes(pack)
+        return true
+    }
+
+    fun useExtraTime(): Boolean {
+        if (_extraTimesFlow.value <= 0) return false
+        _extraTimesFlow.value -= 1
+        prefs.edit().putInt(KEY_EXTRA_TIMES, _extraTimesFlow.value).apply()
         return true
     }
 
@@ -189,15 +274,23 @@ class EconomyManager(context: Context) {
         const val KEY_FREEZES = "streak_freezes"
         const val KEY_VIP = "vip"
         const val KEY_UNDOS = "undos"
+        const val KEY_OWNED_AVATARS = "owned_avatars"
+        const val KEY_OWNED_BANNERS = "owned_banners"
+        const val KEY_EXTRA_TIMES = "extra_times"
         const val KEY_OWNED_SKINS = "owned_skins"
         const val KEY_EQUIPPED_SKIN = "equipped_skin"
+        const val KEY_STUDIO_CONFIG = "studio_config"
         val _coins = MutableStateFlow(0)
         val _gems = MutableStateFlow(0)
         val _freezes = MutableStateFlow(0)
         val _vip = MutableStateFlow(false)
         val _undosFlow = MutableStateFlow(0)
+        val _ownedAvatars = MutableStateFlow<Set<Int>>(emptySet())
+        val _ownedBanners = MutableStateFlow<Set<Int>>(emptySet())
+        val _extraTimesFlow = MutableStateFlow(0)
         val _ownedSkins = MutableStateFlow(setOf(TileSkin.DEFAULT.id))
         val _equippedSkin = MutableStateFlow(TileSkin.DEFAULT)
+        val _studioConfig = MutableStateFlow(StudioConfig())
         var loaded = false
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -87,7 +88,7 @@ fun GameScreen(
 ) {
     val state by viewModel.boardState.collectAsStateWithLifecycle()
     val currentTheme = themeViewModel.currentTheme
-    val haptic = LocalHapticFeedback.current
+    val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
     val context = LocalContext.current
     val activity = context as? Activity
 
@@ -117,6 +118,12 @@ fun GameScreen(
     val bgGradient = remember(currentTheme) { Brush.verticalGradient(colors = currentTheme.colors) }
 
     val isTimeLow = state.maxTime != null && state.elapsedTime <= 10_000L
+    val extraTimes by viewModel.extraTimeCount.collectAsState()
+    val remoteTitle = when (viewModel.remoteRole) {
+        RemoteRole.CREATOR -> "TU RETO"
+        RemoteRole.CHALLENGED -> "EL RETO"
+        RemoteRole.NONE -> null
+    }
 
     val shouldBlur = viewModel.showLevelSummary || state.isGameOver || showExitDialog || showThemeMenu
     val blurRadius by animateDpAsState(
@@ -199,7 +206,10 @@ fun GameScreen(
                                     ) {
                                         GameHeader(
                                             state = state.copy(currentLevel = if (state.currentLevel > displayedLevel) state.currentLevel else displayedLevel),
-                                            currentTheme = currentTheme
+                                            currentTheme = currentTheme,
+                                            extraTimes = extraTimes,
+                                            onExtraTime = { viewModel.useExtraTime() },
+                                            titleOverride = remoteTitle
                                         )
                                     }
                                 }
@@ -325,7 +335,10 @@ fun GameScreen(
                                     ) { targetLevel ->
                                         GameHeader(
                                             state = state.copy(currentLevel = targetLevel),
-                                            currentTheme = currentTheme
+                                            currentTheme = currentTheme,
+                                            extraTimes = extraTimes,
+                                            onExtraTime = { viewModel.useExtraTime() },
+                                            titleOverride = remoteTitle
                                         )
                                     }
 
@@ -406,13 +419,31 @@ fun GameScreen(
                     currentTheme = currentTheme,
                     coinsEarned = viewModel.lastCoinsEarned,
                     canDouble = !viewModel.coinsDoubled && viewModel.lastCoinsEarned > 0,
+                    bonus = viewModel.lastGameBonus,
                     onDouble = {
                         // VIP: gratis, sin anuncio
                         if (com.korkoor.pardos.data.local.EconomyManager(context).isVip.value) viewModel.grantDoubleCoins()
                         else activity?.let { act -> AdManager.showRewardedAd(act) { viewModel.grantDoubleCoins() } }
                     },
                     onRetry = { viewModel.retryLevel() },
-                    onDismiss = { viewModel.nextLevel() }
+                    onDismiss = { viewModel.nextLevel() },
+                    nextGoal = remember { com.korkoor.pardos.data.local.RetentionManager(context).nextGoal() },
+                    onShare = {
+                        val text = com.korkoor.pardos.domain.social.ShareText.victory(
+                            modeName = context.getString(state.gameMode.nameResId),
+                            stars = state.starsEarned,
+                            targetTile = state.levelLimit,
+                            moves = state.moveCount,
+                            timeMs = state.elapsedTime,
+                            streak = com.korkoor.pardos.data.local.ProfileManager(context).getProfile().currentStreak,
+                            epochDay = if (viewModel.dailyChallengeThemeIndex != null) com.korkoor.pardos.data.local.LocalDay.today() else null
+                        )
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, text)
+                        }
+                        context.startActivity(android.content.Intent.createChooser(send, null))
+                    }
                 )
             }
 
@@ -421,7 +452,20 @@ fun GameScreen(
                 enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
-                if (state.gameMode == GameMode.DUELO) {
+                if (state.gameMode == GameMode.DUELO && viewModel.remoteRole != RemoteRole.NONE) {
+                    com.korkoor.pardos.ui.social.RemoteDuelOverlay(
+                        role = viewModel.remoteRole,
+                        myScore = viewModel.duelScores[0],
+                        challenge = viewModel.remoteChallenge,
+                        outcome = viewModel.remoteOutcome,
+                        reward = viewModel.remoteReward,
+                        firstTime = viewModel.remoteFirstTime,
+                        onShare = { viewModel.remoteChallenge?.let { com.korkoor.pardos.ui.social.shareChallenge(context, it) } },
+                        onRetryBoard = { viewModel.retryLevel() },
+                        onChallengeBack = { viewModel.startRemoteCreate() },
+                        onExit = { onBackToMenu() }
+                    )
+                } else if (state.gameMode == GameMode.DUELO) {
                     DuelOverlay(
                         phase = viewModel.duelPhase,
                         scores = viewModel.duelScores,

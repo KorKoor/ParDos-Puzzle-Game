@@ -86,6 +86,21 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         return true
     }
 
+    // --- TIEMPO EXTRA ---
+    val extraTimeCount get() = economy.extraTimes
+
+    /** Suma [Economy.EXTRA_TIME_SECONDS] al reloj gastando un "Tiempo extra". No se permite en duelo (sería ventaja). */
+    fun useExtraTime(): Boolean {
+        val state = _boardState.value
+        val max = state.maxTime ?: return false
+        if (currentMode == GameMode.DUELO || state.isGameOver || state.isLevelCompleted) return false
+        if (!economy.useExtraTime()) return false
+        val bonusMs = com.korkoor.pardos.domain.economy.Economy.EXTRA_TIME_SECONDS * 1000L
+        // Se suma a las dos cifras: así el tiempo usado (máx - restante) no cambia
+        _boardState.update { it.copy(elapsedTime = it.elapsedTime + bonusMs, maxTime = max + bonusMs) }
+        return true
+    }
+
     // --- DUELO LOCAL ---
     var duelPlayer by mutableIntStateOf(1)
         private set
@@ -93,6 +108,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         private set
     val duelScores = mutableStateListOf(0, 0)
     private var duelSeed = 0L
+
+    // --- DUELO A DISTANCIA (por código) ---
+    /** NONE = duelo local; CREATOR = juego mi reto para compartirlo; CHALLENGED = acepto el reto de otro. */
+    var remoteRole by mutableStateOf(RemoteRole.NONE)
+        private set
+    /** El reto que acepté, o el que acabo de crear (con mi puntaje) para compartir. */
+    var remoteChallenge by mutableStateOf<com.korkoor.pardos.domain.logic.RemoteChallenge?>(null)
+        private set
+    var remoteOutcome by mutableStateOf<com.korkoor.pardos.domain.logic.RemoteOutcome?>(null)
+        private set
+    var remoteReward by mutableStateOf<com.korkoor.pardos.domain.logic.RemoteDuel.Reward?>(null)
+        private set
+    var remoteFirstTime by mutableStateOf(true)
+        private set
 
     // --- MODO CARRERA ---
     var raceStage by mutableIntStateOf(1)
@@ -107,6 +136,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         private set
     private val economy = com.korkoor.pardos.data.local.EconomyManager(application)
     private val rewardsManager = com.korkoor.pardos.data.local.RewardsManager(application)
+    private val retention = com.korkoor.pardos.data.local.RetentionManager(application)
+    private val collection = com.korkoor.pardos.data.local.CollectionManager(application)
+
+    /** Extras de la última partida (primera victoria del día, hucha, puntos de pase) para el resumen. */
+    var lastGameBonus by mutableStateOf(com.korkoor.pardos.data.local.GameBonus())
+        private set
 
     var lastCleanTime by mutableLongStateOf(0L)
     var lastMergeTime by mutableLongStateOf(0L)
@@ -237,6 +272,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         startNewGame(GameMode.CLASICO)
         playMenuMusic()
+
+        // Activar/desactivar la música desde Ajustes tiene efecto al instante
+        viewModelScope.launch {
+            com.korkoor.pardos.data.local.SettingsManager(getApplication()).musicEnabled.drop(1).collect { on ->
+                if (on) soundManager.playMenuMusic(getApplication()) else soundManager.stopMenuMusic()
+            }
+        }
     }
 
     // --- FUNCIONES DE SONIDO PÚBLICAS ---
@@ -256,6 +298,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     // --- FUNCIONES DE APOYO ---
 
     fun resetGameSession() {
+        remoteRole = RemoteRole.NONE
         dailyChallengeThemeIndex = null
         timerJob?.cancel()
         timerManager.stop()
@@ -338,6 +381,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // 🔥 INTEGRACIÓN MISIONES DIARIAS: Partida jugada (incluso si se pierde) 🔥
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
+        lastGameBonus = retention.onGameFinished(won = false, dailyChallenge = dailyChallengeThemeIndex != null)
 
         if (currentMode == GameMode.CARRERA) finishRace()
         if (currentMode == GameMode.DUELO) finishDuelRound()
@@ -349,6 +393,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Empieza un duelo nuevo: el jugador 1 juega primero con una semilla que luego repetirá el jugador 2. */
     fun startDuel() {
+        remoteRole = RemoteRole.NONE
         currentMode = GameMode.DUELO
         dailyChallengeThemeIndex = null
         currentMultiplierBase = 2
@@ -385,7 +430,61 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun duelRematch() = startDuel()
 
+    // ----- Duelo a distancia -----
+
+    private fun beginRemote(role: RemoteRole, seed: Long, challenge: com.korkoor.pardos.domain.logic.RemoteChallenge?) {
+        currentMode = GameMode.DUELO
+        dailyChallengeThemeIndex = null
+        currentMultiplierBase = 2
+        remoteRole = role
+        remoteChallenge = challenge
+        remoteOutcome = null
+        remoteReward = null
+        remoteFirstTime = true
+        duelSeed = seed
+        duelPlayer = 1
+        duelScores[0] = 0
+        duelScores[1] = challenge?.score ?: 0
+        duelPhase = DuelPhase.PLAYING
+        setupDuelRound()
+    }
+
+    /** Lanzo mi propio reto: juego 60 s con una semilla nueva y luego comparto el código. */
+    fun startRemoteCreate() =
+        beginRemote(RemoteRole.CREATOR, com.korkoor.pardos.domain.logic.RemoteDuel.normalizeSeed(System.nanoTime()), null)
+
+    /** Acepto el reto de otra persona: mismo tablero, mismos 60 s. */
+    fun startRemoteAccept(challenge: com.korkoor.pardos.domain.logic.RemoteChallenge) =
+        beginRemote(RemoteRole.CHALLENGED, challenge.seed, challenge)
+
+    private fun finishRemoteRound(score: Int) {
+        val manager = com.korkoor.pardos.data.local.RemoteDuelManager(getApplication())
+        duelScores[0] = score
+        when (remoteRole) {
+            RemoteRole.CREATOR -> {
+                val name = com.korkoor.pardos.data.local.ProfileManager(getApplication()).getProfile().name
+                remoteChallenge = com.korkoor.pardos.domain.logic.RemoteChallenge(duelSeed, score, name)
+                remoteReward = manager.finishAsCreator()
+            }
+            RemoteRole.CHALLENGED -> {
+                val ch = remoteChallenge
+                if (ch != null) {
+                    val result = manager.finishAsChallenged(ch, score)
+                    remoteOutcome = result.outcome
+                    remoteReward = result.reward
+                    remoteFirstTime = result.firstTime
+                }
+            }
+            RemoteRole.NONE -> Unit
+        }
+        duelPhase = DuelPhase.RESULT
+    }
+
     private fun finishDuelRound() {
+        if (remoteRole != RemoteRole.NONE) {
+            finishRemoteRound(_boardState.value.score)
+            return
+        }
         duelScores[duelPlayer - 1] = _boardState.value.score
         duelPhase = if (duelPlayer == 1) DuelPhase.HANDOVER else DuelPhase.RESULT
     }
@@ -471,7 +570,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val base = com.korkoor.pardos.domain.logic.RaceRules.coinsFor(stages)
         lastCoinsEarned = com.korkoor.pardos.domain.events.EventCalendar.apply(
             base,
-            com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today())
+            com.korkoor.pardos.domain.collection.AlbumBonus.combine(
+                com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today()),
+                collection.owned.value
+            )
         )
         economy.addCoins(lastCoinsEarned)
         if (stages > 0) {
@@ -658,6 +760,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                     // 🔥 INTEGRACIÓN MISIONES: Contabiliza los pares combinados
                     missionManager.updateProgress(MissionType.MERGE_PAIRS, mergesCount)
+                    retention.onMerges(mergesCount)
                 }
 
                 delay(80)
@@ -692,6 +795,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 // 🔥 INTEGRACIÓN MISIONES: Actualiza el bloque de mayor valor conseguido
                 if (maxTileValue > 0) {
                     missionManager.updateProgress(MissionType.REACH_BLOCK, maxTileValue)
+                    retention.onTileReached(maxTileValue)
                 }
 
                 val reachedTarget = maxTileValue >= currentState.levelLimit
@@ -908,10 +1012,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             // Eventos programados (fin de semana dorado, semana festival...)
             lastCoinsEarned = com.korkoor.pardos.domain.events.EventCalendar.apply(
                 baseCoins,
-                com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today())
+                com.korkoor.pardos.domain.collection.AlbumBonus.combine(
+                com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today()),
+                collection.owned.value
+            )
             )
             economy.addCoins(lastCoinsEarned)
             coinsDoubled = false
+
+            // Retención: pase de temporada, semanales, hucha y bonus de la primera victoria del día
+            val isDaily = dailyChallengeThemeIndex != null
+            lastGameBonus = retention.onGameFinished(won = true, dailyChallenge = isDaily)
+            retention.onStars(_boardState.value.starsEarned)
+            if (isDaily) retention.onDailyChallengeCompleted()
 
             saveLevelProgress(
                 level = currentLvl,
@@ -1034,7 +1147,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             isMoving = false
             isGameStarted = false
             timerJob?.cancel()
-            startDuel()
+            if (remoteRole != RemoteRole.NONE) {
+                // mismo tablero otra vez (el premio de un código solo se cobra la primera vez)
+                duelPhase = DuelPhase.PLAYING
+                remoteOutcome = null
+                remoteReward = null
+                setupDuelRound()
+            } else {
+                startDuel()
+            }
             return
         }
         if (currentMode == GameMode.CARRERA) {
@@ -1206,6 +1327,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val minutes = (remaining / 1000) / 60
         val seconds = (remaining / 1000) % 60
         return "%02d:%02d".format(minutes, seconds)
+    }
+
+    /** Cuánto falta de la recarga, de 1 (recién usado) a 0 (listo). Para el anillo del botón. */
+    fun cooldownFraction(lastUseTime: Long, now: Long): Float {
+        if (lastUseTime == 0L) return 0f
+        return ((COOLDOWN_MS - (now - lastUseTime)).toFloat() / COOLDOWN_MS).coerceIn(0f, 1f)
     }
 
     fun isPowerUpAvailable(lastUseTime: Long, now: Long): Boolean {
@@ -1401,6 +1528,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
+
+/** Rol en un duelo a distancia. */
+enum class RemoteRole { NONE, CREATOR, CHALLENGED }
 
 /** Fases del duelo local: jugando, entrega del teléfono al jugador 2, y resultado final. */
 enum class DuelPhase { PLAYING, HANDOVER, RESULT }

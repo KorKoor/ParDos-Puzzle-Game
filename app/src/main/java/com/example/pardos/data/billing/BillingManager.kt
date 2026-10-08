@@ -16,6 +16,7 @@ import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.korkoor.pardos.data.local.EconomyManager
+import com.korkoor.pardos.data.local.RetentionManager
 import com.korkoor.pardos.domain.shop.ProductKind
 import com.korkoor.pardos.domain.shop.ShopCatalog
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,6 +38,7 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
 
     private val appContext = context.applicationContext
     private val economy = EconomyManager(appContext)
+    private val retention = RetentionManager(appContext)
 
     private val _prices = MutableStateFlow<Map<String, String>>(emptyMap())
     /** productId -> precio con formato local (ej. "$0.99"). */
@@ -169,6 +171,23 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
                         client.acknowledgePurchase(params) { }
                     }
                 }
+                ProductKind.STUDIO -> {
+                    economy.unlockStudio()
+                    if (!purchase.isAcknowledged) {
+                        val params = AcknowledgePurchaseParams.newBuilder()
+                            .setPurchaseToken(purchase.purchaseToken).build()
+                        client.acknowledgePurchase(params) { }
+                    }
+                    if (!silent) _message.value = "¡Skin Studio desbloqueada! Diséñala a tu gusto"
+                }
+                ProductKind.SEASON_PASS -> consumeThen(purchase) {
+                    retention.unlockPremium()
+                    _message.value = "¡Pase premium activado!"
+                }
+                ProductKind.PIGGY -> consumeThen(purchase) {
+                    val gems = retention.breakPiggy()
+                    _message.value = if (gems > 0) "¡Hucha rota! +$gems gemas" else "La hucha estaba vacía"
+                }
                 ProductKind.VIP -> {
                     economy.setVip(true)
                     if (!purchase.isAcknowledged) {
@@ -179,6 +198,14 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
                     if (!silent) _message.value = "¡VIP activado!"
                 }
             }
+        }
+    }
+
+    /** Consume la compra y SOLO si Play confirma entrega el premio (no se duplica ni se pierde). */
+    private fun consumeThen(purchase: Purchase, deliver: () -> Unit) {
+        val params = ConsumeParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
+        client.consumeAsync(params) { consumeResult, _ ->
+            if (consumeResult.responseCode == BillingClient.BillingResponseCode.OK) deliver()
         }
     }
 

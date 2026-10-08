@@ -65,6 +65,10 @@ sealed class Screen {
     data object Shop : Screen()
     data object Collection : Screen()
     data object Multiplayer : Screen()
+    data object Season : Screen()
+    data object Wheel : Screen()
+    data object Studio : Screen()
+    data object Settings : Screen()
 }
 
 /** Nivel de profundidad de cada pantalla, para animar entrar/volver. */
@@ -72,7 +76,9 @@ private fun Screen.navDepth(): Int = when (this) {
     Screen.Splash -> 0
     Screen.Menu -> 1
     Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements,
-    Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.AccessibilityGame -> 2
+    Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.AccessibilityGame,
+    Screen.Season, Screen.Wheel -> 2
+    Screen.Studio, Screen.Settings -> 3
     Screen.LevelSelector -> 3
     Screen.Game -> 4
 }
@@ -89,10 +95,26 @@ class MainActivity : ComponentActivity() {
     private lateinit var notificationManager: ZenNotificationManager
     private val billingManager by lazy { com.korkoor.pardos.data.billing.BillingManager(this) }
 
+    /** Pantalla a la que llevar al terminar el inicio (viene de tocar un aviso). */
+    private var routeFromNotification: String? = null
+
+    /** Sube (nunca baja) el nivel de campaña del perfil hasta el último nivel desbloqueado de verdad. */
+    private fun healCampaignLevel(profileManager: com.korkoor.pardos.data.local.ProfileManager) {
+        val reached = getSharedPreferences("pardos_storage", MODE_PRIVATE)
+            .getInt(com.korkoor.pardos.data.local.LevelProgressStore.KEY_LAST_UNLOCKED, 1)
+        profileManager.updateCampaignLevel(reached)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate - app launch start")
 
+        // Solo en builds de depuración: `--ei debug_day_offset N` salta N días para probar fiestas
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            com.korkoor.pardos.data.local.LocalDay.debugOffsetDays = intent.getIntExtra("debug_day_offset", 0)
+        }
+
+        routeFromNotification = intent?.getStringExtra(com.korkoor.pardos.notifications.NotificationRoute.EXTRA)
         notificationManager = ZenNotificationManager(this)
         requestNotificationPermissionIfNeeded()
 
@@ -105,7 +127,10 @@ class MainActivity : ComponentActivity() {
 
         val profileManager = com.korkoor.pardos.data.local.ProfileManager(this)
         profileManager.checkAndUpdateStreak()
-        profileManager.syncFromFirebase { cloudProfile ->
+        if (!profileManager.shouldCheckCloud()) {
+            // Ya se consultó hoy y el perfil local tiene progreso: no se gasta una lectura en cada arranque
+            healCampaignLevel(profileManager)
+        } else profileManager.syncFromFirebase { cloudProfile ->
             if (cloudProfile != null) {
                 val localProfile = profileManager.getProfile()
                 if (cloudProfile.playerLevel >= localProfile.playerLevel) {
@@ -122,10 +147,14 @@ class MainActivity : ComponentActivity() {
                 profileManager.migrateLegacyProgressIfNeeded(legacyLevel)
             }
 
+            // El perfil de la nube puede traer un nivel de campaña menor que el progreso real guardado
+            healCampaignLevel(profileManager)
             profileManager.checkAndUpdateStreak()
         }
+        healCampaignLevel(profileManager)
 
         setContent {
+            com.korkoor.pardos.ui.design.CozyClockProvider {
             PardosTheme {
                 val lifecycleOwner = LocalLifecycleOwner.current
                 val accessibilityManager = remember {
@@ -178,7 +207,12 @@ class MainActivity : ComponentActivity() {
                 // La skin equipada trae su propia temática (fondo, texto, partículas)
                 val skinEconomy = remember { com.korkoor.pardos.data.local.EconomyManager(this@MainActivity) }
                 val equippedSkin by skinEconomy.equippedSkin.collectAsState()
-                LaunchedEffect(equippedSkin) { themeViewModel.applySkin(equippedSkin) }
+                val studioConfig by skinEconomy.studioConfig.collectAsState()
+                LaunchedEffect(equippedSkin, studioConfig) { themeViewModel.applySkin(equippedSkin) }
+
+                // Compras: se conecta al abrir para tener precios y recuperar compras pendientes
+                val storePrices by billingManager.prices.collectAsState()
+                LaunchedEffect(Unit) { billingManager.connect() }
                 // Pantallas con texto oscuro sobre el fondo usan un tema claro (las skins oscuras solo aplican al juego y al menú)
                 val currentTheme = themeViewModel.uiTheme
 
@@ -217,7 +251,20 @@ class MainActivity : ComponentActivity() {
                         label = "MainNavigation"
                     ) { target ->
                         when (target) {
-                            Screen.Splash -> AnimatedSplashScreen(onAnimationFinished = { currentScreen = Screen.Menu })
+                            Screen.Splash -> AnimatedSplashScreen(onAnimationFinished = {
+                                currentScreen = when (routeFromNotification) {
+                                    "wheel" -> Screen.Wheel
+                                    "season" -> Screen.Season
+                                    "friends" -> Screen.Friends
+                                    "shop" -> Screen.Shop
+                                    "chest", "piggy" -> {
+                                        com.korkoor.pardos.notifications.NotificationRoute.pendingDialog = routeFromNotification
+                                        Screen.Menu
+                                    }
+                                    else -> Screen.Menu
+                                }
+                                routeFromNotification = null
+                            })
 
                             Screen.Menu -> {
                                 SideEffect { gameViewModel.resetGameSession() }
@@ -272,7 +319,11 @@ class MainActivity : ComponentActivity() {
                                         themeViewModel = themeViewModel,
                                         onShopClick = { currentScreen = Screen.Shop },
                                         onCollectionClick = { currentScreen = Screen.Collection },
-                                        onMultiplayerClick = { currentScreen = Screen.Multiplayer }
+                                        onMultiplayerClick = { currentScreen = Screen.Multiplayer },
+                                        onSeasonClick = { currentScreen = Screen.Season },
+                                        onWheelClick = { currentScreen = Screen.Wheel },
+                                        piggyPrice = storePrices[com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK],
+                                        onBuyPiggy = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK) }
                                     )
                                 }
                             }
@@ -352,7 +403,12 @@ class MainActivity : ComponentActivity() {
                                 onBack = { currentScreen = Screen.Menu }
                             )
 
-                            Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(onBack = { currentScreen = Screen.Menu }, onRecords = { currentScreen = Screen.Records })
+                            Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(
+                                onBack = { currentScreen = Screen.Menu },
+                                onRecords = { currentScreen = Screen.Records },
+                                onSettings = { currentScreen = Screen.Settings }
+                            )
+                            Screen.Settings -> com.korkoor.pardos.ui.settings.SettingsScreen(onBack = { currentScreen = Screen.Profile })
                             Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
                             Screen.Collection -> com.korkoor.pardos.ui.collection.CollectionScreen(onBack = { currentScreen = Screen.Menu })
 
@@ -368,13 +424,39 @@ class MainActivity : ComponentActivity() {
                                     gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.setupDailyChallenge()
                                     currentScreen = Screen.Game
+                                },
+                                onCreateChallenge = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.startRemoteCreate()
+                                    currentScreen = Screen.Game
+                                },
+                                onAcceptChallenge = { challenge ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.startRemoteAccept(challenge)
+                                    currentScreen = Screen.Game
                                 }
                             )
                             Screen.Shop -> com.korkoor.pardos.ui.shop.ShopScreen(
                                 activity = this@MainActivity,
                                 billing = billingManager,
                                 economy = com.korkoor.pardos.data.local.EconomyManager(this@MainActivity),
-                                onBack = { currentScreen = Screen.Menu }
+                                onBack = { currentScreen = Screen.Menu },
+                                onStudio = { currentScreen = Screen.Studio },
+                                onSeason = { currentScreen = Screen.Season }
+                            )
+
+                            Screen.Season -> com.korkoor.pardos.ui.season.SeasonScreen(
+                                onBack = { currentScreen = Screen.Menu },
+                                premiumPrice = storePrices[com.korkoor.pardos.domain.shop.ShopCatalog.SEASON_PASS],
+                                onBuyPremium = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.SEASON_PASS) }
+                            )
+
+                            Screen.Wheel -> com.korkoor.pardos.ui.rewards.WheelScreen(onBack = { currentScreen = Screen.Menu })
+
+                            Screen.Studio -> com.korkoor.pardos.ui.studio.StudioScreen(
+                                onBack = { currentScreen = Screen.Shop },
+                                price = storePrices[com.korkoor.pardos.domain.shop.ShopCatalog.SKIN_STUDIO],
+                                onBuy = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.SKIN_STUDIO) }
                             )
                         }
                     }
@@ -385,16 +467,19 @@ class MainActivity : ComponentActivity() {
                     when (currentScreen) {
                         Screen.Game -> {
                             gameViewModel.resetGameSession()
-                            currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) {
-                                Screen.LevelSelector
-                            } else {
-                                Screen.ModeSelection
+                            currentScreen = when (gameViewModel.currentMode) {
+                                GameMode.CLASICO -> Screen.LevelSelector
+                                GameMode.DUELO -> Screen.Multiplayer
+                                else -> Screen.ModeSelection
                             }
                         }
                         Screen.LevelSelector -> currentScreen = Screen.ModeSelection
+                        Screen.Studio -> currentScreen = Screen.Shop
+                        Screen.Settings -> currentScreen = Screen.Profile
                         else -> currentScreen = Screen.Menu
                     }
                 }
+            }
             }
         }
     }
@@ -421,6 +506,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        // Sube los cambios pendientes del perfil (una sola escritura por sesión como máximo)
+        com.korkoor.pardos.data.local.ProfileManager(this).flushPendingSync()
         if (::notificationManager.isInitialized) {
             Log.d(TAG, "onPause -> scheduleAllNotifications")
             notificationManager.scheduleAllNotifications()

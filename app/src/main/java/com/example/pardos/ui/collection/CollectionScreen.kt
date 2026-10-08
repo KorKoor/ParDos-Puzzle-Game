@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.collection
 
+import com.korkoor.pardos.ui.design.CozyText
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -16,7 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.korkoor.pardos.data.local.CollectionManager
+import com.korkoor.pardos.domain.collection.AlbumBonus
 import com.korkoor.pardos.domain.collection.*
 import com.korkoor.pardos.ui.design.*
 
@@ -119,7 +122,7 @@ fun CollectionScreen(onBack: () -> Unit) {
     val chests by manager.chests.collectAsState()
     val claimed by manager.claimedSeries.collectAsState()
     val albumClaimed by manager.albumClaimed.collectAsState()
-    val haptic = LocalHapticFeedback.current
+    val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
 
     var opening by remember { mutableStateOf<ChestResult?>(null) }
     var detail by remember { mutableStateOf<Collectible?>(null) }
@@ -156,6 +159,22 @@ fun CollectionScreen(onBack: () -> Unit) {
                             }
                             Spacer(Modifier.height(8.dp))
                             ProgressBar(have.toFloat() / total, Gold)
+                            val bonus = AlbumBonus.breakdown(owned)
+                            Spacer(Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Gold.copy(alpha = 0.14f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Rounded.MonetizationOn, null, tint = Gold, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("Bono del álbum: +${bonus.total}% monedas", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Navy)
+                                    Text(
+                                        "+1% cada ${8} piezas · +${AlbumBonus.PER_SERIES}% por serie completa · +${AlbumBonus.FULL_ALBUM}% álbum entero (máx. ${AlbumBonus.MAX_PERCENT}%)",
+                                        fontSize = 10.sp, color = InkSecondary, lineHeight = 13.sp
+                                    )
+                                }
+                            }
                             if (CollectibleCatalog.isAlbumComplete(owned)) {
                                 Spacer(Modifier.height(12.dp))
                                 if (manager.isAlbumClaimable) {
@@ -265,11 +284,11 @@ private fun ChestSlot(type: ChestType, count: Int, modifier: Modifier, onClick: 
             .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier.offset(y = bounce.dp).size(46.dp).background(color.copy(alpha = if (count > 0) 0.18f else 0.08f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = if (count > 0) color else Navy.copy(alpha = 0.25f), modifier = Modifier.size(26.dp))
+        Box(Modifier.offset(y = bounce.dp).size(64.dp), contentAlignment = Alignment.Center) {
+            com.korkoor.pardos.ui.design.TreasureChest(
+                type = type, state = if (count > 0) com.korkoor.pardos.ui.design.ChestState.READY else com.korkoor.pardos.ui.design.ChestState.LOCKED,
+                modifier = Modifier.fillMaxSize(), animate = count > 0
+            )
         }
         Spacer(Modifier.height(6.dp))
         Text("x$count", fontSize = 16.sp, fontWeight = FontWeight.Black, color = if (count > 0) Navy else Navy.copy(alpha = 0.3f))
@@ -291,7 +310,7 @@ private fun SeriesBlock(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(series.nameEs, fontSize = 16.sp, fontWeight = FontWeight.Black, color = Navy)
-                    Text("$have/$total · premio: ${series.rewardCoins} monedas + ${series.rewardGems}◆", fontSize = 11.sp, color = InkSecondary)
+                    CozyText("$have/$total · premio: ${series.rewardCoins} monedas + ${series.rewardGems}◆", fontSize = 11.sp, color = InkSecondary)
                 }
                 when {
                     claimed -> Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Sage, modifier = Modifier.size(26.dp))

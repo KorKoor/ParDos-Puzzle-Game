@@ -9,6 +9,7 @@ internal class GameAudioManager(private val context: android.content.Context) {
     private var moveSoundId: Int = 0
     private var victorySoundId: Int = 0
     private var loaded = false
+    private val settings = com.korkoor.pardos.data.local.SettingsManager(context)
 
     fun initialize() {
         try {
@@ -34,13 +35,13 @@ internal class GameAudioManager(private val context: android.content.Context) {
     }
 
     fun playMoveSound() {
-        if (loaded && moveSoundId != 0) {
+        if (settings.soundEnabled.value && loaded && moveSoundId != 0) {
             soundPool?.play(moveSoundId, 0.7f, 0.7f, 1, 0, 1f)
         }
     }
 
     fun playVictorySound() {
-        if (loaded && victorySoundId != 0) {
+        if (settings.soundEnabled.value && loaded && victorySoundId != 0) {
             soundPool?.play(victorySoundId, 0.8f, 0.8f, 1, 0, 1f)
         }
     }

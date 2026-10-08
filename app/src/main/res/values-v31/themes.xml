@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pantalla de inicio del sistema (Android 12+): fondo de noche y el icono de la calabaza -->
+    <style name="Theme.ParDos" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/halloween_night</item>
+        <item name="android:windowSplashScreenBackground">@color/halloween_night</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_halloween_fg</item>
+    </style>
+</resources>

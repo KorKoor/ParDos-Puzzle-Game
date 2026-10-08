@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.profile
 
+import com.korkoor.pardos.ui.design.CozyText
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -59,7 +61,7 @@ fun ProfileSetupDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Icono decorativo arriba del título
-                Text("✨", fontSize = 32.sp)
+                CozyText("✨", fontSize = 32.sp)
 
                 Text(
                     text = "¡BIENVENIDO A PARDOS!",
@@ -92,10 +94,7 @@ fun ProfileSetupDialog(
                         shadowElevation = 12.dp,
                         border = androidx.compose.foundation.BorderStroke(2.dp, cremaFondo)
                     ) {
-                        Image(
-                            painter = painterResource(id = getAvatarResource(avatarSeleccionado)),
-                            contentDescription = "Avatar",
-                            modifier = Modifier
+                        AvatarImage(avatarSeleccionado, modifier = Modifier
                                 .padding(12.dp)
                                 .clip(CircleShape)
                                 .clickable { mostrarSelectorAvatar = true }

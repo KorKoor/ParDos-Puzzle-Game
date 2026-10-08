@@ -19,7 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -62,15 +62,15 @@ fun FriendsScreen(onBack: () -> Unit) {
     var codeInput by remember { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
 
-    fun reload() {
+    fun reload(force: Boolean = false) {
         loading = true
         me = profileManager.getProfile()
-        profileManager.getFriendsProfiles {
+        profileManager.getFriendsProfiles(force) {
             friends = it
             loading = false
         }
     }
-    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(Unit) { reload(force = false) }
 
     val today = LocalDay.today()
     val week = WeekCalendar.weekId(today)
@@ -116,7 +116,7 @@ fun FriendsScreen(onBack: () -> Unit) {
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
             if (me.friendCode.isBlank()) {
-                item { AccountCard(onChanged = { reload() }) }
+                item { AccountCard(onChanged = { reload(force = true) }) }
             }
 
             // --- Mi código + invitar ---
@@ -267,12 +267,16 @@ private fun RankRow(player: RankedPlayer, profile: UserProfile?) {
     val isMe = player.entry.isMe
     val shape = RoundedCornerShape(22.dp)
 
+    Box(
+        Modifier.fillMaxWidth().clip(shape).background(Color.White)
+            .then(if (isMe) Modifier.border(1.5.dp, Sage.copy(alpha = 0.6f), shape) else Modifier)
+    ) {
+    // El banner de cada jugador asoma por la derecha, tras un velo claro
+    ProfileBanner(profile?.bannerId ?: 1, Modifier.matchParentSize())
+    Box(Modifier.matchParentSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.95f), Color.White.copy(alpha = 0.82f), Color.White.copy(alpha = 0.30f)))))
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .background(if (isMe) Sage.copy(alpha = 0.10f) else Color.White)
-            .then(if (isMe) Modifier.border(1.5.dp, Sage.copy(alpha = 0.6f), shape) else Modifier)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -288,11 +292,7 @@ private fun RankRow(player: RankedPlayer, profile: UserProfile?) {
             }
         }
         Spacer(Modifier.width(12.dp))
-        Image(
-            painter = painterResource(getAvatarResource(profile?.avatarId ?: 1)),
-            contentDescription = null,
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFFF5F5F5))
-        )
+        AvatarFramed(profile?.avatarId ?: 1, modifier = Modifier.size(48.dp), ring = 3.dp, animate = false)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -315,6 +315,7 @@ private fun RankRow(player: RankedPlayer, profile: UserProfile?) {
             Spacer(Modifier.width(3.dp))
             Text("${player.score}", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Navy)
         }
+    }
     }
 }
 
@@ -352,7 +353,7 @@ private fun EmptyFriends(onInvite: () -> Unit) {
 }
 
 fun shareMyCode(context: Context, uid: String, shortCode: String = uid.take(8).uppercase()) {
-    val text = "¡Juega conmigo en ParDos! Agrégame con mi código $shortCode y compitamos por el ranking de la semana."
+    val text = com.korkoor.pardos.domain.social.ShareText.invite(shortCode)
     val sendIntent = Intent().apply {
         action = Intent.ACTION_SEND
         putExtra(Intent.EXTRA_TEXT, text)

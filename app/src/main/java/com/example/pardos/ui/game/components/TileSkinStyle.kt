@@ -2,6 +2,7 @@ package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.korkoor.pardos.domain.shop.SkinStyle
 import com.korkoor.pardos.domain.shop.TileFinish
 import com.korkoor.pardos.domain.shop.TileSkin
 import com.korkoor.pardos.ui.theme.GameTheme
@@ -28,8 +29,11 @@ private fun power(value: Int): Int = (log2(value.coerceAtLeast(2).toFloat()).toI
  * paleta de 12 tonos, colores de texto y acabado. Añadir una skin no requiere tocar este código.
  */
 @Composable
-fun tileLook(skin: TileSkin, value: Int, theme: GameTheme): TileLook {
-    val st = skin.style
+fun tileLook(skin: TileSkin, value: Int, theme: GameTheme): TileLook = tileLook(skin.style, value, theme)
+
+/** Igual que arriba pero desde un estilo suelto (la vista previa del editor de Studio). */
+@Composable
+fun tileLook(st: SkinStyle, value: Int, theme: GameTheme): TileLook {
     val p = power(value)
 
     // Sin paleta propia (Gelatina): colores clásicos según el tema de nivel

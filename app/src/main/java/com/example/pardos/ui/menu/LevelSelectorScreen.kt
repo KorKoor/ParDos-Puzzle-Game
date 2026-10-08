@@ -22,12 +22,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
@@ -58,23 +59,14 @@ import kotlin.math.sin
 
 
 /** Niveles por capítulo del mapa. */
-private const val CHAPTER_SIZE = 20
-private val ROW_HEIGHT = 92.dp
+internal const val CHAPTER_SIZE = 20
+internal val ROW_HEIGHT = 92.dp
 
-private val chapterNames = listOf(
-    "Jardín de Arena", "Bosque Sereno", "Orilla del Río", "Colinas de Té",
-    "Faro en la Bruma", "Valle de Lavanda", "Mercado Nocturno", "Pico Nevado",
-    "Isla de Cerezos", "Desierto Dorado", "Bahía Lunar", "Templo de Bambú"
-)
-private val chapterColors = listOf(
-    Color(0xFF6B9E86), Color(0xFFE07A5F), Color(0xFFE0A93B), Color(0xFF4E8FA6), Color(0xFF7A74E0)
-)
+internal fun chapterOf(levelId: Int) = (levelId - 1) / CHAPTER_SIZE
+private fun chapterName(chapter: Int) = chapterTheme(chapter).name
+private fun chapterColor(chapter: Int) = chapterTheme(chapter).color
 
-private fun chapterOf(levelId: Int) = (levelId - 1) / CHAPTER_SIZE
-private fun chapterName(chapter: Int) = chapterNames[chapter % chapterNames.size]
-private fun chapterColor(chapter: Int) = chapterColors[chapter % chapterColors.size]
-
-private sealed interface MapItem {
+internal sealed interface MapItem {
     data class Node(val level: LevelInfo) : MapItem
     data class Banner(val chapter: Int, val stars: Int, val maxStars: Int, val completed: Int) : MapItem
     /** Cofre al final de un capítulo. [ready] = último nivel superado; [claimed] = ya abierto. */
@@ -82,7 +74,7 @@ private sealed interface MapItem {
 }
 
 /** Posición horizontal (0..1) del nodo: un zigzag suave. */
-private fun nodeX(levelId: Int): Float = 0.5f + 0.27f * sin(levelId * 0.85f)
+internal fun nodeX(levelId: Int): Float = 0.5f + 0.27f * sin(levelId * 0.85f)
 
 @Composable
 fun LevelSelectorScreen(
@@ -97,7 +89,7 @@ fun LevelSelectorScreen(
 
     val context = LocalContext.current
     val economy = remember { EconomyManager(context) }
-    val haptic = LocalHapticFeedback.current
+    val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
     var claimTick by remember { mutableIntStateOf(0) }
 
     // Lista plana ascendente: banner de capítulo antes de su primer nivel.
@@ -136,6 +128,17 @@ fun LevelSelectorScreen(
     val scope = rememberCoroutineScope()
     var selected by remember { mutableStateOf<LevelInfo?>(null) }
     var hint by remember { mutableStateOf<String?>(null) }
+    var showChapters by remember { mutableStateOf(false) }
+
+    // Tus amigos aparecen en el nivel donde van
+    var friends by remember { mutableStateOf<List<com.korkoor.pardos.domain.model.UserProfile>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        try { com.korkoor.pardos.data.local.ProfileManager(context).getFriendsProfiles { friends = it } } catch (_: Exception) { }
+    }
+    val friendsByLevel = remember(friends) { friends.groupBy { it.currentCampaignLevel } }
+    val bannerIndex = remember(items) {
+        items.mapIndexedNotNull { i, it -> (it as? MapItem.Banner)?.let { b -> b.chapter to i } }.toMap()
+    }
 
     // Abrir centrado en el nivel actual (y recentrar si cambia el progreso)
     LaunchedEffect(currentIndex, items.size) {
@@ -149,7 +152,11 @@ fun LevelSelectorScreen(
 
     val visibleChapter by remember {
         derivedStateOf {
-            val first = listState.layoutInfo.visibleItemsInfo.firstOrNull()?.index ?: currentIndex
+            // el capítulo del elemento que está en el centro de la pantalla
+            val info = listState.layoutInfo
+            val center = (info.viewportStartOffset + info.viewportEndOffset) / 2
+            val mid = info.visibleItemsInfo.minByOrNull { kotlin.math.abs(it.offset + it.size / 2 - center) }
+            val first = mid?.index ?: currentIndex
             when (val it = items.getOrNull(first)) {
                 is MapItem.Node -> chapterOf(it.level.id)
                 is MapItem.Banner -> it.chapter
@@ -168,12 +175,19 @@ fun LevelSelectorScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(currentTheme.colors))) {
-        PicnicBackgroundOptimized(color = currentTheme.accentColor.copy(alpha = 0.05f))
+    // Si acabas de superar un nivel, el nuevo nivel actual se desbloquea con una animación
+    val seenPrefs = remember { context.getSharedPreferences("pardos_map", android.content.Context.MODE_PRIVATE) }
+    val previouslySeen = remember { seenPrefs.getInt("seen_current", 0) }
+    val justUnlockedId = remember(currentLevel?.id) { currentLevel?.id?.takeIf { previouslySeen in 1 until it } ?: -1 }
+    LaunchedEffect(currentLevel?.id) {
+        delay(2500)
+        seenPrefs.edit().putInt("seen_current", currentLevel?.id ?: 0).apply()
+    }
+    val rowPx = with(androidx.compose.ui.platform.LocalDensity.current) { ROW_HEIGHT.toPx() }
 
-        // Ambiente: el fondo se tiñe suavemente con el color del capítulo que estás viendo
-        val ambient by animateColorAsState(chapterColor(visibleChapter).copy(alpha = 0.10f), tween(700), label = "ambient")
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ambient, Color.Transparent, ambient))))
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Mundo vivo detrás del mapa: cielo del capítulo, sol/luna, nubes, relieve y partículas
+        MapBackdrop(chapter = visibleChapter, scrollPx = { listState.firstVisibleItemIndex * rowPx + listState.firstVisibleItemScrollOffset })
 
         LazyColumn(
             state = listState,
@@ -213,6 +227,10 @@ fun LevelSelectorScreen(
                         nextUnlocked = levels.getOrNull(item.level.id)?.isLocked == false,
                         isLast = item.level.id >= levels.size,
                         isCurrent = item.level.id == currentLevel?.id,
+                        justUnlocked = item.level.id == justUnlockedId,
+                        distanceAhead = (item.level.id - (currentLevel?.id ?: 1)).coerceAtLeast(0),
+                        friends = friendsByLevel[item.level.id].orEmpty(),
+                        onFriendsClick = { names -> hint = names },
                         onClick = {
                             if (item.level.isLocked) {
                                 hint = "Completa el nivel ${item.level.id - 1} para desbloquearlo"
@@ -226,27 +244,53 @@ fun LevelSelectorScreen(
             }
         }
 
-        // --- Cabecera flotante ---
-        Column(
+        // --- Cabecera flotante: una tarjeta translúcida para que el texto siempre se lea ---
+        val night = chapterIsNight(visibleChapter)
+        val headerBase by animateColorAsState(skyTopColor(visibleChapter), tween(900), label = "headerBase")
+        val headerInk by animateColorAsState(if (night) Color.White else Navy, tween(600), label = "headerInk")
+        val headerCard = if (night) Color(0xFF14142B).copy(alpha = 0.60f) else Color.White.copy(alpha = 0.86f)
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(currentTheme.colors.first(), currentTheme.colors.first().copy(alpha = 0f))))
+                .background(Brush.verticalGradient(listOf(headerBase.copy(alpha = 0.9f), headerBase.copy(alpha = 0f))))
                 .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(10.dp, RoundedCornerShape(30.dp), spotColor = chapterColor(visibleChapter))
+                    .clip(RoundedCornerShape(30.dp))
+                    .background(headerCard)
+                    .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 4.dp, modifier = Modifier.size(42.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Atrás", tint = Navy)
                     }
                 }
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("CAMPAÑA", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 3.sp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { showChapters = true }.padding(vertical = 2.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("CAMPAÑA", fontSize = 10.sp, fontWeight = FontWeight.Black, color = headerInk.copy(alpha = 0.6f), letterSpacing = 3.sp)
+                        Icon(Icons.Rounded.UnfoldMore, contentDescription = "Capítulos", tint = headerInk.copy(alpha = 0.6f), modifier = Modifier.size(14.dp))
+                    }
                     Text(
                         "Cap. ${visibleChapter + 1} · ${chapterName(visibleChapter)}",
-                        fontSize = 17.sp, fontWeight = FontWeight.Black, color = Navy, maxLines = 1
+                        fontSize = 16.sp, fontWeight = FontWeight.Black, color = headerInk, maxLines = 1
                     )
+                    val chapterDone = remember(levels, visibleChapter) {
+                        levels.count { chapterOf(it.id) == visibleChapter && it.starsEarned > 0 }
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Box(Modifier.fillMaxWidth(0.8f).height(5.dp).clip(CircleShape).background(headerInk.copy(alpha = 0.14f))) {
+                        Box(
+                            Modifier.fillMaxHeight()
+                                .fillMaxWidth((chapterDone.toFloat() / CHAPTER_SIZE).coerceIn(0f, 1f).coerceAtLeast(0.03f))
+                                .background(chapterColor(visibleChapter), CircleShape)
+                        )
+                    }
                 }
                 Row(
                     modifier = Modifier
@@ -260,6 +304,35 @@ fun LevelSelectorScreen(
                     Text("$totalStars", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy)
                 }
             }
+        }
+
+        // --- Selector de capítulos ---
+        if (showChapters) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.35f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { showChapters = false }
+            )
+        }
+        AnimatedVisibility(
+            visible = showChapters,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn() + slideInVertically { it },
+            exit = fadeOut() + slideOutVertically { it }
+        ) {
+            val lastChapter = chapterOf(levels.size.coerceAtLeast(1))
+            val reachChapter = ((currentLevel?.id ?: 1).let { chapterOf(it) } + 1).coerceAtMost(lastChapter)
+            ChapterSheet(
+                chapters = (reachChapter downTo 0).toList(),
+                levels = levels,
+                currentChapter = chapterOf(currentLevel?.id ?: 1),
+                visibleChapter = visibleChapter,
+                onPick = { ch ->
+                    showChapters = false
+                    val idx = bannerIndex[ch]
+                    if (idx != null) scope.launch { listState.animateScrollToItem((idx - 1).coerceAtLeast(0)) }
+                },
+                onClose = { showChapters = false }
+            )
         }
 
         // --- Botón para volver al nivel actual ---
@@ -337,170 +410,6 @@ fun LevelSelectorScreen(
 }
 
 @Composable
-private fun ChapterBanner(banner: MapItem.Banner) {
-    val color = chapterColor(banner.chapter)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 18.dp)
-            .clip(RoundedCornerShape(26.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(color, color.copy(red = color.red * 0.8f, green = color.green * 0.8f, blue = color.blue * 0.8f))
-                )
-            )
-            .padding(horizontal = 22.dp, vertical = 18.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("CAPÍTULO ${banner.chapter + 1}", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White.copy(alpha = 0.75f), letterSpacing = 3.sp)
-                Spacer(Modifier.height(2.dp))
-                Text(chapterName(banner.chapter), fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Star, contentDescription = null, tint = Color(0xFFFFE08A), modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("${banner.stars}/${banner.maxStars}", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
-                }
-                Text("${banner.completed}/$CHAPTER_SIZE niveles", fontSize = 10.sp, color = Color.White.copy(alpha = 0.75f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun MapNode(level: LevelInfo, nextUnlocked: Boolean, isLast: Boolean, isCurrent: Boolean, onClick: () -> Unit) {
-    val color = chapterColor(chapterOf(level.id))
-    val locked = level.isLocked
-    val completed = !locked && level.starsEarned > 0
-    val isChallenge = level.id % 5 == 0
-    val isEpic = level.id % 25 == 0
-
-    val myX = nodeX(level.id)
-    val nextX = nodeX(level.id + 1)
-    val segmentDone = nextUnlocked
-    val lineColor = if (segmentDone) color.copy(alpha = 0.55f) else Navy.copy(alpha = 0.12f)
-    // Entre capítulos hay un banner: la ruta solo llega al borde de la fila
-    val endsAtBanner = level.id % CHAPTER_SIZE == 0
-
-    val pulse by rememberInfiniteTransition(label = "node").animateFloat(
-        initialValue = 1f,
-        targetValue = if (isCurrent) 1.12f else 1f,
-        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "nodePulse"
-    )
-
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(ROW_HEIGHT)
-            .drawBehind {
-                // Ruta hacia el nivel siguiente (arriba). El nodo siguiente se pinta después y la tapa.
-                if (!isLast) {
-                    val x0 = size.width * myX
-                    val x1 = size.width * nextX
-                    val y0 = size.height / 2f
-                    val y1 = -size.height / 2f
-                    val xEnd = if (endsAtBanner) x0 else x1
-                    val path = Path().apply {
-                        moveTo(x0, y0)
-                        cubicTo(x0, y0 + (y1 - y0) * 0.55f, xEnd, y1 - (y1 - y0) * 0.55f, xEnd, y1)
-                    }
-                    drawPath(
-                        path = path,
-                        color = lineColor,
-                        style = Stroke(
-                            width = 7.dp.toPx(),
-                            cap = StrokeCap.Round,
-                            pathEffect = if (!segmentDone) PathEffect.dashPathEffect(floatArrayOf(14.dp.toPx(), 12.dp.toPx())) else null
-                        )
-                    )
-                }
-            }
-    ) {
-        val nodeSize = if (isCurrent) 68.dp else 58.dp
-        val xDp = maxWidth * myX - nodeSize / 2
-
-        Box(
-            modifier = Modifier
-                .offset(x = xDp, y = (ROW_HEIGHT - nodeSize) / 2)
-                .size(nodeSize)
-                .scale(if (isCurrent) pulse else 1f)
-                .then(
-                    when {
-                        isCurrent -> Modifier.shadow(16.dp, CircleShape, spotColor = color)
-                        !locked -> Modifier.shadow(6.dp, CircleShape)
-                        else -> Modifier
-                    }
-                )
-                .clip(CircleShape)
-                .background(
-                    when {
-                        isCurrent -> Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.85f, green = color.green * 0.85f, blue = color.blue * 0.85f)))
-                        locked -> Brush.linearGradient(listOf(Color(0xFFEDEBE6), Color(0xFFEDEBE6)))
-                        else -> Brush.linearGradient(listOf(Color.White, Color.White))
-                    }
-                )
-                .border(
-                    width = if (isEpic) 3.dp else 2.dp,
-                    color = when {
-                        isEpic && !locked -> Gold
-                        isCurrent -> Color.White
-                        completed -> color
-                        else -> Navy.copy(alpha = 0.08f)
-                    },
-                    shape = CircleShape
-                )
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            if (locked) {
-                Icon(Icons.Rounded.Lock, contentDescription = null, tint = Navy.copy(alpha = 0.28f), modifier = Modifier.size(22.dp))
-            } else {
-                Text(
-                    text = "${level.id}",
-                    fontSize = if (level.id >= 1000) 14.sp else 18.sp,
-                    fontWeight = FontWeight.Black,
-                    color = if (isCurrent) Color.White else Navy
-                )
-            }
-        }
-
-        // Estrellas bajo el nodo completado
-        if (completed) {
-            Row(
-                modifier = Modifier.offset(x = maxWidth * myX - 21.dp, y = (ROW_HEIGHT + nodeSize) / 2 - 2.dp),
-                horizontalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
-                repeat(3) { i ->
-                    Icon(
-                        Icons.Rounded.Star,
-                        contentDescription = null,
-                        tint = if (i < level.starsEarned) Color(0xFFFFC83D) else Navy.copy(alpha = 0.12f),
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-            }
-        }
-
-        // Insignia de reto cronometrado
-        if (isChallenge && !locked) {
-            Box(
-                modifier = Modifier
-                    .offset(x = maxWidth * myX + nodeSize / 2 - 16.dp, y = (ROW_HEIGHT - nodeSize) / 2 - 4.dp)
-                    .size(22.dp)
-                    .background(Color(0xFFE07A5F), CircleShape)
-                    .border(2.dp, Color.White, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-            }
-        }
-    }
-}
-
-@Composable
 private fun LevelPreviewCard(level: LevelInfo, onPlay: () -> Unit) {
     val color = chapterColor(chapterOf(level.id))
     val size = ProgressionEngine.calculateBoardSize(level.target)
@@ -537,6 +446,20 @@ private fun LevelPreviewCard(level: LevelInfo, onPlay: () -> Unit) {
                 PreviewStat("META", "${level.target}")
                 PreviewStat("TABLERO", "${size}×$size")
                 PreviewStat("TIEMPO", timeText ?: "Libre")
+            }
+
+            val toChest = com.korkoor.pardos.domain.rewards.ChapterRewards.lastLevelOf(chapterOf(level.id)) - level.id
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(color.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (toChest <= 0) "Este nivel abre el cofre del capítulo" else "Cofre del capítulo en $toChest ${if (toChest == 1) "nivel" else "niveles"}",
+                    fontSize = 11.sp, fontWeight = FontWeight.Black, color = color.darker(0.8f)
+                )
             }
 
             if (level.bestMoves > 0) {
@@ -579,69 +502,78 @@ private fun PreviewStat(label: String, value: String) {
 }
 
 
+// =====================================================================================
+//  SELECTOR DE CAPÍTULOS: saltar a cualquier capítulo ya alcanzado
+// =====================================================================================
+
 @Composable
-private fun ChapterChest(chest: MapItem.Chest, onClick: () -> Unit) {
-    val color = chapterColor(chest.chapter)
-    val state = when {
-        chest.claimed -> 2
-        chest.ready -> 1
-        else -> 0
-    }
-    val lineColor = if (chest.ready) color.copy(alpha = 0.55f) else Navy.copy(alpha = 0.12f)
-    val x = nodeX(ChapterRewards.lastLevelOf(chest.chapter))
-
-    val bounce by rememberInfiniteTransition(label = "chest").animateFloat(
-        initialValue = 0f,
-        targetValue = if (state == 1) -6f else 0f,
-        animationSpec = infiniteRepeatable(tween(650, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "chestBounce"
-    )
-
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(ROW_HEIGHT)
-            .drawBehind {
-                // Tramo hacia el banner del siguiente capítulo
-                val x0 = size.width * x
-                drawLine(
-                    color = lineColor,
-                    start = Offset(x0, size.height / 2f),
-                    end = Offset(x0, 0f),
-                    strokeWidth = 7.dp.toPx(),
-                    cap = StrokeCap.Round,
-                    pathEffect = if (!chest.ready) PathEffect.dashPathEffect(floatArrayOf(14.dp.toPx(), 12.dp.toPx())) else null
-                )
-            }
+private fun ChapterSheet(
+    chapters: List<Int>, levels: List<LevelInfo>, currentChapter: Int, visibleChapter: Int,
+    onPick: (Int) -> Unit, onClose: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        color = Color(0xFFFFFBF5), shadowElevation = 20.dp
     ) {
-        val size = 64.dp
-        Box(
-            modifier = Modifier
-                .offset(x = maxWidth * x - size / 2, y = (ROW_HEIGHT - size) / 2 + bounce.dp)
-                .size(size)
-                .then(if (state == 1) Modifier.shadow(14.dp, RoundedCornerShape(20.dp), spotColor = Gold) else Modifier.shadow(4.dp, RoundedCornerShape(20.dp)))
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    when (state) {
-                        1 -> Brush.linearGradient(listOf(Color(0xFFF2CC8F), Gold))
-                        2 -> Brush.linearGradient(listOf(Color(0xFFE4EEE8), Color(0xFFE4EEE8)))
-                        else -> Brush.linearGradient(listOf(Color(0xFFEDEBE6), Color(0xFFEDEBE6)))
+        Column(Modifier.navigationBarsPadding().padding(top = 14.dp)) {
+            Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp).background(Navy.copy(alpha = 0.12f), CircleShape))
+            Spacer(Modifier.height(12.dp))
+            Text("CAPÍTULOS", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 3.sp, modifier = Modifier.padding(horizontal = 24.dp))
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.foundation.lazy.LazyColumn(
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                itemsIndexed(chapters, key = { _, ch -> ch }) { _, ch ->
+                    val theme = chapterTheme(ch)
+                    val inChapter = levels.filter { chapterOf(it.id) == ch }
+                    val done = inChapter.count { it.starsEarned > 0 }
+                    val stars = inChapter.sumOf { it.starsEarned }
+                    val locked = inChapter.isNotEmpty() && inChapter.all { it.isLocked }
+                    val isHere = ch == visibleChapter
+                    Row(
+                        modifier = Modifier.fillMaxWidth().alpha(if (locked) 0.5f else 1f).clip(RoundedCornerShape(20.dp))
+                            .background(if (isHere) theme.color.copy(alpha = 0.16f) else Color.White)
+                            .border(if (isHere) 2.dp else 1.dp, if (isHere) theme.color else Navy.copy(alpha = 0.07f), RoundedCornerShape(20.dp))
+                            .clickable(enabled = !locked) { onPick(ch) }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            Modifier.size(44.dp).background(Brush.verticalGradient(listOf(lerpColor(theme.color), theme.color)), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) { Text("${ch + 1}", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color.White) }
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(theme.name, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, maxLines = 1)
+                                if (ch == currentChapter) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("AQUÍ", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 1.sp,
+                                        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(theme.color).padding(horizontal = 6.dp, vertical = 2.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(5.dp))
+                            Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(Navy.copy(alpha = 0.08f))) {
+                                Box(Modifier.fillMaxHeight().fillMaxWidth((done.toFloat() / CHAPTER_SIZE).coerceIn(0f, 1f).coerceAtLeast(0.02f)).background(theme.color, CircleShape))
+                            }
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(horizontalAlignment = Alignment.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.Star, contentDescription = null, tint = Gold, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(3.dp))
+                                Text("$stars/${CHAPTER_SIZE * 3}", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Navy)
+                            }
+                            Text("$done/$CHAPTER_SIZE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Navy.copy(alpha = 0.5f))
+                        }
                     }
-                )
-                .border(2.dp, if (state == 1) Color.White else Navy.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                .clickable(onClick = onClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (state == 2) Icons.Rounded.CheckCircle else Icons.Rounded.Inventory2,
-                contentDescription = "Cofre del capítulo ${chest.chapter + 1}",
-                tint = when (state) {
-                    1 -> Color.White
-                    2 -> Sage
-                    else -> Navy.copy(alpha = 0.28f)
-                },
-                modifier = Modifier.size(32.dp)
-            )
+                }
+                item { Spacer(Modifier.height(10.dp)) }
+            }
         }
     }
 }
+
+private fun lerpColor(c: Color): Color = androidx.compose.ui.graphics.lerp(c, Color.White, 0.3f)

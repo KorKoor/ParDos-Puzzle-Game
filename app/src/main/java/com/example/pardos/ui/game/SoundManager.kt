@@ -15,6 +15,7 @@ class SoundManager(context: Context) {
 
     // Música de fondo
     private var menuMusicPlayer: MediaPlayer? = null
+    private val settings = com.korkoor.pardos.data.local.SettingsManager(context)
 
     init {
         val audioAttributes = AudioAttributes.Builder()
@@ -36,6 +37,7 @@ class SoundManager(context: Context) {
 
     // --- MÚSICA DE MENÚ ---
     fun playMenuMusic(context: Context) {
+        if (!settings.musicEnabled.value) return
         try {
             if (menuMusicPlayer == null) {
                 menuMusicPlayer = MediaPlayer.create(context, R.raw.theme_song)
@@ -82,17 +84,20 @@ class SoundManager(context: Context) {
         // CoerceIn asegura que no baje de 0.5 (lento) ni suba de 2.0 (doble velocidad/chipmunk)
         val finalPitch = (1.0f + comboBoost + variance).coerceIn(0.8f, 2.0f)
 
+        if (!settings.soundEnabled.value) return
         // Reproducir con el pitch calculado
         soundPool.play(betterPopId, 1f, 1f, 1, 0, finalPitch)
     }
 
     fun playWin() {
         stopMenuMusic()
+        if (!settings.soundEnabled.value) return
         soundPool.play(winId, 1f, 1f, 1, 0, 1.0f)
     }
 
     fun playGameOver() {
         stopMenuMusic()
+        if (!settings.soundEnabled.value) return
         // Volumen reducido al 20% como pediste
         // Pitch bajado ligeramente (0.9f) para que suene más triste/pesado
         soundPool.play(gameOverId, 0.2f, 0.2f, 1, 0, 0.9f)

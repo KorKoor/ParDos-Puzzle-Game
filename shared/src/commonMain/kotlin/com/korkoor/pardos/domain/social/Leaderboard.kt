@@ -4,6 +4,9 @@ package com.korkoor.pardos.domain.social
 object WeekCalendar {
     /** El día 0 de epoch fue jueves, por eso el +3 alinea el inicio de semana en lunes. */
     fun weekId(epochDay: Int): Int = (epochDay + 3) / 7
+
+    /** Días que quedan de la semana contando hoy (7 el lunes, 1 el domingo). */
+    fun daysLeft(epochDay: Int): Int = 7 - (epochDay + 3) % 7
 }
 
 /** Participante del ranking semanal. */

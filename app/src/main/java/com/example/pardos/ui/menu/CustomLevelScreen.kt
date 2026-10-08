@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -202,7 +203,7 @@ fun CustomOptionsContent(
     selectedTimeMode: String,
     onTimeModeChange: (String) -> Unit
 ) {
-    val haptic = LocalHapticFeedback.current
+    val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
 
     // --- TAMAÑO ---
     SectionHeader(Icons.Default.GridView, stringResource(R.string.section_board_size), currentTheme.actionColor)

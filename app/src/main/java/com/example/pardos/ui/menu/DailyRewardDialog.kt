@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.CozyText
+
 import com.korkoor.pardos.ui.design.*
 
 import androidx.compose.animation.core.*
@@ -11,7 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -140,7 +142,7 @@ fun DailyRewardDialog(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    CozyText(
                         text = if (claimed) "¡LISTO!" else "RECLAMAR +${reward.coins}" + if (reward.gems > 0) "  +${reward.gems}◆" else "",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Black,
@@ -208,7 +210,7 @@ private fun DayTile(day: Int, today: Int, claimed: Boolean, modifier: Modifier, 
                 modifier = Modifier.size(20.dp)
             )
         }
-        Text(
+        CozyText(
             text = "${reward.coins}" + if (reward.gems > 0) " +${reward.gems}◆" else "",
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,

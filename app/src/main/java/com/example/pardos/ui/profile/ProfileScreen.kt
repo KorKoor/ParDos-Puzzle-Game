@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import com.korkoor.pardos.ui.game.GameViewModel
 fun ProfileScreen(
     onBack: () -> Unit = {},
     onRecords: () -> Unit = {},
+    onSettings: () -> Unit = {},
     gameViewModel: GameViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -46,6 +48,7 @@ fun ProfileScreen(
 
     var profile by remember { mutableStateOf(profileManager.getProfile()) }
     var showAvatarDialog by remember { mutableStateOf(false) }
+    var showBannerDialog by remember { mutableStateOf(false) }
     var showNameDialog by remember { mutableStateOf(false) }
 
     // ESTADOS PARA LA VITRINA DE RÉCORDS
@@ -100,7 +103,14 @@ fun ProfileScreen(
                 title = "Mi perfil",
                 eyebrow = "Tu espacio zen",
                 onBack = onBack,
-                horizontalPadding = 0.dp
+                horizontalPadding = 0.dp,
+                trailing = {
+                    Surface(onClick = onSettings, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Settings, contentDescription = "Ajustes", tint = cafeProfundo)
+                        }
+                    }
+                }
             )
             Spacer(Modifier.height(4.dp))
 
@@ -115,32 +125,44 @@ fun ProfileScreen(
                 shadowElevation = 20.dp,
                 border = BorderStroke(1.dp, cafeSuave.copy(alpha = 0.1f))
             ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Banner del perfil con el avatar y su marco asomando por abajo
+                    ProfileHero(
+                        bannerId = profile.bannerId, avatarId = profile.avatarId,
+                        onAvatarClick = { showAvatarDialog = true },
+                        overlay = {
+                            Row(
+                                Modifier.align(Alignment.TopEnd).padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    onClick = { showBannerDialog = true }, shape = RoundedCornerShape(14.dp),
+                                    color = Color.White.copy(alpha = 0.88f), shadowElevation = 4.dp
+                                ) {
+                                    Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Rounded.Palette, null, tint = cafeProfundo, modifier = Modifier.size(15.dp))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text("BANNER", fontSize = 10.sp, fontWeight = FontWeight.Black, color = cafeProfundo, letterSpacing = 1.sp)
+                                    }
+                                }
+                                Surface(
+                                    onClick = { showAvatarDialog = true }, shape = RoundedCornerShape(14.dp),
+                                    color = Color.White.copy(alpha = 0.88f), shadowElevation = 4.dp
+                                ) {
+                                    Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Rounded.Face, null, tint = cafeProfundo, modifier = Modifier.size(15.dp))
+                                        Spacer(Modifier.width(5.dp))
+                                        Text("AVATAR", fontSize = 10.sp, fontWeight = FontWeight.Black, color = cafeProfundo, letterSpacing = 1.sp)
+                                    }
+                                }
+                            }
+                        }
+                    )
                 Column(
-                    modifier = Modifier.padding(28.dp),
+                    modifier = Modifier.padding(horizontal = 28.dp).padding(bottom = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Avatar
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        Surface(
-                            modifier = Modifier.size(120.dp),
-                            shape = CircleShape,
-                            color = fondoBeige,
-                            border = BorderStroke(4.dp, Brush.sweepGradient(listOf(terracota, verdeMenta, terracota)))
-                        ) {
-                            Image(
-                                painter = painterResource(id = getAvatarResource(profile.avatarId)),
-                                contentDescription = null,
-                                modifier = Modifier.padding(8.dp).clip(CircleShape).clickable { showAvatarDialog = true }
-                            )
-                        }
-                        Surface(
-                            shape = CircleShape, color = cafeProfundo, modifier = Modifier.size(38.dp).offset(x = 4.dp, y = 4.dp).clickable { showAvatarDialog = true }, shadowElevation = 4.dp
-                        ) {
-                            Icon(Icons.Rounded.Edit, null, tint = Color.White, modifier = Modifier.padding(8.dp))
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     // Nombre
                     Surface(
@@ -170,6 +192,7 @@ fun ProfileScreen(
                             color = verdeMenta, trackColor = fondoBeige
                         )
                     }
+                }
                 }
             }
 
@@ -330,6 +353,19 @@ fun ProfileScreen(
         )
     }
 
+    if (showBannerDialog) {
+        BannerSelectorDialog(
+            currentBannerId = profile.bannerId,
+            avatarId = profile.avatarId,
+            onBannerSelected = { id ->
+                val updated = profileManager.getProfile().copy(bannerId = id)
+                profileManager.saveProfile(updated)
+                profile = updated
+            },
+            onDismissRequest = { showBannerDialog = false }
+        )
+    }
+
     if (showNameDialog) {
         var tempName by remember { mutableStateOf(profile.name) }
         AlertDialog(
@@ -452,10 +488,7 @@ fun RankingRow(rank: Int, user: UserProfile, isMe: Boolean, cafeProfundo: Color,
             Spacer(modifier = Modifier.width(8.dp))
 
             // Avatar en pequeño
-            Image(
-                painter = painterResource(id = getAvatarResource(user.avatarId)),
-                contentDescription = null,
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFF5F5F5))
+            AvatarImage(user.avatarId, modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFFF5F5F5))
             )
 
             Spacer(modifier = Modifier.width(12.dp))

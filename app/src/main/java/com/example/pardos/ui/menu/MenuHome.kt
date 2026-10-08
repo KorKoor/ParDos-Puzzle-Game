@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.profile.AvatarImage
+
 import com.korkoor.pardos.ui.design.*
 
 import androidx.compose.animation.core.*
@@ -15,7 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,11 @@ import androidx.compose.ui.Alignment
 import com.korkoor.pardos.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material.icons.rounded.Celebration
+import androidx.compose.material.icons.rounded.Nightlight
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.LocalFlorist
+import androidx.compose.material.icons.rounded.CardGiftcard
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.MonetizationOn
 import androidx.compose.ui.Modifier
@@ -55,18 +62,15 @@ fun PlayerHeader(profile: UserProfile, onClick: () -> Unit, modifier: Modifier =
         color = Color.White,
         shadowElevation = 6.dp
     ) {
+        Box {
+        // Tu banner asoma por la derecha; a la izquierda un velo claro mantiene el texto legible
+        com.korkoor.pardos.ui.profile.ProfileBanner(profile.bannerId, Modifier.matchParentSize())
+        Box(Modifier.matchParentSize().background(Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.94f), Color.White.copy(alpha = 0.80f), Color.White.copy(alpha = 0.22f)))))
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(getAvatarResource(profile.avatarId)),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .border(2.dp, Sage.copy(alpha = 0.5f), CircleShape)
-            )
+            com.korkoor.pardos.ui.profile.AvatarFramed(profile.avatarId, modifier = Modifier.size(56.dp), ring = 3.dp)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -105,6 +109,7 @@ fun PlayerHeader(profile: UserProfile, onClick: () -> Unit, modifier: Modifier =
             }
             Spacer(Modifier.width(12.dp))
             StreakChip(profile.currentStreak)
+        }
         }
     }
 }
@@ -306,7 +311,14 @@ fun BottomDock(items: List<DockItem>, modifier: Modifier = Modifier) {
 
 /** Banner del evento activo con cuenta atrás de días. */
 @Composable
-fun EventBanner(event: com.korkoor.pardos.domain.events.GameEvent, today: Int, modifier: Modifier = Modifier) {
+fun EventBanner(
+    event: com.korkoor.pardos.domain.events.GameEvent,
+    today: Int,
+    modifier: Modifier = Modifier,
+    /** Si el evento trae skin: el progreso ("1/3") y qué hacer al tocar. */
+    skinProgress: String? = null,
+    onClick: (() -> Unit)? = null
+) {
     val (title, desc, icon, color) = when (event.type) {
         com.korkoor.pardos.domain.events.EventType.WEEKEND_GOLD ->
             EventStyle(R.string.event_weekend_gold_title, R.string.event_weekend_gold_desc, Icons.Rounded.MonetizationOn, Gold)
@@ -314,6 +326,22 @@ fun EventBanner(event: com.korkoor.pardos.domain.events.GameEvent, today: Int, m
             EventStyle(R.string.event_xp_wednesday_title, R.string.event_xp_wednesday_desc, Icons.Rounded.AutoAwesome, GemBlue)
         com.korkoor.pardos.domain.events.EventType.FESTIVAL_WEEK ->
             EventStyle(R.string.event_festival_week_title, R.string.event_festival_week_desc, Icons.Rounded.Celebration, Terracotta)
+        com.korkoor.pardos.domain.events.EventType.HALLOWEEN ->
+            EventStyle(R.string.event_halloween_title, R.string.event_halloween_desc, Icons.Rounded.Nightlight, Color(0xFFE0782F))
+        com.korkoor.pardos.domain.events.EventType.DAY_OF_THE_DEAD ->
+            EventStyle(R.string.event_dead_title, R.string.event_dead_desc, Icons.Rounded.LocalFlorist, Color(0xFFE08A2E))
+        com.korkoor.pardos.domain.events.EventType.CHRISTMAS ->
+            EventStyle(R.string.event_christmas_title, R.string.event_christmas_desc, Icons.Rounded.CardGiftcard, Color(0xFFC94C5F))
+        com.korkoor.pardos.domain.events.EventType.NEW_YEAR ->
+            EventStyle(R.string.event_new_year_title, R.string.event_new_year_desc, Icons.Rounded.Celebration, Gold)
+        com.korkoor.pardos.domain.events.EventType.VALENTINE ->
+            EventStyle(R.string.event_valentine_title, R.string.event_valentine_desc, Icons.Rounded.Favorite, Color(0xFFD96C8C))
+        com.korkoor.pardos.domain.events.EventType.SPRING ->
+            EventStyle(R.string.event_spring_title, R.string.event_spring_desc, Icons.Rounded.LocalFlorist, Color(0xFF6BBF8A))
+        com.korkoor.pardos.domain.events.EventType.SUMMER ->
+            EventStyle(R.string.event_summer_title, R.string.event_summer_desc, Icons.Rounded.WbSunny, Color(0xFFFF8A5B))
+        com.korkoor.pardos.domain.events.EventType.INDEPENDENCE ->
+            EventStyle(R.string.event_independence_title, R.string.event_independence_desc, Icons.Rounded.Celebration, Color(0xFF1B8A5A))
     }
     val left = event.daysLeft(today)
     Row(
@@ -322,6 +350,7 @@ fun EventBanner(event: com.korkoor.pardos.domain.events.GameEvent, today: Int, m
             .clip(RoundedCornerShape(22.dp))
             .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.18f), color.copy(alpha = 0.06f))))
             .border(1.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -337,7 +366,11 @@ fun EventBanner(event: com.korkoor.pardos.domain.events.GameEvent, today: Int, m
                 stringResource(title).uppercase(),
                 fontSize = 12.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.sp, maxLines = 1
             )
-            Text(stringResource(desc), fontSize = 11.sp, color = Navy.copy(alpha = 0.6f), maxLines = 1)
+            Text(
+                if (skinProgress != null) skinProgress else stringResource(desc),
+                fontSize = 11.sp, color = if (skinProgress != null) color else Navy.copy(alpha = 0.6f),
+                fontWeight = if (skinProgress != null) FontWeight.Bold else FontWeight.Normal, maxLines = 1
+            )
         }
         Spacer(Modifier.width(8.dp))
         Text(

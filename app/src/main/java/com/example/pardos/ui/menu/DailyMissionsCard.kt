@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -115,7 +116,15 @@ fun DailyMissionsCard(
                                     )
                                 )
 
-                                Toast.makeText(context, "¡+${mission.xpReward} XP Reclamados!", Toast.LENGTH_SHORT).show()
+                                // Retención: puntos de pase y bonus por cobrar las tres del día
+                                val allClaimed = missions.all { missionManager.isMissionClaimed(it.id) }
+                                val bonus = com.korkoor.pardos.data.local.RetentionManager(context).onDailyMissionClaimed(allClaimed)
+
+                                Toast.makeText(
+                                    context,
+                                    if (bonus) "¡Misiones del día completas! Cofre + gemas de regalo" else "¡+${mission.xpReward} XP Reclamados!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                                 refreshTrigger++ // Refresca la UI
                             }
                         )

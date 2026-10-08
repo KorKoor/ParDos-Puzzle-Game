@@ -1,8 +1,7 @@
 package com.korkoor.pardos.ui.profile
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,26 +11,32 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.MonetizationOn
+import androidx.compose.material.icons.rounded.WorkspacePremium
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.korkoor.pardos.R
+import com.korkoor.pardos.data.local.EconomyManager
+import com.korkoor.pardos.domain.shop.AvatarSource
+import com.korkoor.pardos.domain.shop.Avatars
+import com.korkoor.pardos.ui.design.*
 
-/**
- * Mejoramos MUCHO el diseño: Ahora es un Custom Dialog con estética
- * Café-Beige, bordes suaves y feedback visual al seleccionar.
- */
 fun getAvatarResource(avatarId: Int): Int {
     return when (avatarId) {
         1 -> R.drawable.avatar_1
@@ -47,117 +52,154 @@ fun getAvatarResource(avatarId: Int): Int {
         else -> R.drawable.avatar_1 // Por si las moscas
     }
 }
+
+/**
+ * Selector de avatar: una vista previa grande arriba, la colección debajo y un botón que cambia según el caso
+ * (usar, comprar con monedas o "se gana en el pase"). Los comprados quedan para siempre.
+ */
 @Composable
 fun AvatarSelectorDialog(
     currentAvatarId: Int,
     onAvatarSelected: (Int) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    // Colores ParDos Zen
-    val cafeOscuro = Color(0xFF3D405B)
-    val cafeSuave = Color(0xFF8D6E63)
-    val cremaFondo = Color(0xFFFDF8F1)
-    val blancoPuro = Color(0xFFFFFFFF)
+    val context = LocalContext.current
+    val economy = remember { EconomyManager(context) }
+    val coins by economy.coins.collectAsState()
+    val owned by economy.ownedAvatars.collectAsState()
+    var preview by remember { mutableIntStateOf(currentAvatarId) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var filter by remember { mutableIntStateOf(0) }
+    val filters = listOf("TODOS", "ANIMALES", "TEMPORADA", "CLÁSICOS")
+    val shown = remember(filter) {
+        when (filter) {
+            1 -> Avatars.all.filter { it.animal != null && it.source == AvatarSource.SHOP }
+            2 -> Avatars.all.filter { it.source == AvatarSource.SEASON }
+            3 -> Avatars.classics
+            else -> Avatars.all
+        }
+    }
 
-    val avataresDisponibles = (1..10).toList()
+    val def = Avatars.byId(preview)
+    val isOwned = Avatars.isOwned(preview, owned)
 
-    // Usamos Dialog normal para tener control total del diseño (Custom UI)
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .padding(horizontal = 4.dp),
-            shape = RoundedCornerShape(32.dp), // Esquinas súper redondeadas
-            color = cremaFondo,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+            shape = RoundedCornerShape(32.dp),
+            color = Cream,
             shadowElevation = 24.dp
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Título Estilizado
+            Column(Modifier.padding(horizontal = 20.dp, vertical = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("IDENTIDAD ZEN", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 2.sp)
+                Spacer(Modifier.height(10.dp))
+
+                // vista previa
+                AvatarFramed(preview, Modifier.size(116.dp).shadow(14.dp, CircleShape, spotColor = Navy), ring = 5.dp)
+                Spacer(Modifier.height(8.dp))
+                Text(if (def.animal == null) "Avatar clásico" else def.name, fontSize = 17.sp, fontWeight = FontWeight.Black, color = Navy)
                 Text(
-                    text = "IDENTIDAD ZEN",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    color = cafeSuave,
-                    letterSpacing = 2.sp
+                    when {
+                        isOwned && preview == currentAvatarId -> "EN USO"
+                        isOwned -> "TUYO"
+                        def.source == AvatarSource.SEASON -> "EXCLUSIVO DEL PASE"
+                        else -> "${def.coinPrice} MONEDAS"
+                    },
+                    fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
+                    color = when { isOwned -> Sage; def.source == AvatarSource.SEASON -> Violet; else -> Gold }
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    filters.forEachIndexed { i, label ->
+                        val sel = i == filter
+                        Text(
+                            label, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp,
+                            color = if (sel) Color.White else Navy, maxLines = 1, softWrap = false, textAlign = TextAlign.Center,
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (sel) Navy else Color.White)
+                                .border(1.dp, if (sel) Navy else Navy.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                .clickable { filter = i }.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
 
-                Text(
-                    text = "Elige tu nuevo avatar",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = cafeOscuro
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Cuadrícula de Avatares
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.height(320.dp) // Altura fija para el scroll
+                    columns = GridCells.Fixed(4),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.height(280.dp)
                 ) {
-                    items(avataresDisponibles) { avatarId ->
-                        val isSelected = currentAvatarId == avatarId
-
-                        // Animación de escala al estar seleccionado
-                        val scale by animateFloatAsState(if (isSelected) 1.15f else 1f, label = "scale")
-
-                        Box(
-                            modifier = Modifier
-                                .size(85.dp)
-                                .scale(scale)
-                                .shadow(
-                                    elevation = if (isSelected) 12.dp else 0.dp,
-                                    shape = CircleShape
-                                )
-                                .clip(CircleShape)
-                                .background(if (isSelected) blancoPuro else Color.Transparent)
-                                .border(
-                                    width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) cafeOscuro else cafeSuave.copy(alpha = 0.2f),
-                                    shape = CircleShape
-                                )
-                                .clickable { onAvatarSelected(avatarId) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = getAvatarResource(avatarId)),
-                                contentDescription = "Avatar $avatarId",
-                                modifier = Modifier
-                                    .size(70.dp)
-                                    .padding(8.dp)
+                    items(shown) { a ->
+                        val has = Avatars.isOwned(a.id, owned)
+                        val selected = preview == a.id
+                        val sc by animateFloatAsState(if (selected) 1.12f else 1f, spring(dampingRatio = 0.5f), label = "av")
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.aspectRatio(1f)) {
+                            Box(
+                                Modifier.fillMaxSize().scale(sc)
+                                    .shadow(if (selected) 8.dp else 0.dp, CircleShape)
                                     .clip(CircleShape)
-                            )
+                                    .border(if (selected) 3.dp else 0.dp, if (selected) Navy else Color.Transparent, CircleShape)
+                                    .clickable { preview = a.id; message = null }
+                            ) {
+                                AvatarFramed(a.id, Modifier.fillMaxSize(), ring = 3.dp, animate = false)
+                                if (!has) {
+                                    // velo para lo que aún no es tuyo
+                                    Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White.copy(alpha = 0.55f)))
+                                }
+                            }
+                            // insignia: candado / pase / en uso
+                            when {
+                                a.id == currentAvatarId -> Badge(Sage) { Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
+                                !has && a.source == AvatarSource.SEASON -> Badge(Violet) { Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
+                                !has -> Badge(Navy.copy(alpha = 0.75f)) { Icon(Icons.Rounded.Lock, null, tint = Color.White, modifier = Modifier.size(11.dp)) }
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                message?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Terracotta, textAlign = TextAlign.Center)
+                }
+                Spacer(Modifier.height(14.dp))
 
-                // Botón de Confirmación Estético
-                Button(
-                    onClick = onDismissRequest,
-                    colors = ButtonDefaults.buttonColors(containerColor = cafeOscuro),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                ) {
-                    Text(
-                        "CONFIRMAR SELECCIÓN",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 12.sp,
-                        letterSpacing = 1.sp
+                when {
+                    isOwned -> PrimaryButton(
+                        if (preview == currentAvatarId) "LISTO" else "USAR ESTE AVATAR",
+                        onClick = { if (preview != currentAvatarId) onAvatarSelected(preview); onDismissRequest() },
+                        height = 52.dp
+                    )
+                    def.source == AvatarSource.SEASON -> PrimaryButton(
+                        "SE GANA EN EL PASE DE TEMPORADA", onClick = { message = "Míralo en el Pase de temporada: sale como premio." },
+                        enabled = false, height = 52.dp, fontSize = 11.sp
+                    )
+                    else -> PrimaryButton(
+                        if (coins >= def.coinPrice) "COMPRAR · ${def.coinPrice} MONEDAS" else "TE FALTAN ${def.coinPrice - coins} MONEDAS",
+                        onClick = {
+                            when (economy.buyAvatar(def.id)) {
+                                is Avatars.Purchase.Ok -> { onAvatarSelected(def.id); onDismissRequest() }
+                                Avatars.Purchase.NotEnoughCoins -> message = "Te faltan monedas."
+                                else -> Unit
+                            }
+                        },
+                        enabled = coins >= def.coinPrice, height = 52.dp
                     )
                 }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Cerrar", fontSize = 12.sp, fontWeight = FontWeight.Black, color = InkSecondary,
+                    modifier = Modifier.clickable(onClick = onDismissRequest).padding(10.dp)
+                )
             }
         }
     }
+}
+
+@Composable
+private fun BoxScope.Badge(color: Color, content: @Composable () -> Unit) {
+    Box(
+        Modifier.align(Alignment.BottomEnd).size(20.dp).shadow(3.dp, CircleShape).background(color, CircleShape).border(1.5.dp, Color.White, CircleShape),
+        contentAlignment = Alignment.Center
+    ) { content() }
 }

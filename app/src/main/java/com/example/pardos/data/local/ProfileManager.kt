@@ -11,6 +11,13 @@ import com.korkoor.pardos.domain.model.UserProfile
 class ProfileManager(private val context: Context) {
     companion object {
         private const val TAG = "ProfileManager"
+
+        // Estado compartido (ProfileManager se crea muchas veces; la cola de subida y la caché son únicas por proceso)
+        private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+        private var pendingUpload: Runnable? = null
+        private var friendsCache: List<UserProfile>? = null
+        private var friendsCacheIds: Set<String>? = null
+        private var friendsCacheAt = 0L
     }
 
     private val prefs: SharedPreferences = context.getSharedPreferences("pardos_profile", Context.MODE_PRIVATE)
@@ -91,7 +98,8 @@ class ProfileManager(private val context: Context) {
             pinnedRecords = pinnedList,
             weeklyStars = currentWeeklyStars(),
             weekId = currentWeekId(),
-            friendCode = if (signedUid != null) ensureFriendCode() else ""
+            friendCode = if (signedUid != null) ensureFriendCode() else "",
+            bannerId = prefs.getInt("banner_id", 1)
         )
     }
 
@@ -99,6 +107,7 @@ class ProfileManager(private val context: Context) {
         prefs.edit().apply {
             putString("user_name", profile.name)
             putInt("avatar_id", profile.avatarId)
+            putInt("banner_id", profile.bannerId)
             putInt("player_level", profile.playerLevel)
             putInt("current_campaign_level", profile.currentCampaignLevel)
             putInt("current_xp", profile.currentXp)
@@ -196,6 +205,16 @@ class ProfileManager(private val context: Context) {
             today = LocalDay.today(),
             freezes = economy.streakFreezes.value
         )
+        // Racha perdida por poco: se guarda una oferta para recuperarla hoy (ver StreakRepair)
+        if (result.change == com.korkoor.pardos.domain.rewards.StreakChange.RESET &&
+            com.korkoor.pardos.domain.rewards.StreakRepair.canOffer(before, LocalDay.today())
+        ) {
+            prefs.edit()
+                .putInt("repair_day", LocalDay.today())
+                .putInt("repair_streak", before.streak)
+                .putInt("repair_best", before.best)
+                .apply()
+        }
         if (result.change != com.korkoor.pardos.domain.rewards.StreakChange.NONE) {
             prefs.edit().apply {
                 putInt("current_streak", result.state.streak)
@@ -211,23 +230,112 @@ class ProfileManager(private val context: Context) {
         return result.change
     }
 
+    // ---------------- Recuperar racha ----------------
+
+    /** Racha perdida que aún se puede recuperar hoy, o null si no hay oferta. */
+    fun pendingStreakRepair(): Int? =
+        if (prefs.getInt("repair_day", -1) == LocalDay.today()) prefs.getInt("repair_streak", 0).takeIf { it > 0 } else null
+
+    fun streakRepairGemCost(): Int = com.korkoor.pardos.domain.rewards.StreakRepair.gemCost(pendingStreakRepair() ?: 0)
+
+    fun streakRepairAdAvailable(): Boolean =
+        com.korkoor.pardos.domain.rewards.StreakRepair.adAvailable(prefs.getInt("repair_ad_day", 0), LocalDay.today())
+
+    /** Recupera la racha pagando gemas o tras ver un anuncio (el anuncio lo muestra la UI antes de llamar). */
+    fun repairStreak(withGems: Boolean): Boolean {
+        val lost = pendingStreakRepair() ?: return false
+        val today = LocalDay.today()
+        if (withGems) {
+            if (!EconomyManager(context).spendGems(streakRepairGemCost())) return false
+        } else {
+            if (!streakRepairAdAvailable()) return false
+            prefs.edit().putInt("repair_ad_day", today).apply()
+        }
+        val fixed = com.korkoor.pardos.domain.rewards.StreakRepair.repaired(
+            com.korkoor.pardos.domain.rewards.StreakState(lost, prefs.getInt("repair_best", lost), today), today
+        )
+        prefs.edit()
+            .putInt("current_streak", fixed.streak)
+            .putInt("best_streak", fixed.best)
+            .putInt("last_play_day", fixed.lastDay)
+            .remove("repair_day")
+            .apply()
+        syncToFirebase()
+        RewardsManager(context).claimStreakMilestone(fixed.streak)
+        return true
+    }
+
+    /** El jugador deja ir la racha: la oferta desaparece. */
+    fun declineStreakRepair() {
+        prefs.edit().remove("repair_day").apply()
+    }
+
+    /**
+     * Pide subir el perfil. NO sube al instante: junta los cambios (ganar un nivel toca XP, campaña, racha…) y sube una
+     * sola vez tras una pausa, o al salir de la app (ver [flushPendingSync]). Así una sesión cuesta ~1 escritura, no decenas.
+     */
     private fun syncToFirebase() {
+        prefs.edit().putBoolean("sync_dirty", true).apply()
+        pendingUpload?.let { handler.removeCallbacks(it) }
+        val task = Runnable { uploadIfNeeded() }
+        pendingUpload = task
+        handler.postDelayed(task, com.korkoor.pardos.domain.social.SyncPolicy.UPLOAD_DEBOUNCE_MS)
+    }
+
+    /** Se llama al pasar la app a segundo plano: sube lo pendiente (si cambió algo) antes de que el sistema la cierre. */
+    fun flushPendingSync() {
+        pendingUpload?.let { handler.removeCallbacks(it) }
+        pendingUpload = null
+        uploadIfNeeded()
+    }
+
+    private fun profileHash(p: UserProfile): Int = com.korkoor.pardos.domain.social.SyncPolicy.contentHash(
+        listOf(
+            p.uid, p.name, p.avatarId, p.playerLevel, p.currentCampaignLevel, p.currentXp, p.xpToNextLevel,
+            p.currentStreak, p.bestStreak, p.friendsUids, p.unlockedBadges, p.pinnedRecords, p.weeklyStars, p.weekId, p.friendCode, p.bannerId
+        )
+    )
+
+    private fun uploadIfNeeded() {
+        val now = System.currentTimeMillis()
+        val profile = getProfile()
+        val changed = profileHash(profile) != prefs.getInt("sync_hash", 0)
+        val last = prefs.getLong("sync_last_ms", 0L)
+        val dirty = prefs.getBoolean("sync_dirty", false)
+        if (!dirty || !changed) {
+            if (dirty) prefs.edit().putBoolean("sync_dirty", false).apply()
+            return
+        }
+        if (!com.korkoor.pardos.domain.social.SyncPolicy.shouldUpload(dirty, changed, last, now)) {
+            // demasiado pronto: se reintenta cuando se cumpla la separación mínima
+            val wait = com.korkoor.pardos.domain.social.SyncPolicy.waitBeforeUpload(last, now).coerceAtLeast(5_000L)
+            pendingUpload?.let { handler.removeCallbacks(it) }
+            val task = Runnable { uploadIfNeeded() }
+            pendingUpload = task
+            handler.postDelayed(task, wait)
+            return
+        }
+        uploadNow(profile)
+    }
+
+    private fun uploadNow(profile: UserProfile) {
         val firestore = db
         if (firestore == null) {
             Log.w(TAG, "Sync omitido: Firebase no esta disponible en este build.")
             return
         }
 
-        val profile = getProfile()
         if (profile.playerLevel == 1 && profile.currentXp == 0 && profile.name == "Jugador Zen") {
             Log.d(TAG, "Perfil inicial detectado. No se sube para evitar sobreescritura.")
             return
         }
 
         val collection = profilesCollection
+        val hash = profileHash(profile)
         firestore.collection(collection).document(profile.uid)
             .set(profile)
             .addOnSuccessListener {
+                prefs.edit().putInt("sync_hash", hash).putLong("sync_last_ms", System.currentTimeMillis()).putBoolean("sync_dirty", false).apply()
                 Log.d(TAG, "Sincronizado en Firebase correctamente ($collection).")
             }
             .addOnFailureListener { e ->
@@ -346,7 +454,11 @@ class ProfileManager(private val context: Context) {
 
     // Dentro de tu archivo ProfileManager.kt
 
-    fun getFriendsProfiles(onComplete: (List<UserProfile>) -> Unit) {
+    /**
+     * Perfiles de los amigos. Cada amigo cuesta una lectura, así que se guardan 15 min en memoria: abrir Perfil y Amigos
+     * varias veces seguidas no vuelve a leer nada. [force] = true (botón de actualizar, amigo nuevo) salta la caché.
+     */
+    fun getFriendsProfiles(force: Boolean = false, onComplete: (List<UserProfile>) -> Unit) {
         val firestore = db
         if (firestore == null) {
             Log.w(TAG, "getFriendsProfiles: Firebase no disponible. Regresando lista vacia.")
@@ -360,11 +472,29 @@ class ProfileManager(private val context: Context) {
             return
         }
 
+        val cached = friendsCache
+        if (cached != null && com.korkoor.pardos.domain.social.SyncPolicy.friendsCacheValid(
+                friendsCacheIds, currentFriends.toSet(), friendsCacheAt, System.currentTimeMillis(), force)
+        ) {
+            Log.d(TAG, "getFriendsProfiles: caché (0 lecturas)")
+            onComplete(cached)
+            return
+        }
+        val originalComplete = onComplete
+        @Suppress("NAME_SHADOWING")
+        val onComplete: (List<UserProfile>) -> Unit = { list ->
+            friendsCache = list
+            friendsCacheIds = currentFriends.toSet()
+            friendsCacheAt = System.currentTimeMillis()
+            originalComplete(list)
+        }
+
         fun parse(doc: com.google.firebase.firestore.DocumentSnapshot): UserProfile? = try {
             UserProfile(
                 uid = doc.id,
                 name = doc.getString("name") ?: "Jugador Zen",
                 avatarId = doc.getLong("avatarId")?.toInt() ?: 1,
+                bannerId = doc.getLong("bannerId")?.toInt() ?: 1,
                 playerLevel = doc.getLong("playerLevel")?.toInt() ?: 1,
                 currentCampaignLevel = doc.getLong("currentCampaignLevel")?.toInt() ?: 1,
                 currentXp = doc.getLong("currentXp")?.toInt() ?: 0,
@@ -427,6 +557,7 @@ class ProfileManager(private val context: Context) {
                         val restored = local.copy(
                             name = doc.getString("name") ?: local.name,
                             avatarId = doc.getLong("avatarId")?.toInt() ?: local.avatarId,
+                            bannerId = doc.getLong("bannerId")?.toInt() ?: local.bannerId,
                             playerLevel = cloudLevel,
                             currentCampaignLevel = cloudCampaign,
                             currentXp = doc.getLong("currentXp")?.toInt() ?: local.currentXp,
@@ -449,6 +580,13 @@ class ProfileManager(private val context: Context) {
             }
     }
 
+    /** ¿Vale la pena consultar la nube al arrancar? Solo en un perfil recién instalado o si pasó más de un día. */
+    fun shouldCheckCloud(): Boolean {
+        val p = getProfile()
+        val fresh = p.playerLevel == 1 && p.currentXp == 0 && p.name == "Jugador Zen"
+        return com.korkoor.pardos.domain.social.SyncPolicy.shouldCheckCloud(fresh, prefs.getLong("cloud_check_ms", 0L), System.currentTimeMillis())
+    }
+
     fun syncFromFirebase(onResult: (UserProfile?) -> Unit) {
         val firestore = db
         if (firestore == null) {
@@ -456,6 +594,7 @@ class ProfileManager(private val context: Context) {
             onResult(null)
             return
         }
+        prefs.edit().putLong("cloud_check_ms", System.currentTimeMillis()).apply()
 
         firestore.collection(profilesCollection).document(cloudId)
             .get(com.google.firebase.firestore.Source.SERVER)
@@ -467,6 +606,7 @@ class ProfileManager(private val context: Context) {
                         uid = document.getString("uid") ?: deviceId,
                         name = document.getString("name") ?: "Jugador Zen",
                         avatarId = document.getLong("avatarId")?.toInt() ?: 1,
+                        bannerId = document.getLong("bannerId")?.toInt() ?: 1,
                         playerLevel = document.getLong("playerLevel")?.toInt() ?: 1,
                         currentCampaignLevel = document.getLong("currentCampaignLevel")?.toInt() ?: 1,
                         currentXp = document.getLong("currentXp")?.toInt() ?: 0,

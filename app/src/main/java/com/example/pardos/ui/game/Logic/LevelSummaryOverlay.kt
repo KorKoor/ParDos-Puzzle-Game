@@ -15,8 +15,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,8 +53,11 @@ fun LevelSummaryOverlay(
     coinsEarned: Int = 0,
     canDouble: Boolean = false,
     onDouble: () -> Unit = {},
+    bonus: com.korkoor.pardos.data.local.GameBonus = com.korkoor.pardos.data.local.GameBonus(),
     onRetry: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onShare: (() -> Unit)? = null,
+    nextGoal: com.korkoor.pardos.domain.retention.NextGoal? = null
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -135,10 +140,12 @@ fun LevelSummaryOverlay(
                         ) {
                             StatsRow(moves, timeElapsed)
                             CoinsEarnedChip(coinsEarned, canDouble, onDouble)
+                            BonusChips(bonus)
+                            NextGoalRow(nextGoal, currentTheme)
                             Spacer(Modifier.height(16.dp))
                             PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                             Spacer(Modifier.height(20.dp))
-                            ActionButtons(currentTheme, onRetry, onDismiss)
+                            ActionButtons(currentTheme, onRetry, onDismiss, onShare)
                         }
                     }
                 } else {
@@ -160,10 +167,12 @@ fun LevelSummaryOverlay(
                     Spacer(modifier = Modifier.height(24.dp))
                     StatsRow(moves, timeElapsed)
                             CoinsEarnedChip(coinsEarned, canDouble, onDouble)
+                            BonusChips(bonus)
+                            NextGoalRow(nextGoal, currentTheme)
                     Spacer(modifier = Modifier.height(24.dp))
                     PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                     Spacer(modifier = Modifier.height(32.dp))
-                    ActionButtons(currentTheme, onRetry, onDismiss)
+                    ActionButtons(currentTheme, onRetry, onDismiss, onShare)
                 }
             }
         }
@@ -309,16 +318,17 @@ private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime
 }
 
 @Composable
-private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismiss: () -> Unit) {
+private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismiss: () -> Unit, onShare: (() -> Unit)?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         OutlinedButton(
             onClick = onRetry,
             modifier = Modifier
-                .weight(1f)
+                .width(60.dp)
                 .height(60.dp),
+            contentPadding = PaddingValues(0.dp),
             shape = RoundedCornerShape(20.dp),
             border = BorderStroke(2.dp, currentTheme.actionColor.copy(alpha = 0.2f)),
             colors = ButtonDefaults.outlinedButtonColors(
@@ -333,10 +343,28 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
             )
         }
 
+        if (onShare != null) {
+            OutlinedButton(
+                onClick = onShare,
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(60.dp),
+                contentPadding = PaddingValues(0.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(2.dp, currentTheme.actionColor.copy(alpha = 0.2f)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = currentTheme.actionColor
+                )
+            ) {
+                Icon(Icons.Default.Share, contentDescription = "Compartir", modifier = Modifier.size(24.dp))
+            }
+        }
+
         Button(
             onClick = onDismiss,
             modifier = Modifier
-                .weight(2f)
+                .weight(1f)
                 .height(60.dp)
                 .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = currentTheme.actionColor.copy(alpha = 0.4f)),
             colors = ButtonDefaults.buttonColors(containerColor = currentTheme.actionColor),
@@ -346,7 +374,9 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
                 text = stringResource(R.string.next_button),
                 fontWeight = FontWeight.Black,
                 fontSize = 16.sp,
-                letterSpacing = 1.sp
+                letterSpacing = 1.sp,
+                maxLines = 1,
+                softWrap = false
             )
         }
     }
@@ -430,6 +460,61 @@ private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit
                 Icon(Icons.Rounded.PlayCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("x2", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
+            }
+        }
+    }
+}
+
+
+/** Extras de retención de la partida: primera victoria del día, hucha y puntos del pase. */
+@Composable
+private fun BonusChips(bonus: com.korkoor.pardos.data.local.GameBonus) {
+    val chips = buildList {
+        if (bonus.firstWinCoins > 0) add("Primera victoria del día  +${bonus.firstWinCoins} ●" to Color(0xFFE0A93B))
+        if (bonus.piggyGems > 0) add("Hucha  +${bonus.piggyGems} ◆" to Color(0xFF4E8FA6))
+        if (bonus.seasonPoints > 0) add("Pase de temporada  +${bonus.seasonPoints}" to Color(0xFF6C63FF))
+        bonus.newSkins.forEach { add("¡Skin ${it.displayName} desbloqueada!" to Color(0xFFE0A93B)) }
+    }
+    if (chips.isEmpty()) return
+    Spacer(modifier = Modifier.height(10.dp))
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        chips.forEach { (text, color) ->
+            com.korkoor.pardos.ui.design.CozyText(
+                text = text, fontSize = 11.sp, fontWeight = FontWeight.Black, color = color,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color.copy(alpha = 0.12f))
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+            )
+        }
+    }
+}
+
+
+/** Una línea con la meta más cercana: invita a jugar "una más". */
+@Composable
+private fun NextGoalRow(goal: com.korkoor.pardos.domain.retention.NextGoal?, theme: GameTheme) {
+    if (goal == null) return
+    Spacer(Modifier.height(10.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(theme.actionColor.copy(alpha = 0.10f))
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("SIGUIENTE META", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, color = Color(0xFF3D405B).copy(alpha = 0.5f))
+            Text(goal.title, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B), maxLines = 1)
+            Text(goal.detail, fontSize = 11.sp, color = Color(0xFF3D405B).copy(alpha = 0.6f), maxLines = 1)
+        }
+        if (goal.kind != com.korkoor.pardos.domain.retention.GoalKind.CHEST_READY) {
+            Spacer(Modifier.width(12.dp))
+            Box(
+                Modifier.width(56.dp).height(8.dp).clip(CircleShape).background(Color(0xFF3D405B).copy(alpha = 0.10f))
+            ) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(goal.progress.coerceAtLeast(0.04f)).background(theme.actionColor, CircleShape))
             }
         }
     }

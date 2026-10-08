@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -44,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import com.korkoor.pardos.ui.design.actionColor
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -86,14 +88,18 @@ import kotlinx.coroutines.launch
 internal fun GameHeader(
     state: BoardState,
     currentTheme: GameTheme,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    extraTimes: Int = 0,
+    onExtraTime: (() -> Unit)? = null,
+    /** Reemplaza "JUGADOR n" (p. ej. "TU RETO" en duelos a distancia). */
+    titleOverride: String? = null
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = currentTheme.name.uppercase(),
+            text = ((currentTheme as? com.korkoor.pardos.ui.theme.GameTheme.Skinned)?.skin?.displayName ?: currentTheme.name).uppercase(),
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
             color = currentTheme.inkColor.copy(alpha = 0.5f),
@@ -103,6 +109,7 @@ internal fun GameHeader(
         AnimatedLevelDisplay(
             level = state.currentLevel,
             textColor = currentTheme.inkColor,
+            titleOverride = titleOverride,
             labelRes = when (state.gameMode) {
                 GameMode.CARRERA -> R.string.stage_label
                 GameMode.DUELO -> R.string.player_label
@@ -123,16 +130,26 @@ internal fun GameHeader(
         }
 
         if (state.maxTime != null) {
-            Box(
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .scale(0.8f)
-            ) {
-                TimeDisplay(
-                    elapsedTime = state.elapsedTime,
-                    accentColor = currentTheme.accentColor,
-                    textColor = currentTheme.inkColor
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                Box(modifier = Modifier.scale(0.8f)) {
+                    TimeDisplay(
+                        elapsedTime = state.elapsedTime,
+                        accentColor = currentTheme.accentColor,
+                        textColor = currentTheme.inkColor
+                    )
+                }
+                if (onExtraTime != null && extraTimes > 0 && !state.isGameOver && !state.isLevelCompleted && state.gameMode != GameMode.DUELO) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "+${com.korkoor.pardos.domain.economy.Economy.EXTRA_TIME_SECONDS}s · $extraTimes",
+                        fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(currentTheme.actionColor)
+                            .clickable(onClick = onExtraTime)
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
             }
         }
     }
@@ -370,7 +387,8 @@ internal fun AnimatedLevelDisplay(
     level: Int,
     modifier: Modifier = Modifier,
     textColor: Color,
-    labelRes: Int = R.string.level_label
+    labelRes: Int = R.string.level_label,
+    titleOverride: String? = null
 ) {
     AnimatedContent(
         targetState = level,
@@ -381,7 +399,7 @@ internal fun AnimatedLevelDisplay(
         label = "LevelSlotAnimation"
     ) { targetLevel ->
         Text(
-            text = stringResource(labelRes, targetLevel),
+            text = titleOverride ?: stringResource(labelRes, targetLevel),
             modifier = modifier,
             fontSize = 34.sp,
             fontWeight = FontWeight.Black,

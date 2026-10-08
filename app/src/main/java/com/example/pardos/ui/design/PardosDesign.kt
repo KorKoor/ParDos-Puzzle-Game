@@ -25,6 +25,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -128,7 +130,7 @@ fun PardosTopBar(
             if (eyebrow != null) {
                 Text(eyebrow.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 3.sp)
             }
-            Text(title, fontSize = if (eyebrow != null) 20.sp else 20.sp, fontWeight = FontWeight.Black, color = Navy, maxLines = 1)
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
         trailing()
     }
@@ -167,9 +169,9 @@ fun PrimaryButton(
             .fillMaxWidth()
             .height(height)
             .scale(scale)
-            .shadow(if (enabled && !pressed) 10.dp else 2.dp, shape, spotColor = Sage)
+            .shadow(if (!enabled) 0.dp else if (pressed) 2.dp else 10.dp, shape, spotColor = Sage)
             .clip(shape)
-            .background(if (enabled) PrimaryGradient else Brush.linearGradient(listOf(Navy.copy(alpha = 0.12f), Navy.copy(alpha = 0.12f))))
+            .background(if (enabled) PrimaryGradient else SolidColor(Navy.copy(alpha = 0.12f).compositeOver(Color.White)))
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center
     ) {

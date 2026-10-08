@@ -80,4 +80,60 @@ object Economy {
     // ---------------- Pack inicial (compra real, una vez) ----------------
     const val STARTER_GEMS = 300
     const val STARTER_RARE_CHESTS = 3
+
+    // ---------------- Retención ----------------
+    /** Espera entre cofres gratis. */
+    const val FREE_CHEST_COOLDOWN_MS: Long = 4L * 60 * 60 * 1000
+    /** Cada cuántos cofres gratis uno es raro. */
+    const val FREE_CHEST_RARE_EVERY = 5
+    const val FREE_CHEST_SKIP_MAX_GEMS = 8
+    /** Esperas que se pueden saltar viendo anuncios por día. */
+    const val FREE_CHEST_AD_SKIPS_PER_DAY = 3
+
+    const val WHEEL_FREE_SPINS = 1
+    const val WHEEL_AD_SPINS = 2
+
+    /** Bonus por la primera victoria de cada día. */
+    const val FIRST_WIN_BONUS_COINS = 75
+    /** Días sin entrar a partir de los cuales hay regalo de regreso. */
+    const val COMEBACK_MIN_DAYS = 3
+
+    /** Misiones diarias: premio extra por cobrar las tres. */
+    const val DAILY_MISSIONS_BONUS_GEMS = 2
+
+    // Pase de temporada
+    const val SEASON_TIERS = 30
+    const val SEASON_POINTS_PER_TIER = 100
+    /** Gemas por saltar un nivel del pase. */
+    const val SEASON_TIER_SKIP_GEMS = 40
+
+    // Duelo a distancia (por código)
+    const val REMOTE_DUEL_PLAY_COINS = 25
+    const val REMOTE_DUEL_WIN_COINS = 60
+    const val REMOTE_DUEL_WIN_GEMS = 2
+    const val REMOTE_DUEL_CREATE_COINS = 15
+    /** Retos lanzados al día que dan premio (evita crear retos solo para cobrar). */
+    const val REMOTE_DUEL_CREATE_PER_DAY = 3
+
+    // Avatares (se compran con monedas; los de temporada solo salen en el pase)
+    const val AVATAR_PRICE_BASIC = 600
+    const val AVATAR_PRICE_COZY = 900
+    const val AVATAR_PRICE_NICE = 1_100
+    const val AVATAR_PRICE_RARE = 1_500
+    const val AVATAR_PRICE_EPIC = 2_500
+    const val AVATAR_PRICE_LEGENDARY = 3_500
+
+    // Banners de perfil
+    const val BANNER_PRICE_BASIC = 500
+    const val BANNER_PRICE_COZY = 700
+    const val BANNER_PRICE_NICE = 900
+    const val BANNER_PRICE_RARE = 1_100
+    const val BANNER_PRICE_PRIME = 1_300
+    const val BANNER_GEMS_NICE = 60
+    const val BANNER_GEMS_RARE = 75
+    const val BANNER_GEMS_EPIC = 90
+
+    // Hucha
+    const val PIGGY_CAP = 300
+    const val PIGGY_MIN_TO_BREAK = 40
 }

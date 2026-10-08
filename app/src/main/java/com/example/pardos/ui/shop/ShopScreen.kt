@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.shop
 
+import com.korkoor.pardos.ui.design.CozyText
+
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,7 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.Icon
+import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,26 +51,27 @@ private enum class ShopTab(val label: String, val icon: ImageVector) {
     GEMS("Gemas", Icons.Rounded.Diamond)
 }
 
-fun skinName(skin: TileSkin): String = mapOf(
-    TileSkin.JELLY to "Gelatina", TileSkin.FLAT to "Papel", TileSkin.WOOD to "Madera",
-    TileSkin.SAKURA to "Cerezo", TileSkin.FOREST to "Bosque", TileSkin.AUTUMN to "Otoño",
-    TileSkin.GLASS to "Hielo", TileSkin.CANDY to "Dulces", TileSkin.NEON to "Neón",
-    TileSkin.OCEAN to "Océano", TileSkin.SPACE to "Galaxia", TileSkin.GOLD to "Oro Real"
-)[skin] ?: skin.id
+fun skinName(skin: TileSkin): String = skin.displayName
 
 @Composable
 fun ShopScreen(
     activity: Activity,
     billing: BillingManager,
     economy: EconomyManager,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onStudio: () -> Unit = {},
+    onSeason: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val collection = remember { CollectionManager(context) }
+    val retention = remember { com.korkoor.pardos.data.local.RetentionManager(context) }
+    val studioConfig by economy.studioConfig.collectAsState()
+    val piggy by retention.piggy.collectAsState()
     val coins by economy.coins.collectAsState()
     val gems by economy.gems.collectAsState()
     val freezes by economy.streakFreezes.collectAsState()
     val undos by economy.undos.collectAsState()
+    val extraTimes by economy.extraTimes.collectAsState()
     val isVip by economy.isVip.collectAsState()
     val equippedSkin by economy.equippedSkin.collectAsState()
     val ownedSkins by economy.ownedSkins.collectAsState()
@@ -79,6 +82,9 @@ fun ShopScreen(
     var tab by remember { mutableStateOf(ShopTab.FEATURED) }
 
     val today = remember { LocalDay.today() }
+    val liveEvents = remember(today) { com.korkoor.pardos.domain.events.EventCalendar.activeOn(today) }
+    var eventDialog by remember { mutableStateOf<com.korkoor.pardos.domain.events.GameEvent?>(null) }
+    eventDialog?.let { ev -> com.korkoor.pardos.ui.rewards.EventSkinDialog(ev, retention) { eventDialog = null } }
     val offer = remember(today) { DailyOffers.forDay(today) }
 
     LaunchedEffect(Unit) { billing.connect() }
@@ -161,6 +167,15 @@ fun ShopScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
+                        PromoCard(
+                            icon = Icons.Rounded.WorkspacePremium, color = Gold,
+                            title = "PASE DE TEMPORADA", tag = "NUEVO CADA MES",
+                            text = "30 niveles de premios gratis y una vía premium con skin exclusiva.",
+                            action = "VER", onClick = onSeason
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        StudioPromo(owned = TileSkin.STUDIO.id in ownedSkins, price = prices[ShopCatalog.SKIN_STUDIO], config = studioConfig, onClick = onStudio)
+                        Spacer(Modifier.height(12.dp))
                         VipCard(owned = isVip, price = prices[ShopCatalog.VIP_FOREVER], onBuy = { billing.purchase(activity, ShopCatalog.VIP_FOREVER) })
 
                         SectionTitle("CONSUMIBLES")
@@ -170,6 +185,14 @@ fun ShopScreen(
                             priceText = "${Economy.UNDO_PRICE_COINS * 3}", priceIcon = Icons.Rounded.MonetizationOn, priceColor = Gold,
                             enabled = coins >= Economy.UNDO_PRICE_COINS * 3,
                             onClick = { localMessage = if (economy.buyUndos(3)) "+3 Deshacer" else "No te alcanza" }
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        ShopRow(
+                            icon = Icons.Rounded.Timer, color = GemBlue,
+                            title = "Tiempo extra x3", subtitle = "+${Economy.EXTRA_TIME_SECONDS}s en modos con reloj · Tienes $extraTimes",
+                            priceText = "${Economy.EXTRA_TIME_PRICE_COINS * 3}", priceIcon = Icons.Rounded.MonetizationOn, priceColor = Gold,
+                            enabled = coins >= Economy.EXTRA_TIME_PRICE_COINS * 3,
+                            onClick = { localMessage = if (economy.buyExtraTimes(3)) "+3 Tiempo extra" else "No te alcanza" }
                         )
                         Spacer(Modifier.height(10.dp))
                         ShopRow(
@@ -193,7 +216,9 @@ fun ShopScreen(
                         Spacer(Modifier.height(8.dp))
                         Text("Cada skin cambia las fichas, el fondo y las partículas del juego.", fontSize = 12.sp, color = InkSecondary)
                         Spacer(Modifier.height(12.dp))
-                        TileSkin.entries.chunked(2).forEach { row ->
+                        StudioPromo(owned = TileSkin.STUDIO.id in ownedSkins, price = prices[ShopCatalog.SKIN_STUDIO], config = studioConfig, onClick = onStudio)
+                        Spacer(Modifier.height(14.dp))
+                        TileSkin.entries.filter { it != TileSkin.STUDIO && it.source != SkinSource.EVENT && it.source != SkinSource.HIDDEN }.chunked(2).forEach { row ->
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
                                 row.forEach { skin ->
                                     val owned = skin.isFree || skin.id in ownedSkins
@@ -208,11 +233,70 @@ fun ShopScreen(
                                                 is SkinInventory.Purchase.Ok -> { economy.equipSkin(skin); localMessage = "¡${skinName(skin)} desbloqueada y equipada!" }
                                                 SkinInventory.Purchase.NotEnoughCoins -> localMessage = "Te faltan monedas"
                                                 SkinInventory.Purchase.NotEnoughGems -> localMessage = "Te faltan gemas"
-                                                SkinInventory.Purchase.NotPurchasable -> localMessage = "Se consigue completando el Álbum"
+                                                SkinInventory.Purchase.NotPurchasable -> localMessage = when (skin.source) {
+                                                    SkinSource.SEASON -> "Se consigue en el Pase de temporada"
+                                                    else -> "Se consigue completando el Álbum"
+                                                }
                                                 SkinInventory.Purchase.AlreadyOwned -> Unit
                                             }
                                         }
                                     )
+                                }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+
+                        // ---- Fiestas del año ----
+                        SectionTitle("FIESTAS DEL AÑO")
+                        Text(
+                            "Se ganan jugando durante cada fiesta (${EventSkins.WINS_REQUIRED} victorias). Si te la pierdes, vuelve el año siguiente.",
+                            fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        TileSkin.events.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+                                row.forEach { skin ->
+                                    val type = EventSkins.eventFor(skin)
+                                    val live = type?.let { t -> liveEvents.firstOrNull { it.type == t } }
+                                    val owned = skin.id in ownedSkins
+                                    SkinCard(
+                                        skin = skin, owned = owned, equipped = skin == equippedSkin, canAfford = true,
+                                        modifier = Modifier.weight(1f),
+                                        status = if (live != null) "EN CURSO · ${retention.eventWins(live)}/${EventSkins.WINS_REQUIRED}" else type?.let { EventSkins.dateRange(it)?.uppercase() },
+                                        statusColor = if (live != null) Terracotta else null,
+                                        onClick = {
+                                            when {
+                                                owned -> { economy.equipSkin(skin); localMessage = "Skin equipada: ${skinName(skin)}" }
+                                                live != null -> eventDialog = live
+                                                else -> localMessage = "Disponible del ${type?.let { EventSkins.dateRange(it) }} (cada año)"
+                                            }
+                                        }
+                                    )
+                                }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+
+                        // ---- Secretas ----
+                        SectionTitle("SECRETAS")
+                        Text("Nadie te dice cómo conseguirlas. Descúbrelas jugando.", fontSize = 12.sp, color = InkSecondary)
+                        Spacer(Modifier.height(12.dp))
+                        TileSkin.hidden.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+                                row.forEach { skin ->
+                                    val owned = skin.id in ownedSkins
+                                    if (owned) {
+                                        SkinCard(
+                                            skin = skin, owned = true, equipped = skin == equippedSkin, canAfford = true,
+                                            modifier = Modifier.weight(1f),
+                                            onClick = { economy.equipSkin(skin); localMessage = "Skin equipada: ${skinName(skin)}" }
+                                        )
+                                    } else {
+                                        HiddenSkinCard(
+                                            hint = HiddenSkins.hint(skin), modifier = Modifier.weight(1f),
+                                            onClick = { localMessage = "Pista: ${HiddenSkins.hint(skin)}" }
+                                        )
+                                    }
                                 }
                                 if (row.size == 1) Spacer(Modifier.weight(1f))
                             }
@@ -256,6 +340,11 @@ fun ShopScreen(
                                 }
                             }
                         }
+                        Spacer(Modifier.height(20.dp))
+                        PiggyShopCard(
+                            gems = piggy, price = prices[ShopCatalog.PIGGY_BREAK],
+                            onBreak = { billing.purchase(activity, ShopCatalog.PIGGY_BREAK) }
+                        )
                         Spacer(Modifier.height(20.dp))
                         Text(
                             "Las compras se procesan con Google Play. Las gemas y el VIP se recuperan al reinstalar con la misma cuenta.",
@@ -312,8 +401,8 @@ private fun DailyOfferCard(
                 is OfferItem.SkinOffer -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(2, 16, 128).forEach { v -> SkinTilePreview(item.skin, v) }
                 }
-                is OfferItem.ChestOffer -> Box(Modifier.size(54.dp).background(Color.White.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = Color.White, modifier = Modifier.size(30.dp))
+                is OfferItem.ChestOffer -> Box(Modifier.size(78.dp)) {
+                    com.korkoor.pardos.ui.design.TreasureChest(item.type, com.korkoor.pardos.ui.design.ChestState.READY, Modifier.fillMaxSize())
                 }
             }
             Spacer(Modifier.width(14.dp))
@@ -331,7 +420,7 @@ private fun DailyOfferCard(
                 .clickable(enabled = !owned && canAfford, onClick = onBuy),
             contentAlignment = Alignment.Center
         ) {
-            Text(
+            CozyText(
                 text = when {
                     owned -> "YA LA TIENES"
                     price.gems > 0 -> "${price.gems} ◆   (antes ${original.gems})"
@@ -421,8 +510,10 @@ private fun ChestRow(
     val color = chestColor(type)
     PardosCard(Modifier.fillMaxWidth(), shape = RoundedCornerShape(Radius.Large), elevation = 5.dp) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconTile(Icons.Rounded.Inventory2, color, size = 54.dp)
-            Spacer(Modifier.width(12.dp))
+            Box(Modifier.size(64.dp)) {
+                com.korkoor.pardos.ui.design.TreasureChest(type, com.korkoor.pardos.ui.design.ChestState.READY, Modifier.fillMaxSize())
+            }
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(chestName(type), fontSize = 15.sp, fontWeight = FontWeight.Black, color = Navy)
                 Text(
@@ -463,7 +554,8 @@ private fun PriceChip(text: String, icon: ImageVector, color: Color, enabled: Bo
 @Composable
 private fun SkinCard(
     skin: TileSkin, owned: Boolean, equipped: Boolean, canAfford: Boolean,
-    modifier: Modifier, onClick: () -> Unit
+    modifier: Modifier, onClick: () -> Unit,
+    status: String? = null, statusColor: Color? = null
 ) {
     val shape = RoundedCornerShape(24.dp)
     val st = skin.style
@@ -506,23 +598,62 @@ private fun SkinCard(
         when {
             equipped -> { label = "EQUIPADA"; bg = Sage; fg = Color.White }
             owned -> { label = "EQUIPAR"; bg = Sage.copy(alpha = 0.16f); fg = Sage }
+            status != null -> { label = status; bg = (statusColor ?: Navy).copy(alpha = if (statusColor != null) 0.16f else 0.06f); fg = statusColor ?: InkTertiary }
+            skin.source == SkinSource.SEASON -> { label = "PASE PREMIUM"; bg = Violet.copy(alpha = 0.16f); fg = Violet }
             skin.exclusive -> { label = "ÁLBUM COMPLETO"; bg = Gold.copy(alpha = 0.18f); fg = Gold }
             skin.gemPrice > 0 -> { label = "${skin.gemPrice} ◆"; bg = if (canAfford) GemBlue.copy(alpha = 0.16f) else Navy.copy(alpha = 0.06f); fg = if (canAfford) GemBlue else Navy.copy(alpha = 0.35f) }
             else -> { label = "${skin.coinPrice} ●"; bg = if (canAfford) Gold.copy(alpha = 0.18f) else Navy.copy(alpha = 0.06f); fg = if (canAfford) Gold else Navy.copy(alpha = 0.35f) }
         }
         Box(Modifier.clip(RoundedCornerShape(14.dp)).background(bg).padding(horizontal = 14.dp, vertical = 7.dp)) {
-            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Black, color = fg, letterSpacing = 1.sp)
+            CozyText(label, fontSize = 11.sp, fontWeight = FontWeight.Black, color = fg, letterSpacing = 1.sp)
         }
     }
 }
 
+/** Skin secreta aún sin descubrir: silueta misteriosa y una pista poética. */
 @Composable
-private fun SkinTilePreview(skin: TileSkin, value: Int) {
+private fun HiddenSkinCard(hint: String, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(Color.White)
+            .border(1.dp, Navy.copy(alpha = 0.08f), shape)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF14142B), Color(0xFF3A2A5C))))
+                .padding(vertical = 14.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                repeat(3) {
+                    Box(
+                        Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.07f))
+                            .border(1.dp, Color.White.copy(alpha = 0.18f), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) { Text("?", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.White.copy(alpha = 0.55f)) }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text("SECRETA", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 2.sp)
+        Spacer(Modifier.height(4.dp))
+        Text(hint, fontSize = 10.sp, color = InkSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 13.sp, maxLines = 4)
+    }
+}
+
+@Composable
+fun SkinTilePreview(skin: TileSkin, value: Int, size: androidx.compose.ui.unit.Dp = 36.dp) {
     val look = tileLook(skin, value, GameTheme.Zen)
     val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(size)
             .then(if (look.glow != null) Modifier.shadow(6.dp, shape, spotColor = look.glow, ambientColor = look.glow) else Modifier)
             .clip(shape)
             .background(look.background)
@@ -582,5 +713,89 @@ private fun ShopRow(
         }
         Spacer(Modifier.width(10.dp))
         PriceChip(priceText, priceIcon, priceColor, enabled, onClick)
+    }
+}
+
+
+// ============================ Promos ============================
+
+@Composable
+private fun PromoCard(icon: ImageVector, color: Color, title: String, tag: String, text: String, action: String, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(Radius.XLarge)
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(shape).background(color.copy(alpha = 0.10f))
+            .border(1.5.dp, color.copy(alpha = 0.5f), shape).clickable(onClick = onClick).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(icon, color, size = 50.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tag, fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 1.sp, maxLines = 1, softWrap = false,
+                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color).padding(horizontal = 6.dp, vertical = 2.dp))
+            Spacer(Modifier.height(3.dp))
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.sp, maxLines = 1)
+            Text(text, fontSize = 11.sp, color = InkSecondary, lineHeight = 14.sp)
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(action, fontSize = 12.sp, fontWeight = FontWeight.Black, color = color)
+    }
+}
+
+/** Studio: la skin de pago que el jugador diseña. La vista previa usa los colores de SU diseño actual. */
+@Composable
+private fun StudioPromo(owned: Boolean, price: String?, config: StudioConfig, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(Radius.XLarge)
+    val live = remember(config) { config.toStyle() }
+    val inkColor = Color(live.ink ?: 0xFFFFFFFF)
+    val bg = Brush.linearGradient(listOf(Color(live.bgTop ?: 0xFF3D405B), Color(live.bgBottom ?: 0xFF6C63FF)))
+    Column(
+        modifier = Modifier.fillMaxWidth().shadow(8.dp, shape, spotColor = Violet).clip(shape).background(bg).clickable(onClick = onClick).padding(18.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("STUDIO", fontSize = 18.sp, fontWeight = FontWeight.Black, color = inkColor, letterSpacing = 3.sp)
+                Text("Diseña tus propias fichas: acabado, colores, fondo y partículas", fontSize = 11.sp, color = inkColor.copy(alpha = 0.8f), lineHeight = 14.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(Modifier.clip(RoundedCornerShape(14.dp)).background(Color.White).padding(horizontal = 14.dp, vertical = 9.dp)) {
+                Text(if (owned) "EDITAR" else price ?: "PROBAR", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Navy)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(2, 8, 32, 128, 512).forEach { v ->
+                val look = tileLook(live, v, GameTheme.Zen)
+                val sh = RoundedCornerShape(10.dp)
+                Box(
+                    Modifier.size(40.dp).clip(sh).background(look.background).then(if (look.border != null) Modifier.border(1.5.dp, look.border, sh) else Modifier),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (look.gloss) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.Transparent)))
+                    Text("$v", fontSize = if (v >= 100) 11.sp else 14.sp, fontWeight = FontWeight.Black, color = look.text)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PiggyShopCard(gems: Int, price: String?, onBreak: () -> Unit) {
+    val shape = RoundedCornerShape(Radius.Large)
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(shape).background(Color.White).border(1.dp, GemBlue.copy(alpha = 0.35f), shape).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(Icons.Rounded.Savings, GemBlue, size = 50.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text("HUCHA", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.sp)
+            Text("Guarda $gems gemas ganadas jugando · rómpela cuando quieras", fontSize = 11.sp, color = InkSecondary, lineHeight = 14.sp)
+        }
+        Spacer(Modifier.width(8.dp))
+        val can = com.korkoor.pardos.domain.retention.PiggyBank.canBreak(gems) && price != null
+        Box(
+            Modifier.clip(RoundedCornerShape(14.dp)).background(if (can) GemBlue else Navy.copy(alpha = 0.08f)).clickable(enabled = can, onClick = onBreak)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) { Text(price ?: "Pronto", fontSize = 12.sp, fontWeight = FontWeight.Black, color = if (can) Color.White else Navy.copy(alpha = 0.4f)) }
     }
 }

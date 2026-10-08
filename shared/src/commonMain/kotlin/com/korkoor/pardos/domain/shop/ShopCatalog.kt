@@ -1,6 +1,6 @@
 package com.korkoor.pardos.domain.shop
 
-enum class ProductKind { GEMS, VIP, STARTER }
+enum class ProductKind { GEMS, VIP, STARTER, STUDIO, SEASON_PASS, PIGGY }
 
 /** Producto de la tienda (compra real). Los IDs deben crearse igual en Play Console / App Store Connect. */
 data class StoreProduct(
@@ -15,13 +15,22 @@ object ShopCatalog {
     const val GEMS_LARGE = "gems_large"
     const val VIP_FOREVER = "vip_forever"
     const val STARTER_PACK = "starter_pack"
+    /** Desbloquea el editor de la skin Studio (compra única). */
+    const val SKIN_STUDIO = StudioSkin.PRODUCT_ID
+    /** Vía premium del pase de la temporada en curso (consumible: se compra una vez por temporada). */
+    const val SEASON_PASS = "season_pass"
+    /** Rompe la hucha y entrega las gemas guardadas (consumible). */
+    const val PIGGY_BREAK = "piggy_break"
 
     val products: List<StoreProduct> = listOf(
         StoreProduct(GEMS_SMALL, ProductKind.GEMS, gems = 100),
         StoreProduct(GEMS_MEDIUM, ProductKind.GEMS, gems = 550),
         StoreProduct(GEMS_LARGE, ProductKind.GEMS, gems = 1200),
         StoreProduct(VIP_FOREVER, ProductKind.VIP),
-        StoreProduct(STARTER_PACK, ProductKind.STARTER)
+        StoreProduct(STARTER_PACK, ProductKind.STARTER),
+        StoreProduct(SKIN_STUDIO, ProductKind.STUDIO),
+        StoreProduct(SEASON_PASS, ProductKind.SEASON_PASS),
+        StoreProduct(PIGGY_BREAK, ProductKind.PIGGY)
     )
 
     fun byId(id: String): StoreProduct? = products.firstOrNull { it.id == id }

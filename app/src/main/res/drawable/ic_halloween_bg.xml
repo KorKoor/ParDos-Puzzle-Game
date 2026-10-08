@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fondo del icono de Halloween: noche morada con luna, estrellas y murciélagos. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- cielo -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="54" android:startY="0" android:endX="54" android:endY="108">
+                <item android:color="#FF3A1F6B" android:offset="0" />
+                <item android:color="#FF26143F" android:offset="0.6" />
+                <item android:color="#FF150B2C" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- resplandor de la luna -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="80" android:centerY="22" android:gradientRadius="44">
+                <item android:color="#66FFC46B" android:offset="0" />
+                <item android:color="#00FFC46B" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- luna -->
+    <path android:fillColor="#FFFFE9A8" android:pathData="M80,11 a11,11 0 1,0 0.01,0 z" />
+    <path android:fillColor="#33D9B96A" android:pathData="M75.6,17.6 a2.4,2.4 0 1,0 0.01,0 z" />
+    <path android:fillColor="#33D9B96A" android:pathData="M84,26 a1.7,1.7 0 1,0 0.01,0 z" />
+
+    <!-- estrellas -->
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.9" android:pathData="M16,14 a1.2,1.2 0 1,0 0.01,0 z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.7" android:pathData="M34,8 a0.9,0.9 0 1,0 0.01,0 z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.8" android:pathData="M8,34 a0.9,0.9 0 1,0 0.01,0 z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.6" android:pathData="M56,10 a0.8,0.8 0 1,0 0.01,0 z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.7" android:pathData="M98,52 a0.9,0.9 0 1,0 0.01,0 z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.6" android:pathData="M12,70 a0.8,0.8 0 1,0 0.01,0 z" />
+    <path android:fillColor="#FFFFE9A8" android:fillAlpha="0.9" android:pathData="M24,22 l0.8,2 l2,0.8 l-2,0.8 l-0.8,2 l-0.8,-2 l-2,-0.8 l2,-0.8 z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.8" android:pathData="M96,74 l0.6,1.5 l1.5,0.6 l-1.5,0.6 l-0.6,1.5 l-0.6,-1.5 l-1.5,-0.6 l1.5,-0.6 z" />
+
+    <!-- murciélagos -->
+    <group android:translateX="81" android:translateY="31" android:scaleX="0.95" android:scaleY="0.95">
+        <path android:fillColor="#FF0A0614"
+            android:pathData="M0,-1.5 C1.2,-3.2 2.6,-3.4 3.6,-2.6 C5,-5 8,-5.4 10.5,-3.6 C9.2,-2.6 8.8,-1 9.4,0.6 C7.6,-0.4 6.4,0 5.6,1.2 C4.6,0 3.6,-0.2 2.6,0.6 L1.6,3 L0.6,1.2 L0,1.4 L-0.6,1.2 L-1.6,3 L-2.6,0.6 C-3.6,-0.2 -4.6,0 -5.6,1.2 C-6.4,0 -7.6,-0.4 -9.4,0.6 C-8.8,-1 -9.2,-2.6 -10.5,-3.6 C-8,-5.4 -5,-5 -3.6,-2.6 C-2.6,-3.4 -1.2,-3.2 0,-1.5 Z" />
+    </group>
+    <group android:translateX="24" android:translateY="38" android:scaleX="0.7" android:scaleY="0.7" android:rotation="-14">
+        <path android:fillColor="#FF9A78DC"
+            android:pathData="M0,-1.5 C1.2,-3.2 2.6,-3.4 3.6,-2.6 C5,-5 8,-5.4 10.5,-3.6 C9.2,-2.6 8.8,-1 9.4,0.6 C7.6,-0.4 6.4,0 5.6,1.2 C4.6,0 3.6,-0.2 2.6,0.6 L1.6,3 L0.6,1.2 L0,1.4 L-0.6,1.2 L-1.6,3 L-2.6,0.6 C-3.6,-0.2 -4.6,0 -5.6,1.2 C-6.4,0 -7.6,-0.4 -9.4,0.6 C-8.8,-1 -9.2,-2.6 -10.5,-3.6 C-8,-5.4 -5,-5 -3.6,-2.6 C-2.6,-3.4 -1.2,-3.2 0,-1.5 Z" />
+    </group>
+</vector>
