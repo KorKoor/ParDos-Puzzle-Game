@@ -1047,7 +1047,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         // ⏳ BALANCE DE TIEMPO: +30 segundos al revivir (el reloj trabaja en milisegundos)
                         val bonusTimeSec = 30_000L
                         val newTime = if (state.maxTime != null) {
-                            (state.elapsedTime + bonusTimeSec).coerceAtMost(state.maxTime)
+                            (state.elapsedTime + bonusTimeSec).coerceAtMost(state.maxTime!!)
                         } else {
                             state.elapsedTime
                         }
@@ -1128,7 +1128,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 // Modo Contrarreloj: elapsed es "tiempo restante".
                 // Tiempo usado = Max - Restante
                 // Start = Now - TiempoUsado
-                val timeUsed = state.maxTime - state.elapsedTime
+                val timeUsed = state.maxTime!! - state.elapsedTime
                 now - timeUsed
             } else {
                 // Modo Campaña: elapsed es "tiempo jugado".

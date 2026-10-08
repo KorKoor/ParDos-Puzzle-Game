@@ -1,7 +1,5 @@
 package com.korkoor.pardos.domain.model
 
-import com.korkoor.pardos.R
-import androidx.compose.ui.graphics.Color
 
 /**
  * Estado inmutable del tablero de juego.
@@ -177,48 +175,17 @@ data class BoardStateValidation(
         if (!isValid) throw IllegalStateException("Estado de tablero inválido:\n${errors.joinToString("\n")}")
     }
 }
+/** timeLimit en MILISEGUNDOS. */
 enum class GameMode(
     val initialTarget: Int,
     val timeLimit: Long?
 ) {
     CLASICO(64, null),
-    DESAFIO(128, 180L),
+    DESAFIO(128, 180_000L),
     ZEN(2048, null),
-    RAPIDO(64, 60L),
-    TABLAS(0, 150L),
+    RAPIDO(64, 60_000L),
+    TABLAS(0, 150_000L),
 
     // 🔥 NUEVO MODO AGREGADO (Arregla el bug del tablero 3x3)
     CUSTOM(2048, null);
-
-    // ✅ Propiedad para el nombre (ID de recurso)
-    val nameResId: Int
-        get() = when (this) {
-            CLASICO -> R.string.mode_classic
-            DESAFIO -> R.string.mode_challenge
-            ZEN -> R.string.mode_zen
-            RAPIDO -> R.string.mode_fast
-            TABLAS -> R.string.mode_tables
-            CUSTOM -> R.string.mode_custom // ⚠️ Asegúrate de crear este string
-        }
-
-    // ✅ Propiedad para la descripción (ID de recurso)
-    val descriptionResId: Int
-        get() = when (this) {
-            CLASICO -> R.string.mode_classic_desc
-            DESAFIO -> R.string.mode_challenge_desc
-            ZEN -> R.string.mode_zen_desc
-            RAPIDO -> R.string.mode_fast_desc
-            TABLAS -> R.string.mode_tables_desc
-            CUSTOM -> R.string.mode_custom_desc // ⚠️ Asegúrate de crear este string
-        }
-
-    val color: Color
-        get() = when (this) {
-            CLASICO -> Color(0xFF81B29A)
-            DESAFIO -> Color(0xFFE07A5F)
-            ZEN -> Color(0xFF6C63FF)
-            RAPIDO -> Color(0xFFF4A261)
-            TABLAS -> Color(0xFF3D405B)
-            CUSTOM -> Color(0xFF2A9D8F) // Un tono Turquesa/Cian para el modo Custom
-        }
 }

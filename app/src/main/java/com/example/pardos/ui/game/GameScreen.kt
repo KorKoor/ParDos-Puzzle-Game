@@ -63,6 +63,7 @@ import com.korkoor.pardos.domain.achievements.AchievementPopUp
 import com.korkoor.pardos.domain.logic.Direction
 import com.korkoor.pardos.domain.model.BoardState
 import com.korkoor.pardos.domain.model.GameMode
+import com.korkoor.pardos.domain.model.nameResId
 import com.korkoor.pardos.ui.game.components.*
 import com.korkoor.pardos.ui.game.logic.AdManager
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
@@ -392,7 +393,8 @@ fun GameScreen(
                     modeName = stringResource(state.gameMode.nameResId),
                     base = viewModel.currentMultiplierBase,
                     moves = state.moveCount,
-                    timeElapsed = if (state.maxTime != null) (state.maxTime!! - state.elapsedTime) else state.elapsedTime,
+                    // handleLevelVictory ya deja en elapsedTime el tiempo USADO (no el restante)
+                    timeElapsed = state.elapsedTime,
                     bestMoves = stats.first,
                     bestTime = stats.second,
                     stars = state.starsEarned,
