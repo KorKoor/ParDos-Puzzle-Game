@@ -32,3 +32,10 @@ secrets.properties
 /shared/build
 *.log
 .kotlin/
+
+# Claves de administrador (NUNCA al repositorio)
+*admin*key*.json
+*adminsdk*.json
+service-account*.json
+amdin-key.json
+*-key.json
