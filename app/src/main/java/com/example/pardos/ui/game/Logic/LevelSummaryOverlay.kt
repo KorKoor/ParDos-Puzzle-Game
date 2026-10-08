@@ -373,10 +373,13 @@ private fun StatDetail(
     }
 }
 
-fun formatTime(ms: Long): String {
-    if (ms <= 0) return "00:00"
+/** Los tiempos del juego están en segundos. Valores guardados por versiones antiguas (ms) se normalizan. */
+fun normalizeSeconds(raw: Long): Long = if (raw > 36_000L) raw / 1000 else raw
 
-    val totalSeconds = ms / 1000
+fun formatTime(seconds: Long): String {
+    if (seconds <= 0) return "00:00"
+
+    val totalSeconds = seconds
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
 
