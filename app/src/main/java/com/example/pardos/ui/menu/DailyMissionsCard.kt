@@ -38,10 +38,10 @@ fun DailyMissionsCard(
 
     // --- PALETA ZEN ---
     val cremaCard = Color(0xFFFFFFFF)
-    val cafeOscuro = Color(0xFF5D4037)
-    val cafeSuave = Color(0xFF8D6E63)
+    val cafeOscuro = Color(0xFF3D405B)
+    val cafeSuave = Color(0xFF3D405B).copy(alpha = 0.55f)
     val terracota = Color(0xFFE07A5F)
-    val verdeZen = Color(0xFF81B29A)
+    val verdeZen = Color(0xFF6B9E86)
 
     // Cargamos las misiones
     LaunchedEffect(refreshTrigger) {
@@ -162,7 +162,7 @@ fun MissionItemRow(
         Surface(
             modifier = Modifier.size(48.dp),
             shape = CircleShape,
-            color = if (isClaimed) verdeZen.copy(alpha = 0.1f) else Color(0xFFFDF8F1),
+            color = if (isClaimed) verdeZen.copy(alpha = 0.1f) else Color(0xFFF6F3EC),
             border = BorderStroke(1.dp, if (isClaimed) verdeZen else Color.LightGray.copy(alpha = 0.3f))
         ) {
             Box(contentAlignment = Alignment.Center) {
