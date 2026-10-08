@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.*
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +34,6 @@ import com.korkoor.pardos.domain.model.GameMode
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
 import com.korkoor.pardos.ui.theme.GameTheme
 
-private val Navy = Color(0xFF3D405B)
 private const val TOTAL_LEVELS = 2400
 
 @Composable

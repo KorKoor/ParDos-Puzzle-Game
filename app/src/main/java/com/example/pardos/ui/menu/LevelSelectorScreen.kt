@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.*
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -47,8 +49,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
-private val Navy = Color(0xFF3D405B)
-private val Gold = Color(0xFFE0A93B)
 
 /** Niveles por capítulo del mapa. */
 private const val CHAPTER_SIZE = 20

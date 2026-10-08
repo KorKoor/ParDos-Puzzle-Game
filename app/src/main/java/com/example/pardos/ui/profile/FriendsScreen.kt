@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.profile
 
+import com.korkoor.pardos.ui.design.*
+
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -46,11 +48,6 @@ import com.korkoor.pardos.domain.social.RankedPlayer
 import com.korkoor.pardos.domain.social.WeekCalendar
 import kotlinx.coroutines.launch
 
-private val Sage = Color(0xFF6B9E86)
-private val Terracotta = Color(0xFFE07A5F)
-private val Navy = Color(0xFF3D405B)
-private val Gold = Color(0xFFE0A93B)
-private val Cream = Color(0xFFFFFBF5)
 
 @Composable
 fun FriendsScreen(onBack: () -> Unit) {

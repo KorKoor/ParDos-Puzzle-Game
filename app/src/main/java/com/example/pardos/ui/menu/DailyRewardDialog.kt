@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.*
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,11 +30,6 @@ import androidx.compose.ui.window.Dialog
 import com.korkoor.pardos.domain.rewards.DailyRewards
 import com.korkoor.pardos.domain.rewards.Reward
 
-private val Sage = Color(0xFF6B9E86)
-private val Terracotta = Color(0xFFE07A5F)
-private val Navy = Color(0xFF3D405B)
-private val Gold = Color(0xFFE0A93B)
-private val GemBlue = Color(0xFF4E8FA6)
 
 @Composable
 fun CurrencyPill(icon: ImageVector, value: Int, color: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {

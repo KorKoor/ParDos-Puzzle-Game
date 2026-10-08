@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.*
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,10 +38,6 @@ import com.korkoor.pardos.domain.model.UserProfile
 import com.korkoor.pardos.ui.profile.getAvatarResource
 
 // Paleta de identidad (misma que el resto del juego)
-private val Sage = Color(0xFF6B9E86)
-private val Terracotta = Color(0xFFE07A5F)
-private val Navy = Color(0xFF3D405B)
-private val Sand = Color(0xFFF2CC8F)
 
 /** Tarjeta de jugador: avatar, nivel, barra de XP y racha. */
 @Composable
