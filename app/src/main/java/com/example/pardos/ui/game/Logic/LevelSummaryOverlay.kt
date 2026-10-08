@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game.components
 
+import androidx.compose.material.icons.rounded.MonetizationOn
 import android.content.res.Configuration
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -44,6 +45,7 @@ fun LevelSummaryOverlay(
     bestTime: Long,
     stars: Int,
     currentTheme: GameTheme,
+    coinsEarned: Int = 0,
     onRetry: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -127,6 +129,7 @@ fun LevelSummaryOverlay(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             StatsRow(moves, timeElapsed)
+                            CoinsEarnedChip(coinsEarned)
                             Spacer(Modifier.height(16.dp))
                             PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                             Spacer(Modifier.height(20.dp))
@@ -151,6 +154,7 @@ fun LevelSummaryOverlay(
                     VictoryHeader(stars, modeName, base, currentTheme)
                     Spacer(modifier = Modifier.height(24.dp))
                     StatsRow(moves, timeElapsed)
+                            CoinsEarnedChip(coinsEarned)
                     Spacer(modifier = Modifier.height(24.dp))
                     PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                     Spacer(modifier = Modifier.height(32.dp))
@@ -384,5 +388,27 @@ fun formatTime(ms: Long): String {
         "99:59"
     } else {
         String.format("%02d:%02d", minutes, seconds)
+    }
+}
+
+@Composable
+private fun CoinsEarnedChip(coins: Int) {
+    if (coins <= 0) return
+    Spacer(modifier = Modifier.height(14.dp))
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFE0A93B).copy(alpha = 0.14f))
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.MonetizationOn,
+            contentDescription = null,
+            tint = Color(0xFFE0A93B),
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = "+$coins", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B))
     }
 }

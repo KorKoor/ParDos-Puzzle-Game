@@ -86,6 +86,9 @@ fun DailyMissionsCard(
                             onClaim = {
                                 // 1. Reclamar en el Manager para apagar el botón
                                 missionManager.claimMissionReward(mission.id)
+                                com.korkoor.pardos.data.local.EconomyManager(context).addCoins(
+                                    com.korkoor.pardos.domain.rewards.CoinRewards.forMission(mission.xpReward)
+                                )
 
                                 // 2. Sumar la XP real al perfil
                                 val profile = profileManager.getProfile()

@@ -141,36 +141,30 @@ class ProfileManager(private val context: Context) {
         }
     }
 
-  fun checkAndUpdateStreak() {
-        val currentDay = (System.currentTimeMillis() / (1000 * 60 * 60 * 24)).toInt()
-        val lastPlayDay = prefs.getInt("last_play_day", 0)
-
-        var currentStreak = prefs.getInt("current_streak", 0)
-        var bestStreak = prefs.getInt("best_streak", 0)
-        var changed = false
-
-        if (lastPlayDay == 0) {
-            currentStreak = 1
-            bestStreak = 1
-            changed = true
-        } else if (currentDay - lastPlayDay == 1) {
-            currentStreak += 1
-            if (currentStreak > bestStreak) bestStreak = currentStreak
-            changed = true
-        } else if (currentDay - lastPlayDay > 1) {
-            currentStreak = 1
-            changed = true
-        }
-
-        if (changed) {
+    /** Actualiza la racha al abrir el juego, usando el día LOCAL del jugador. */
+    fun checkAndUpdateStreak(): com.korkoor.pardos.domain.rewards.StreakChange {
+        val economy = EconomyManager(context)
+        val before = com.korkoor.pardos.domain.rewards.StreakState(
+            streak = prefs.getInt("current_streak", 0),
+            best = prefs.getInt("best_streak", 0),
+            lastDay = prefs.getInt("last_play_day", 0)
+        )
+        val result = com.korkoor.pardos.domain.rewards.StreakCalculator.onOpen(
+            state = before,
+            today = LocalDay.today(),
+            freezes = economy.streakFreezes.value
+        )
+        if (result.change != com.korkoor.pardos.domain.rewards.StreakChange.NONE) {
             prefs.edit().apply {
-                putInt("current_streak", currentStreak)
-                putInt("best_streak", bestStreak)
-                putInt("last_play_day", currentDay)
+                putInt("current_streak", result.state.streak)
+                putInt("best_streak", result.state.best)
+                putInt("last_play_day", result.state.lastDay)
                 apply()
             }
+            economy.setStreakFreezes(result.freezesLeft)
             syncToFirebase()
         }
+        return result.change
     }
 
     private fun syncToFirebase() {

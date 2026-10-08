@@ -42,6 +42,9 @@ class LevelProgressStore(private val prefs: SharedPreferences) {
         }
     }
 
+    /** Estrellas ya conseguidas en un nivel (0 si nunca se ha ganado). */
+    fun starsFor(mode: GameMode, level: Int): Int = prefs.getInt("${prefix(mode)}stars_level_$level", 0)
+
     /** Mejores (movimientos, tiempo) de un nivel; 0 si no hay marca. */
     fun bestStats(mode: GameMode, level: Int): Pair<Int, Long> {
         val p = prefix(mode)

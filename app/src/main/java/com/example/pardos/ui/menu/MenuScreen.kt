@@ -23,6 +23,8 @@ import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.MonetizationOn
+import androidx.compose.material.icons.rounded.Diamond
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudSync
@@ -99,6 +101,34 @@ fun MenuScreen(
         TutorialDialog(onDismiss = { showTutorial = false })
     }
     var showSupportDialog by remember { mutableStateOf(false) }
+
+    // --- ECONOMÍA Y RECOMPENSA DIARIA ---
+    val economy = remember { com.korkoor.pardos.data.local.EconomyManager(context) }
+    val dailyRewards = remember { com.korkoor.pardos.data.local.DailyRewardManager(context) }
+    val coins by economy.coins.collectAsState()
+    val gems by economy.gems.collectAsState()
+    var rewardClaimable by remember { mutableStateOf(dailyRewards.isClaimable()) }
+    var showDailyReward by remember { mutableStateOf(false) }
+    // Se abre sola una vez por día, cuando ya no hay diálogos de bienvenida encima
+    LaunchedEffect(showPrivacyDisclaimer, showTutorial) {
+        if (!showPrivacyDisclaimer && !showTutorial && rewardClaimable) showDailyReward = true
+    }
+    if (showDailyReward) {
+        val pending = remember { dailyRewards.pending() }
+        if (pending != null) {
+            DailyRewardDialog(
+                streak = dailyRewards.currentStreak,
+                reward = pending,
+                onClaim = {
+                    dailyRewards.claim()
+                    rewardClaimable = false
+                },
+                onDismiss = { showDailyReward = false }
+            )
+        } else {
+            showDailyReward = false
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -196,6 +226,19 @@ fun MenuScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     PlayerHeader(profile = profile, onClick = onProfileClick)
+
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (rewardClaimable) {
+                            ClaimGiftChip(onClick = { showDailyReward = true })
+                        }
+                        CurrencyPill(Icons.Rounded.MonetizationOn, coins, Color(0xFFE0A93B))
+                        CurrencyPill(Icons.Rounded.Diamond, gems, Color(0xFF4E8FA6))
+                    }
 
                     Spacer(Modifier.height(20.dp))
                     AnimatedTitle("PARDOS", textColor, fontSize = 44.sp)

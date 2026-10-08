@@ -67,6 +67,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     var firstSelectedTileId by mutableStateOf<String?>(null)
         private set
+    // Monedas ganadas en la última victoria (para mostrarlas en el resumen)
+    var lastCoinsEarned by mutableIntStateOf(0)
+        private set
+    private val economy = com.korkoor.pardos.data.local.EconomyManager(application)
+
     var lastCleanTime by mutableLongStateOf(0L)
     var lastMergeTime by mutableLongStateOf(0L)
 
@@ -687,6 +692,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         if (_boardState.value.starsEarned > 0) {
             val currentLvl = _boardState.value.currentLevel
+
+            // 🪙 Monedas: se calculan ANTES de guardar el progreso (para saber si es primera vez)
+            val firstClear = levelStore.starsFor(currentMode, currentLvl) == 0
+            lastCoinsEarned = com.korkoor.pardos.domain.rewards.CoinRewards.forLevelWin(
+                _boardState.value.starsEarned, firstClear
+            )
+            economy.addCoins(lastCoinsEarned)
 
             saveLevelProgress(
                 level = currentLvl,

@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val profileManager = com.korkoor.pardos.data.local.ProfileManager(this)
+        profileManager.checkAndUpdateStreak()
         profileManager.syncFromFirebase { cloudProfile ->
             if (cloudProfile != null) {
                 val localProfile = profileManager.getProfile()

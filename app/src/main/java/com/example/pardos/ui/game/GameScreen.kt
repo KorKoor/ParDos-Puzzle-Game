@@ -399,6 +399,7 @@ fun GameScreen(
                     bestTime = stats.second,
                     stars = state.starsEarned,
                     currentTheme = currentTheme,
+                    coinsEarned = viewModel.lastCoinsEarned,
                     onRetry = { viewModel.retryLevel() },
                     onDismiss = { viewModel.nextLevel() }
                 )
