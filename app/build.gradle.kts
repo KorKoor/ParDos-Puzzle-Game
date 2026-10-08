@@ -22,10 +22,24 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            // Prueba local de R8 con las mismas reglas de la versión de lanzamiento: ./gradlew assembleDebug -PpardosMinifyDebug
+            if (project.hasProperty("pardosMinifyDebug")) {
+                isMinifyEnabled = true
+                isShrinkResources = true
+                proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            }
             versionNameSuffix = "-debug"
+            // Debug: SIEMPRE anuncios de prueba de Google (tocar anuncios reales en pruebas puede suspender la cuenta de AdMob)
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
+            buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
         }
         release {
-            isMinifyEnabled = false
+            // Release: IDs reales de AdMob
+            manifestPlaceholders["admobAppId"] = "ca-app-pub-3851960142449906~8749596168"
+            buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-3851960142449906/7125882091\"")
+            // R8: código sin usar fuera + recursos sin usar fuera (APK/AAB más pequeño y más rápido). Reglas en proguard-rules.pro
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -44,6 +58,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     packaging {

@@ -17,7 +17,14 @@ object SyncPolicy {
     /** Vida de la caché de perfiles de amigos. */
     const val FRIENDS_CACHE_MS = 15L * 60_000L
     /** Cada cuánto se vuelve a mirar la nube al arrancar (si el perfil local ya tiene progreso). */
-    const val CLOUD_CHECK_MS = 24L * 60 * 60_000L
+    const val CLOUD_CHECK_MS = 3L * 24 * 60 * 60_000L
+    /** Máximo de amigos: acota las lecturas de la lista (cada amigo = 1 lectura al refrescar). */
+    const val MAX_FRIENDS = 100
+    /** Búsquedas de código de amigo permitidas por hora (frena el abuso y las lecturas inútiles). */
+    const val MAX_LOOKUPS_PER_HOUR = 12
+    const val MIN_LOOKUP_GAP_MS = 1_500L
+    private const val HOUR_MS = 60L * 60_000L
+    private const val DAY_MS = 24L * HOUR_MS
 
     /** ¿Toca subir el perfil ahora? */
     fun shouldUpload(dirty: Boolean, contentChanged: Boolean, lastUploadMs: Long, nowMs: Long): Boolean {
@@ -53,4 +60,45 @@ object SyncPolicy {
 
     /** Estimación de escrituras diarias de un jugador activo con [sessions] sesiones: una subida por sesión como máximo. */
     fun estimatedDailyWrites(sessions: Int): Int = sessions.coerceAtLeast(0)
+
+    /**
+     * Vida de la copia de UN amigo según cuánto lleva sin jugar: quien juega hoy cambia a cada rato; quien no ha vuelto
+     * en semanas casi nunca cambia, así que se vuelve a leer a lo sumo una vez al día.
+     */
+    fun friendTtlMs(lastPlayMs: Long, nowMs: Long): Long {
+        if (lastPlayMs <= 0L) return DAY_MS
+        val idle = nowMs - lastPlayMs
+        return when {
+            idle < 3 * DAY_MS -> FRIENDS_CACHE_MS
+            idle < 14 * DAY_MS -> 6 * HOUR_MS
+            else -> DAY_MS
+        }
+    }
+
+    /** Amigos que hay que leer de verdad: los que no están guardados o ya vencieron. [force] lee a todos. */
+    fun friendsToFetch(current: List<String>, fetchedAt: Map<String, Long>, lastPlay: Map<String, Long>, nowMs: Long, force: Boolean): List<String> {
+        if (force) return current
+        return current.filter { id ->
+            val at = fetchedAt[id] ?: return@filter true
+            val age = nowMs - at
+            age < 0 || age >= friendTtlMs(lastPlay[id] ?: 0L, nowMs)
+        }
+    }
+
+    /** Espera tras [failures] subidas fallidas seguidas: 1, 2, 4… minutos hasta 6 horas (no se insiste contra una regla que rechaza). */
+    fun uploadBackoffMs(failures: Int): Long {
+        if (failures <= 0) return 0L
+        val shift = (failures - 1).coerceAtMost(9)
+        return (MIN_UPLOAD_GAP_MS shl shift).coerceAtMost(6 * HOUR_MS)
+    }
+
+    /** ¿Se permite otra búsqueda de código de amigo? [attemptsMs] = instantes de las búsquedas anteriores. */
+    fun canLookupFriend(attemptsMs: List<Long>, nowMs: Long): Boolean {
+        val recent = attemptsMs.filter { nowMs - it in 0 until HOUR_MS }
+        if (recent.size >= MAX_LOOKUPS_PER_HOUR) return false
+        val last = recent.maxOrNull() ?: return true
+        return nowMs - last >= MIN_LOOKUP_GAP_MS
+    }
+
+    fun friendLimitReached(count: Int): Boolean = count >= MAX_FRIENDS
 }

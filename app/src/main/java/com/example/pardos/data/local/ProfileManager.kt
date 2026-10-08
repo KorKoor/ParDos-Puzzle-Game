@@ -7,6 +7,7 @@ import android.util.Log
 import com.google.firebase.FirebaseApp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.korkoor.pardos.domain.model.UserProfile
+import com.korkoor.pardos.domain.social.SyncPolicy
 
 class ProfileManager(private val context: Context) {
     companion object {
@@ -15,10 +16,14 @@ class ProfileManager(private val context: Context) {
         // Estado compartido (ProfileManager se crea muchas veces; la cola de subida y la caché son únicas por proceso)
         private val handler = android.os.Handler(android.os.Looper.getMainLooper())
         private var pendingUpload: Runnable? = null
-        private var friendsCache: List<UserProfile>? = null
-        private var friendsCacheIds: Set<String>? = null
-        private var friendsCacheAt = 0L
+        private var friendCache: MutableMap<String, FriendEntry>? = null
+        private var uploading = false
+        private var lastForcedMs = 0L
+        private const val FORCE_MIN_GAP_MS = 60_000L
     }
+
+    /** Copia guardada de un amigo: cuándo se leyó, de qué colección (p = players, u = users, x = no existe) y su perfil. */
+    private class FriendEntry(val at: Long, val src: String, val profile: UserProfile?)
 
     private val prefs: SharedPreferences = context.getSharedPreferences("pardos_profile", Context.MODE_PRIVATE)
     private val db: FirebaseFirestore? by lazy {
@@ -279,7 +284,7 @@ class ProfileManager(private val context: Context) {
         pendingUpload?.let { handler.removeCallbacks(it) }
         val task = Runnable { uploadIfNeeded() }
         pendingUpload = task
-        handler.postDelayed(task, com.korkoor.pardos.domain.social.SyncPolicy.UPLOAD_DEBOUNCE_MS)
+        handler.postDelayed(task, SyncPolicy.UPLOAD_DEBOUNCE_MS)
     }
 
     /** Se llama al pasar la app a segundo plano: sube lo pendiente (si cambió algo) antes de que el sistema la cierre. */
@@ -289,12 +294,18 @@ class ProfileManager(private val context: Context) {
         uploadIfNeeded()
     }
 
-    private fun profileHash(p: UserProfile): Int = com.korkoor.pardos.domain.social.SyncPolicy.contentHash(
+    private fun profileHash(p: UserProfile): Int = SyncPolicy.contentHash(
         listOf(
             p.uid, p.name, p.avatarId, p.playerLevel, p.currentCampaignLevel, p.currentXp, p.xpToNextLevel,
             p.currentStreak, p.bestStreak, p.friendsUids, p.unlockedBadges, p.pinnedRecords, p.weeklyStars, p.weekId, p.friendCode, p.bannerId
         )
     )
+
+    private fun isOnline(): Boolean = try {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+        caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    } catch (e: Exception) { true }
 
     private fun uploadIfNeeded() {
         val now = System.currentTimeMillis()
@@ -306,9 +317,16 @@ class ProfileManager(private val context: Context) {
             if (dirty) prefs.edit().putBoolean("sync_dirty", false).apply()
             return
         }
-        if (!com.korkoor.pardos.domain.social.SyncPolicy.shouldUpload(dirty, changed, last, now)) {
+        // Sin red no se encola nada: el SDK de Firestore guardaría cada escritura y las enviaría TODAS al volver la conexión.
+        // El perfil sigue marcado como pendiente y se sube al abrir/cerrar la app con conexión.
+        if (uploading || !isOnline()) return
+        // Tras un fallo (reglas que rechazan, servidor caído) se espera cada vez más en vez de insistir cada minuto
+        val failures = prefs.getInt("sync_failures", 0)
+        val backoffLeft = SyncPolicy.uploadBackoffMs(failures) - (now - prefs.getLong("sync_fail_ms", 0L))
+        if (backoffLeft > 0) return
+        if (!SyncPolicy.shouldUpload(dirty, changed, last, now)) {
             // demasiado pronto: se reintenta cuando se cumpla la separación mínima
-            val wait = com.korkoor.pardos.domain.social.SyncPolicy.waitBeforeUpload(last, now).coerceAtLeast(5_000L)
+            val wait = SyncPolicy.waitBeforeUpload(last, now).coerceAtLeast(5_000L)
             pendingUpload?.let { handler.removeCallbacks(it) }
             val task = Runnable { uploadIfNeeded() }
             pendingUpload = task
@@ -332,14 +350,20 @@ class ProfileManager(private val context: Context) {
 
         val collection = profilesCollection
         val hash = profileHash(profile)
+        uploading = true
         firestore.collection(collection).document(profile.uid)
             .set(profile)
             .addOnSuccessListener {
-                prefs.edit().putInt("sync_hash", hash).putLong("sync_last_ms", System.currentTimeMillis()).putBoolean("sync_dirty", false).apply()
+                uploading = false
+                prefs.edit().putInt("sync_hash", hash).putLong("sync_last_ms", System.currentTimeMillis())
+                    .putBoolean("sync_dirty", false).putInt("sync_failures", 0).apply()
                 Log.d(TAG, "Sincronizado en Firebase correctamente ($collection).")
             }
             .addOnFailureListener { e ->
+                uploading = false
                 Log.e(TAG, "Fallo sincronizando en Firebase ($collection): ${e.message}")
+                prefs.edit().putInt("sync_failures", prefs.getInt("sync_failures", 0) + 1)
+                    .putLong("sync_fail_ms", System.currentTimeMillis()).apply()
                 // Mientras las reglas v2 no estén publicadas, `players` rechaza la escritura:
                 // seguimos guardando en el perfil legacy para no perder la copia en la nube.
                 if (collection == "players") {
@@ -353,6 +377,18 @@ class ProfileManager(private val context: Context) {
      * que se muestra en pantalla (antes solo funcionaba el ID completo, y era confuso).
      */
     fun addFriendByCode(friendUid: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        // Antes de gastar una lectura: tope de amigos y límite de búsquedas por hora
+        if (SyncPolicy.friendLimitReached(getProfile().friendsUids.size)) {
+            onError("Llegaste al máximo de ${SyncPolicy.MAX_FRIENDS} amigos.")
+            return
+        }
+        val nowMs = System.currentTimeMillis()
+        val attempts = (prefs.getString("lookup_times", "") ?: "").split(",").mapNotNull { it.toLongOrNull() }
+        if (!SyncPolicy.canLookupFriend(attempts, nowMs)) {
+            onError("Demasiados intentos. Espera un momento e inténtalo de nuevo.")
+            return
+        }
+        prefs.edit().putString("lookup_times", (attempts.filter { nowMs - it in 0 until 3_600_000L } + nowMs).joinToString(",")).apply()
         // Cuenta con sesión: se busca por el código corto de amigo en `players`
         if (signedUid != null) {
             addFriendByFriendCode(friendUid, onSuccess, onError)
@@ -455,8 +491,11 @@ class ProfileManager(private val context: Context) {
     // Dentro de tu archivo ProfileManager.kt
 
     /**
-     * Perfiles de los amigos. Cada amigo cuesta una lectura, así que se guardan 15 min en memoria: abrir Perfil y Amigos
-     * varias veces seguidas no vuelve a leer nada. [force] = true (botón de actualizar, amigo nuevo) salta la caché.
+     * Perfiles de los amigos. Cada amigo leído cuesta una lectura, así que cada uno se guarda EN EL DISCO con su propia
+     * vida útil (quien juega hoy se renueva a los 15 min; quien lleva semanas sin jugar, una vez al día) y recuerda en qué
+     * colección vive (no se vuelve a preguntar en `users` por quien ya está en `players`). Solo se leen los vencidos;
+     * abrir Perfil, Amigos y el Mapa seguidos, o reiniciar la app, no gasta nada. [force] (botón de actualizar) salta la caché,
+     * con un mínimo de 1 minuto entre refrescos forzados.
      */
     fun getFriendsProfiles(force: Boolean = false, onComplete: (List<UserProfile>) -> Unit) {
         val firestore = db
@@ -466,74 +505,157 @@ class ProfileManager(private val context: Context) {
             return
         }
 
-        val currentFriends = getProfile().friendsUids
+        val currentFriends = getProfile().friendsUids.distinct()
         if (currentFriends.isEmpty()) {
             onComplete(emptyList())
             return
         }
 
-        val cached = friendsCache
-        if (cached != null && com.korkoor.pardos.domain.social.SyncPolicy.friendsCacheValid(
-                friendsCacheIds, currentFriends.toSet(), friendsCacheAt, System.currentTimeMillis(), force)
-        ) {
+        val now = System.currentTimeMillis()
+        val reallyForce = force && now - lastForcedMs >= FORCE_MIN_GAP_MS
+        if (reallyForce) lastForcedMs = now
+        val cache = loadFriendCache()
+        fun assemble(): List<UserProfile> = currentFriends.mapNotNull { cache[it]?.profile }
+
+        val stale = SyncPolicy.friendsToFetch(
+            currentFriends,
+            cache.mapValues { it.value.at },
+            cache.mapValues { it.value.profile?.lastPlayDate ?: 0L },
+            now, reallyForce
+        )
+        if (stale.isEmpty() || !isOnline()) {
             Log.d(TAG, "getFriendsProfiles: caché (0 lecturas)")
-            onComplete(cached)
+            onComplete(assemble())
             return
         }
-        val originalComplete = onComplete
-        @Suppress("NAME_SHADOWING")
-        val onComplete: (List<UserProfile>) -> Unit = { list ->
-            friendsCache = list
-            friendsCacheIds = currentFriends.toSet()
-            friendsCacheAt = System.currentTimeMillis()
-            originalComplete(list)
-        }
 
-        fun parse(doc: com.google.firebase.firestore.DocumentSnapshot): UserProfile? = try {
-            UserProfile(
-                uid = doc.id,
-                name = doc.getString("name") ?: "Jugador Zen",
-                avatarId = doc.getLong("avatarId")?.toInt() ?: 1,
-                bannerId = doc.getLong("bannerId")?.toInt() ?: 1,
-                playerLevel = doc.getLong("playerLevel")?.toInt() ?: 1,
-                currentCampaignLevel = doc.getLong("currentCampaignLevel")?.toInt() ?: 1,
-                currentXp = doc.getLong("currentXp")?.toInt() ?: 0,
-                xpToNextLevel = doc.getLong("xpToNextLevel")?.toInt() ?: 100,
-                currentStreak = doc.getLong("currentStreak")?.toInt() ?: 0,
-                bestStreak = doc.getLong("bestStreak")?.toInt() ?: 0,
-                lastPlayDate = doc.getLong("lastPlayDate") ?: 0L,
-                friendsUids = (doc.get("friendsUids") as? List<String>) ?: emptyList(),
-                unlockedBadges = (doc.get("unlockedBadges") as? List<String>) ?: emptyList(),
-                pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", ""),
-                weeklyStars = doc.getLong("weeklyStars")?.toInt() ?: 0,
-                weekId = doc.getLong("weekId")?.toInt() ?: 0,
-                friendCode = doc.getString("friendCode") ?: ""
-            )
-        } catch (e: Exception) { null }
+        val signed = signedUid != null
+        // Con sesión: lo conocido en `users` va directo allí; el resto, primero `players`
+        val v2Ids = if (signed) stale.filter { cache[it]?.src != "u" } else emptyList()
+        val legacyKnown = if (signed) stale.filter { cache[it]?.src == "u" } else stale
 
-        // Lee una colección por trozos de 10 (límite de whereIn). Si falla, devuelve lo que haya.
-        fun readCollection(collection: String, ids: List<String>, done: (List<UserProfile>) -> Unit) {
-            if (ids.isEmpty()) { done(emptyList()); return }
-            val chunks = ids.chunked(10)
-            val found = mutableListOf<UserProfile>()
-            var finished = 0
-            for (chunk in chunks) {
-                firestore.collection(collection)
-                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
-                    .addOnSuccessListener { snap -> found += snap.documents.mapNotNull { parse(it) } }
-                    .addOnCompleteListener { if (++finished == chunks.size) done(found) }
+        readCollection(firestore, "players", v2Ids) { v2, v2Ok ->
+            val v2Found = v2.map { it.uid }.toSet()
+            val legacyIds = (legacyKnown + (v2Ids - v2Found)).distinct()
+            readCollection(firestore, "users", legacyIds) { legacy, legacyOk ->
+                val legacyFound = legacy.map { it.uid }.toSet()
+                val t = System.currentTimeMillis()
+                v2.forEach { cache[it.uid] = FriendEntry(t, "p", it) }
+                legacy.forEach { cache[it.uid] = FriendEntry(t, "u", it) }
+                // Quien no está en ninguna colección se recuerda como "no existe" (no se vuelve a pedir en 24 h)
+                for (id in stale) {
+                    if (id in v2Found || id in legacyFound) continue
+                    val askedAll = id in legacyOk && (!signed || id in v2Ok || cache[id]?.src == "u")
+                    if (askedAll) cache[id] = FriendEntry(t, "x", null)
+                }
+                saveFriendCache(cache, currentFriends)
+                onComplete(assemble())
             }
         }
+    }
 
-        if (signedUid != null) {
-            // Primero `players` (v2); los ids que no estén allí se buscan en el perfil legacy
-            readCollection("players", currentFriends) { v2 ->
-                val missing = currentFriends - v2.map { it.uid }.toSet()
-                readCollection("users", missing) { legacy -> onComplete(v2 + legacy) }
-            }
-        } else {
-            readCollection("users", currentFriends, onComplete)
+    // Lee una colección por trozos de 10 (límite de whereIn). Devuelve lo encontrado y los ids de los trozos que SÍ respondieron.
+    private fun readCollection(
+        firestore: FirebaseFirestore, collection: String, ids: List<String>,
+        done: (List<UserProfile>, Set<String>) -> Unit
+    ) {
+        if (ids.isEmpty()) { done(emptyList(), emptySet()); return }
+        val chunks = ids.chunked(10)
+        val found = mutableListOf<UserProfile>()
+        val ok = mutableSetOf<String>()
+        var finished = 0
+        for (chunk in chunks) {
+            firestore.collection(collection)
+                .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
+                .limit(10)
+                .get()
+                .addOnSuccessListener { snap ->
+                    found += snap.documents.mapNotNull { parseProfile(it) }
+                    ok += chunk
+                }
+                .addOnCompleteListener { if (++finished == chunks.size) done(found, ok) }
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun parseProfile(doc: com.google.firebase.firestore.DocumentSnapshot): UserProfile? = try {
+        UserProfile(
+            uid = doc.id,
+            name = doc.getString("name") ?: "Jugador Zen",
+            avatarId = doc.getLong("avatarId")?.toInt() ?: 1,
+            bannerId = doc.getLong("bannerId")?.toInt() ?: 1,
+            playerLevel = doc.getLong("playerLevel")?.toInt() ?: 1,
+            currentCampaignLevel = doc.getLong("currentCampaignLevel")?.toInt() ?: 1,
+            currentXp = doc.getLong("currentXp")?.toInt() ?: 0,
+            xpToNextLevel = doc.getLong("xpToNextLevel")?.toInt() ?: 100,
+            currentStreak = doc.getLong("currentStreak")?.toInt() ?: 0,
+            bestStreak = doc.getLong("bestStreak")?.toInt() ?: 0,
+            lastPlayDate = doc.getLong("lastPlayDate") ?: 0L,
+            friendsUids = (doc.get("friendsUids") as? List<String>) ?: emptyList(),
+            unlockedBadges = (doc.get("unlockedBadges") as? List<String>) ?: emptyList(),
+            pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", ""),
+            weeklyStars = doc.getLong("weeklyStars")?.toInt() ?: 0,
+            weekId = doc.getLong("weekId")?.toInt() ?: 0,
+            friendCode = doc.getString("friendCode") ?: ""
+        )
+    } catch (e: Exception) { null }
+
+    // ---- Caché de amigos en disco ----
+    private val socialPrefs: SharedPreferences by lazy { context.getSharedPreferences("pardos_social_cache", Context.MODE_PRIVATE) }
+
+    private fun loadFriendCache(): MutableMap<String, FriendEntry> {
+        friendCache?.let { return it }
+        val map = mutableMapOf<String, FriendEntry>()
+        try {
+            val arr = org.json.JSONArray(socialPrefs.getString("friends", "[]"))
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                map[o.getString("id")] = FriendEntry(o.getLong("at"), o.getString("src"), o.optJSONObject("p")?.let { profileFromJson(it) })
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Caché de amigos ilegible, se descarta: ${e.message}")
+        }
+        friendCache = map
+        return map
+    }
+
+    private fun saveFriendCache(map: MutableMap<String, FriendEntry>, keep: List<String>) {
+        map.keys.retainAll(keep.toSet())
+        try {
+            val arr = org.json.JSONArray()
+            for ((id, e) in map) {
+                val o = org.json.JSONObject().put("id", id).put("at", e.at).put("src", e.src)
+                e.profile?.let { o.put("p", profileToJson(it)) }
+                arr.put(o)
+            }
+            socialPrefs.edit().putString("friends", arr.toString()).apply()
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo guardar la caché de amigos: ${e.message}")
+        }
+    }
+
+    private fun profileToJson(p: UserProfile): org.json.JSONObject = org.json.JSONObject()
+        .put("uid", p.uid).put("name", p.name).put("avatarId", p.avatarId).put("bannerId", p.bannerId)
+        .put("playerLevel", p.playerLevel).put("currentCampaignLevel", p.currentCampaignLevel)
+        .put("currentXp", p.currentXp).put("xpToNextLevel", p.xpToNextLevel)
+        .put("currentStreak", p.currentStreak).put("bestStreak", p.bestStreak).put("lastPlayDate", p.lastPlayDate)
+        .put("friendsUids", org.json.JSONArray(p.friendsUids)).put("unlockedBadges", org.json.JSONArray(p.unlockedBadges))
+        .put("pinnedRecords", org.json.JSONArray(p.pinnedRecords))
+        .put("weeklyStars", p.weeklyStars).put("weekId", p.weekId).put("friendCode", p.friendCode)
+
+    private fun profileFromJson(o: org.json.JSONObject): UserProfile {
+        fun list(key: String): List<String> = o.optJSONArray(key)?.let { a -> List(a.length()) { a.optString(it) } } ?: emptyList()
+        return UserProfile(
+            uid = o.optString("uid"), name = o.optString("name", "Jugador Zen"),
+            avatarId = o.optInt("avatarId", 1), bannerId = o.optInt("bannerId", 1),
+            playerLevel = o.optInt("playerLevel", 1), currentCampaignLevel = o.optInt("currentCampaignLevel", 1),
+            currentXp = o.optInt("currentXp", 0), xpToNextLevel = o.optInt("xpToNextLevel", 100),
+            currentStreak = o.optInt("currentStreak", 0), bestStreak = o.optInt("bestStreak", 0),
+            lastPlayDate = o.optLong("lastPlayDate", 0L),
+            friendsUids = list("friendsUids"), unlockedBadges = list("unlockedBadges"),
+            pinnedRecords = list("pinnedRecords").ifEmpty { listOf("", "", "") },
+            weeklyStars = o.optInt("weeklyStars", 0), weekId = o.optInt("weekId", 0), friendCode = o.optString("friendCode", "")
+        )
     }
 
     /**
@@ -584,7 +706,7 @@ class ProfileManager(private val context: Context) {
     fun shouldCheckCloud(): Boolean {
         val p = getProfile()
         val fresh = p.playerLevel == 1 && p.currentXp == 0 && p.name == "Jugador Zen"
-        return com.korkoor.pardos.domain.social.SyncPolicy.shouldCheckCloud(fresh, prefs.getLong("cloud_check_ms", 0L), System.currentTimeMillis())
+        return SyncPolicy.shouldCheckCloud(fresh, prefs.getLong("cloud_check_ms", 0L), System.currentTimeMillis())
     }
 
     fun syncFromFirebase(onResult: (UserProfile?) -> Unit) {

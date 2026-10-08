@@ -12,7 +12,8 @@ rules_version = '2';
 //
 // Qué cambia:
 //  - `players/{uid}` (cuentas de Google, app v3): solo el dueño escribe; cualquier jugador con sesión
-//    puede leer el perfil público (necesario para amigos y ranking).
+//    puede leer el perfil público (necesario para amigos y ranking). Las consultas deben llevar `limit(10)` o menos
+//    (la app ya lo hace): así nadie puede barrer la colección y gastar la cuota de lecturas.
 //  - `users` y `user_progression` (app publicada SIN cuenta): se mantienen abiertas para no romper a
 //    quienes aún no actualizan, pero se PROHÍBE BORRAR. Cuando casi todos estén en la v3, se cierran.
 service cloud.firestore {
@@ -37,7 +38,9 @@ service cloud.firestore {
 
     // ---- v3: perfiles con cuenta de Google ----
     match /players/{uid} {
-      allow read: if signedIn();
+      // Leer un perfil por id, o consultar con tope: nadie puede "listar toda la colección" (ni a propósito ni por error)
+      allow get: if signedIn();
+      allow list: if signedIn() && request.query.limit <= 10;
       allow create, update: if isOwner(uid) && validProfile();
       allow delete: if isOwner(uid);
     }

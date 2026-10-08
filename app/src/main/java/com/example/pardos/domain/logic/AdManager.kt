@@ -12,8 +12,8 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
 object AdManager {
-    // ID DE PRUEBA de Google (rewarded). Poner el ID real SOLO al publicar.
-    private const val AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+    // Debug = ID de prueba de Google; release = ID real (ver app/build.gradle.kts)
+    private val AD_UNIT_ID: String = com.korkoor.pardos.BuildConfig.REWARDED_AD_UNIT_ID
 
     private var rewardedAd: RewardedAd? = null
     private var isAdLoading = false

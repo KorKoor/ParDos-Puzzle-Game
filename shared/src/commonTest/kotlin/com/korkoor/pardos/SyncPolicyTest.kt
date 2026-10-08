@@ -58,4 +58,49 @@ class SyncPolicyTest {
         assertEquals(3, SyncPolicy.estimatedDailyWrites(3))
         assertEquals(0, SyncPolicy.estimatedDailyWrites(-1))
     }
+
+    @Test fun friendTtlDependsOnActivity() {
+        val now = 100L * 24 * 60 * min
+        val day = 24 * 60 * min
+        assertEquals(SyncPolicy.FRIENDS_CACHE_MS, SyncPolicy.friendTtlMs(now - 60 * min, now), "juega hoy")
+        assertEquals(6 * 60 * min, SyncPolicy.friendTtlMs(now - 5 * day, now), "hace días")
+        assertEquals(day, SyncPolicy.friendTtlMs(now - 30 * day, now), "inactivo")
+        assertEquals(day, SyncPolicy.friendTtlMs(0, now), "sin dato")
+    }
+
+    @Test fun onlyStaleFriendsAreFetched() {
+        val now = 100L * 24 * 60 * min
+        val day = 24 * 60 * min
+        val ids = listOf("a", "b", "c", "d")
+        val fetched = mapOf("a" to now - 5 * min, "b" to now - 20 * min, "c" to now - 20 * min)
+        val lastPlay = mapOf("a" to now - min, "b" to now - min, "c" to now - 30 * day)
+        // a: activo y fresco; b: activo y vencido; c: inactivo y fresco; d: nunca leído
+        assertEquals(listOf("b", "d"), SyncPolicy.friendsToFetch(ids, fetched, lastPlay, now, force = false))
+        assertEquals(ids, SyncPolicy.friendsToFetch(ids, fetched, lastPlay, now, force = true))
+        assertEquals(emptyList(), SyncPolicy.friendsToFetch(listOf("a"), fetched, lastPlay, now, force = false))
+        assertEquals(listOf("a"), SyncPolicy.friendsToFetch(listOf("a"), mapOf("a" to now + day), lastPlay, now, force = false), "reloj hacia atrás")
+    }
+
+    @Test fun uploadBackoffGrowsAndCaps() {
+        assertEquals(0L, SyncPolicy.uploadBackoffMs(0))
+        assertEquals(min, SyncPolicy.uploadBackoffMs(1))
+        assertEquals(2 * min, SyncPolicy.uploadBackoffMs(2))
+        assertEquals(4 * min, SyncPolicy.uploadBackoffMs(3))
+        assertEquals(6 * 60 * min, SyncPolicy.uploadBackoffMs(50))
+    }
+
+    @Test fun friendLookupsAreLimited() {
+        val now = 10L * 60 * min
+        assertTrue(SyncPolicy.canLookupFriend(emptyList(), now))
+        assertFalse(SyncPolicy.canLookupFriend(listOf(now - 500), now), "muy seguidas")
+        assertTrue(SyncPolicy.canLookupFriend(listOf(now - 2_000), now))
+        val many = (1..SyncPolicy.MAX_LOOKUPS_PER_HOUR).map { now - 10 * min + it * 2_000L }
+        assertFalse(SyncPolicy.canLookupFriend(many, now), "tope por hora")
+        assertTrue(SyncPolicy.canLookupFriend(many.map { it - 60 * min }, now), "las viejas no cuentan")
+    }
+
+    @Test fun friendLimit() {
+        assertFalse(SyncPolicy.friendLimitReached(SyncPolicy.MAX_FRIENDS - 1))
+        assertTrue(SyncPolicy.friendLimitReached(SyncPolicy.MAX_FRIENDS))
+    }
 }
