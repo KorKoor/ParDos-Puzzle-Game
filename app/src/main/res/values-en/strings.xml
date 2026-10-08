@@ -361,4 +361,5 @@
     <string name="accessible_tutorial_step_5">Board reading: each row is read left to right. Use Repeat board whenever you need it.</string>
     <string name="accessible_tutorial_step_6">Recommended strategy: keep your highest tile in one corner and avoid filling the board.</string>
     <string name="accessible_tutorial_step_7">Tile spawning: the most common new tile is 2. You can also get 4 and, in some levels, higher values.</string>
+    <string name="menu_play_subtitle">Level %1$d</string>
 </resources>

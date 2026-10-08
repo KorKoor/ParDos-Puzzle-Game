@@ -363,4 +363,5 @@
     <string name="accessible_tutorial_step_6">Estrategia recomendada: intenta mantener tu ficha mayor en una esquina y evita llenar todo el tablero.</string>
     <string name="accessible_tutorial_step_7">Aparicion de fichas: lo mas comun es que salga 2. Tambien pueden salir 4 y, en ciertos niveles, valores mayores.</string>
 
+    <string name="menu_play_subtitle">Nivel %1$d</string>
 </resources>
