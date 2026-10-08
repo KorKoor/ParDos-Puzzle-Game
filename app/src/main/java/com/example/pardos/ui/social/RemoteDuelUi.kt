@@ -86,7 +86,7 @@ fun RemoteDuelOverlay(
     val opponent = challenge?.let { RemoteDuel.displayName(it.name) } ?: ""
 
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)), contentAlignment = Alignment.Center) {
-        Surface(
+        JellySurface(
             modifier = Modifier.fillMaxWidth(0.9f).padding(12.dp),
             color = Cream, shape = RoundedCornerShape(32.dp), shadowElevation = 16.dp
         ) {

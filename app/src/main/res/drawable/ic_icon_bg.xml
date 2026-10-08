@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fondo del icono de ParDos: verde salvia de la marca con luz desde arriba y un mantel de cuadros muy tenue. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="20" android:startY="0" android:endX="88" android:endY="108">
+                <item android:color="#FF9AD1B6" android:offset="0" />
+                <item android:color="#FF6B9E86" android:offset="0.55" />
+                <item android:color="#FF4F8068" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- mantel de cuadros -->
+    <path android:fillColor="#14FFFFFF" android:pathData="M0,0h18v18h-18zM36,0h18v18h-18zM72,0h18v18h-18zM18,18h18v18h-18zM54,18h18v18h-18zM90,18h18v18h-18zM0,36h18v18h-18zM36,36h18v18h-18zM72,36h18v18h-18zM18,54h18v18h-18zM54,54h18v18h-18zM90,54h18v18h-18zM0,72h18v18h-18zM36,72h18v18h-18zM72,72h18v18h-18zM18,90h18v18h-18zM54,90h18v18h-18zM90,90h18v18h-18z" />
+
+    <!-- brillo -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial" android:centerX="38" android:centerY="22" android:gradientRadius="64">
+                <item android:color="#55FFFFFF" android:offset="0" />
+                <item android:color="#00FFFFFF" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

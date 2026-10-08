@@ -1,5 +1,12 @@
 package com.korkoor.pardos.ui.game.components
 
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.JellySurface
 import com.korkoor.pardos.ui.design.actionColor
 
 import androidx.compose.material.icons.rounded.MonetizationOn
@@ -57,7 +64,18 @@ fun LevelSummaryOverlay(
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     onShare: (() -> Unit)? = null,
-    nextGoal: com.korkoor.pardos.domain.retention.NextGoal? = null
+    nextGoal: com.korkoor.pardos.domain.retention.NextGoal? = null,
+    /** Cómo conseguir las 3 estrellas (solo se enseña si faltó alguna). */
+    starHint: String? = null,
+    // --- Flow: racha, hito, "siguiente nivel" y avance automático ---
+    streak: Int = 0,
+    streakBonusPct: Int = 0,
+    flowBonusPct: Int = 0,
+    milestone: com.korkoor.pardos.domain.flow.WinStreak.Milestone? = null,
+    teaser: com.korkoor.pardos.domain.flow.NextLevelTeaser.Teaser? = null,
+    nextKindSeen: Boolean = true,
+    /** Milisegundos hasta pasar solo al siguiente nivel (null = no hay avance automático). */
+    autoNextMs: Int? = null
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -78,11 +96,35 @@ fun LevelSummaryOverlay(
         isVisible = true
     }
 
+    // Avance automático: tras ver las estrellas empieza una cuenta atrás; cualquier toque la cancela
+    var autoCancelled by remember { mutableStateOf(false) }
+    var autoProgress by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(autoNextMs, autoCancelled) {
+        if (autoNextMs != null && !autoCancelled) {
+            delay(2400)
+            val steps = (autoNextMs / 50).coerceAtLeast(1)
+            for (i in 1..steps) {
+                autoProgress = i / steps.toFloat()
+                delay(50)
+            }
+            onDismiss()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.6f))
-            .clickable(enabled = false) {},
+            .clickable(enabled = false) {}
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(PointerEventPass.Initial)
+                        autoCancelled = true
+                        autoProgress = 0f
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         // 🚀 EL FIX HERMOSO: Disparamos el confeti AQUÍ para que se vea encima del fondo negro
@@ -91,7 +133,7 @@ fun LevelSummaryOverlay(
             VictoryConfetti()
         }
 
-        Surface(
+        JellySurface(
             modifier = Modifier
                 .fillMaxWidth(if (isLandscape) 0.85f else 0.88f)
                 .scale(scale)
@@ -139,8 +181,13 @@ fun LevelSummaryOverlay(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             StatsRow(moves, timeElapsed)
+                            StarHintLine(starHint)
                             CoinsEarnedChip(coinsEarned, canDouble, onDouble)
                             BonusChips(bonus)
+                            com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
+                                streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
+                                if (autoCancelled) 0f else autoProgress, currentTheme.actionColor
+                            )
                             NextGoalRow(nextGoal, currentTheme)
                             Spacer(Modifier.height(16.dp))
                             PersonalRecordsBox(currentTheme, bestMoves, bestTime)
@@ -166,12 +213,20 @@ fun LevelSummaryOverlay(
                     VictoryHeader(stars, modeName, base, currentTheme)
                     Spacer(modifier = Modifier.height(24.dp))
                     StatsRow(moves, timeElapsed)
+                            StarHintLine(starHint)
                             CoinsEarnedChip(coinsEarned, canDouble, onDouble)
                             BonusChips(bonus)
+                            com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
+                                streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
+                                if (autoCancelled) 0f else autoProgress, currentTheme.actionColor
+                            )
                             NextGoalRow(nextGoal, currentTheme)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    PersonalRecordsBox(currentTheme, bestMoves, bestTime)
-                    Spacer(modifier = Modifier.height(32.dp))
+                    // Con el "siguiente nivel" a la vista el botón tiene que seguir cabiendo: los récords se guardan igual en el perfil
+                    if (teaser == null) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        PersonalRecordsBox(currentTheme, bestMoves, bestTime)
+                    }
+                    Spacer(modifier = Modifier.height(if (teaser == null) 32.dp else 18.dp))
                     ActionButtons(currentTheme, onRetry, onDismiss, onShare)
                 }
             }
@@ -180,10 +235,24 @@ fun LevelSummaryOverlay(
 }
 
 @Composable
+private fun StarHintLine(text: String?) {
+    if (text == null) return
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = text,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f),
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+    )
+}
+
+@Composable
 private fun VictoryHeader(stars: Int, modeName: String, base: Int, currentTheme: GameTheme) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = if (stars >= 2) stringResource(R.string.victory_mastered).uppercase()
+            text = if (com.korkoor.pardos.ui.design.Season.halloween) (if (stars >= 2) "¡MONSTRUOSO!" else "¡BUEN TRUCO!")
+            else if (stars >= 2) stringResource(R.string.victory_mastered).uppercase()
             else stringResource(R.string.victory_well_done).uppercase(),
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold,
@@ -197,7 +266,7 @@ private fun VictoryHeader(stars: Int, modeName: String, base: Int, currentTheme:
             else modeName,
             fontSize = 26.sp,
             fontWeight = FontWeight.Black,
-            color = Color(0xFF3D405B),
+            color = com.korkoor.pardos.ui.design.Navy,
             letterSpacing = (-0.5).sp
         )
     }
@@ -212,7 +281,7 @@ private fun StatsRow(moves: Int, timeElapsed: Long) {
         StatDetail(
             label = stringResource(R.string.moves_label),
             value = moves.toString(),
-            color = Color(0xFF3D405B),
+            color = com.korkoor.pardos.ui.design.Navy,
             delayMillis = 400
         )
         Box(
@@ -224,7 +293,7 @@ private fun StatsRow(moves: Int, timeElapsed: Long) {
         StatDetail(
             label = stringResource(R.string.time_label),
             value = formatTime(timeElapsed),
-            color = Color(0xFF3D405B),
+            color = com.korkoor.pardos.ui.design.Navy,
             delayMillis = 600
         )
     }
@@ -311,7 +380,7 @@ private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime
                 text = "$displayMoves mov.  |  $displayTime",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF3D405B).copy(alpha = 0.8f)
+                color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.8f)
             )
         }
     }
@@ -361,7 +430,7 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
             }
         }
 
-        Button(
+        ToyButton(
             onClick = onDismiss,
             modifier = Modifier
                 .weight(1f)
@@ -445,7 +514,7 @@ private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "+$coins", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B))
+            Text(text = "+$coins", fontSize = 16.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
         }
         if (canDouble) {
             Spacer(modifier = Modifier.width(10.dp))
@@ -505,14 +574,14 @@ private fun NextGoalRow(goal: com.korkoor.pardos.domain.retention.NextGoal?, the
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text("SIGUIENTE META", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, color = Color(0xFF3D405B).copy(alpha = 0.5f))
-            Text(goal.title, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B), maxLines = 1)
-            Text(goal.detail, fontSize = 11.sp, color = Color(0xFF3D405B).copy(alpha = 0.6f), maxLines = 1)
+            Text("SIGUIENTE META", fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f))
+            Text(goal.title, fontSize = 14.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy, maxLines = 1)
+            Text(goal.detail, fontSize = 11.sp, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f), maxLines = 1)
         }
         if (goal.kind != com.korkoor.pardos.domain.retention.GoalKind.CHEST_READY) {
             Spacer(Modifier.width(12.dp))
             Box(
-                Modifier.width(56.dp).height(8.dp).clip(CircleShape).background(Color(0xFF3D405B).copy(alpha = 0.10f))
+                Modifier.width(56.dp).height(8.dp).clip(CircleShape).background(com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.10f))
             ) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth(goal.progress.coerceAtLeast(0.04f)).background(theme.actionColor, CircleShape))
             }

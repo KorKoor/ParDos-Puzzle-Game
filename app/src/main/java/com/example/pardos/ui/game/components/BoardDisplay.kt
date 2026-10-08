@@ -1,8 +1,10 @@
 package com.korkoor.pardos.ui.game.components
 
+import androidx.compose.ui.zIndex
 import android.annotation.SuppressLint
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,6 +26,10 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -118,12 +124,16 @@ fun BoardDisplay(
     haptic: HapticFeedback,
     currentTheme: GameTheme,
     onMoveSound: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Mano y resaltado del tutorial o de la pista (null = nada). */
+    guide: BoardGuide? = null
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val dragState = remember { DragGestureState() }
     val gridSize = state.boardSize
-    val equippedSkin by remember { com.korkoor.pardos.data.local.EconomyManager(context) }.equippedSkin.collectAsState()
+    val economyForBoard = remember { com.korkoor.pardos.data.local.EconomyManager(context) }
+    val equippedSkin by economyForBoard.equippedSkin.collectAsState()
+    val equippedFx by economyForBoard.equippedFx.collectAsState()
 
     // 🚀 MEJORA: Definimos rangos de tamaño para expansión masiva
     val isLargeGrid = gridSize >= 4
@@ -159,6 +169,7 @@ fun BoardDisplay(
             color = currentTheme.surfaceColor.copy(alpha = 0.96f),
             shape = RoundedCornerShape(cornerRadius)
         ) {
+          Box(Modifier.fillMaxSize()) {
             BoxWithConstraints(
                 modifier = Modifier
                     .padding(outerPadding)
@@ -182,12 +193,23 @@ fun BoardDisplay(
                 val availableWidth = maxWidth - (spacing * (gridSize - 1))
                 val tileSize = availableWidth / gridSize
 
-                // 1. CAPA DE FONDO (Grilla)
+                // 1. CAPA DE FONDO (Grilla). Las piedras del nivel ocupan casillas que no se pueden usar.
+                val stones = remember(state.blocked) { state.blocked.toSet() }
                 Box(Modifier.fillMaxSize()) {
                     repeat(gridSize) { row ->
                         repeat(gridSize) { col ->
                             val xPos = (tileSize + spacing) * col
                             val yPos = (tileSize + spacing) * row
+
+                            if ((row to col) in stones) {
+                                StoneBlock(
+                                    size = tileSize,
+                                    index = row * gridSize + col,
+                                    resetKey = state.currentLevel * 2 + if (state.moveCount == 0) 1 else 0,
+                                    modifier = Modifier.offset(x = xPos, y = yPos)
+                                )
+                                return@repeat
+                            }
 
                             Box(
                                 modifier = Modifier
@@ -212,6 +234,7 @@ fun BoardDisplay(
                     key(tile.id) {
                         AnimatedTile(
                             skin = equippedSkin,
+                            fx = equippedFx,
                             tile = tile,
                             tileSize = tileSize,
                             spacing = spacing,
@@ -229,6 +252,11 @@ fun BoardDisplay(
                             }
                         )
                     }
+                }
+
+                // 2b. GUÍA (tutorial / pista): halos y mano deslizando
+                if (guide != null && !viewModel.isSelectModeActive) {
+                    GuideOverlay(guide, tileSize, spacing, gridSize)
                 }
 
                 // 3. CAPA DE PUNTOS FLOTANTES
@@ -256,7 +284,70 @@ fun BoardDisplay(
                     )
                 }
             }
+            // Aura de flow: el halo del tablero crece con las jugadas seguidas que fusionan
+            FlowAura(streak = viewModel.flowStreak, callout = viewModel.flowCallout)
+          }
         }
+    }
+}
+
+/**
+ * Piedra del nivel: una roca con relieve, una cara iluminada y grietas. No se mueve ni se fusiona.
+ * Entra con un pequeño rebote (escalonado por casilla) cada vez que empieza el nivel.
+ */
+@Composable
+private fun StoneBlock(size: Dp, index: Int, resetKey: Int, modifier: Modifier = Modifier) {
+    val pop = remember { Animatable(0.4f) }
+    LaunchedEffect(resetKey) {
+        pop.snapTo(0.4f)
+        kotlinx.coroutines.delay(60L * (index % 6))
+        pop.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 300f))
+    }
+    Canvas(
+        modifier = modifier
+            .size(size)
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = pop.value.coerceIn(0f, 1f) }
+    ) {
+        val w = this.size.width
+        val h = this.size.height
+        val rock = Path().apply {
+            moveTo(w * 0.17f, h * 0.30f)
+            quadraticBezierTo(w * 0.25f, h * 0.09f, w * 0.52f, h * 0.11f)
+            quadraticBezierTo(w * 0.80f, h * 0.09f, w * 0.89f, h * 0.33f)
+            quadraticBezierTo(w * 0.95f, h * 0.62f, w * 0.83f, h * 0.82f)
+            quadraticBezierTo(w * 0.62f, h * 0.95f, w * 0.33f, h * 0.91f)
+            quadraticBezierTo(w * 0.09f, h * 0.85f, w * 0.07f, h * 0.58f)
+            quadraticBezierTo(w * 0.05f, h * 0.40f, w * 0.17f, h * 0.30f)
+            close()
+        }
+        // sombra apoyada en el suelo
+        translate(0f, h * 0.045f) { drawPath(rock, Color(0xFF3D405B).copy(alpha = 0.22f)) }
+        // cuerpo
+        drawPath(
+            rock,
+            Brush.linearGradient(
+                0f to Color(0xFFD3D8E2), 0.55f to Color(0xFFA2AABB), 1f to Color(0xFF7C869B),
+                start = Offset(w * 0.2f, h * 0.1f), end = Offset(w * 0.8f, h * 0.95f)
+            )
+        )
+        // cara iluminada (arriba a la izquierda)
+        val light = Path().apply {
+            moveTo(w * 0.20f, h * 0.31f)
+            quadraticBezierTo(w * 0.28f, h * 0.15f, w * 0.50f, h * 0.17f)
+            quadraticBezierTo(w * 0.66f, h * 0.18f, w * 0.60f, h * 0.30f)
+            quadraticBezierTo(w * 0.42f, h * 0.30f, w * 0.30f, h * 0.46f)
+            quadraticBezierTo(w * 0.18f, h * 0.45f, w * 0.20f, h * 0.31f)
+            close()
+        }
+        drawPath(light, Color.White.copy(alpha = 0.34f))
+        // grietas
+        val crack = Color(0xFF59627A).copy(alpha = 0.55f)
+        val cw = w * 0.028f
+        drawLine(crack, Offset(w * 0.52f, h * 0.36f), Offset(w * 0.58f, h * 0.52f), cw, StrokeCap.Round)
+        drawLine(crack, Offset(w * 0.58f, h * 0.52f), Offset(w * 0.50f, h * 0.66f), cw, StrokeCap.Round)
+        drawLine(crack, Offset(w * 0.58f, h * 0.52f), Offset(w * 0.72f, h * 0.58f), cw, StrokeCap.Round)
+        // contorno
+        drawPath(rock, Color(0xFF5B647A).copy(alpha = 0.55f), style = Stroke(width = w * 0.03f))
     }
 }
 
@@ -264,6 +355,7 @@ fun BoardDisplay(
 @Composable
 private fun AnimatedTile(
     skin: com.korkoor.pardos.domain.shop.TileSkin,
+    fx: com.korkoor.pardos.domain.shop.MergeFx,
     tile: TileModel,
     tileSize: Dp,
     spacing: Dp,
@@ -283,7 +375,12 @@ private fun AnimatedTile(
     )
 
     val scaleAnim = remember { Animatable(0f) }
+    // Cuenta las fusiones de esta ficha para disparar el efecto cosmético (no en la primera composición)
+    var mergeCount by remember { mutableIntStateOf(0) }
+    var firstRun by remember { mutableStateOf(true) }
     LaunchedEffect(tile.value) {
+        if (!tile.isNew && !firstRun) mergeCount++
+        firstRun = false
         if (tile.isNew) {
             // Aparición: crece desde pequeña con rebote suave
             scaleAnim.snapTo(0.2f)
@@ -315,6 +412,8 @@ private fun AnimatedTile(
     val look = tileLook(skin, tile.value, currentTheme)
     val backgroundColor = look.background
     val textColor = look.text
+
+    MergeBurst(fx, mergeCount, tile.value, tileSize, Modifier.offset(animX, animY).zIndex(5f))
 
     Box(
         modifier = Modifier

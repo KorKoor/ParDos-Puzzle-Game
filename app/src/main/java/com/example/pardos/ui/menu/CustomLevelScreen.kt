@@ -1,5 +1,8 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.JellySurface
 import com.korkoor.pardos.ui.design.actionColor
 
 import android.content.res.Configuration
@@ -84,7 +87,7 @@ fun CustomLevelScreen(
                             text = stringResource(R.string.custom_title),
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
-                            color = Color(0xFF3D405B)
+                            color = com.korkoor.pardos.ui.design.Navy
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -105,7 +108,7 @@ fun CustomLevelScreen(
                         modifier = Modifier.weight(1f).padding(top = 20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Button(
+                        ToyButton(
                             onClick = { onStartCustom(size, target, allowPowerUps, selectedTimeMode) },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -123,7 +126,7 @@ fun CustomLevelScreen(
                         }
                         Spacer(modifier = Modifier.height(12.dp))
                         // Info visual del modo seleccionado
-                        Surface(
+                        JellySurface(
                             color = Color.White.copy(alpha = 0.3f),
                             shape = RoundedCornerShape(16.dp)
                         ) {
@@ -132,7 +135,7 @@ fun CustomLevelScreen(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF3D405B)
+                                color = com.korkoor.pardos.ui.design.Navy
                             )
                         }
                     }
@@ -143,14 +146,14 @@ fun CustomLevelScreen(
                     text = stringResource(R.string.custom_subtitle),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF3D405B).copy(alpha = 0.5f),
+                    color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f),
                     letterSpacing = 2.sp
                 )
                 Text(
                     text = stringResource(R.string.custom_title),
                     fontSize = 30.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF3D405B)
+                    color = com.korkoor.pardos.ui.design.Navy
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -169,7 +172,7 @@ fun CustomLevelScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Button(
+                ToyButton(
                     onClick = { onStartCustom(size, target, allowPowerUps, selectedTimeMode) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -233,9 +236,9 @@ fun CustomOptionsContent(
 
     // --- REGLAS ---
     SectionHeader(Icons.Default.FlashOn, stringResource(R.string.section_game_rules), currentTheme.actionColor)
-    Surface(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), shape = RoundedCornerShape(32.dp), color = Color.White.copy(alpha = 0.7f)) {
+    JellySurface(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), shape = RoundedCornerShape(32.dp), color = Color.White.copy(alpha = 0.7f)) {
         Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(stringResource(R.string.powerups_active), color = Color(0xFF3D405B), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.powerups_active), color = com.korkoor.pardos.ui.design.Navy, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Switch(checked = allowPowerUps, onCheckedChange = { onPowerUpsChange(it); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                 colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = currentTheme.actionColor))
         }
@@ -271,9 +274,9 @@ private fun HeaderSection(onBack: () -> Unit) {
 @Composable
 fun SelectableCard(text: String, isSelected: Boolean, accentColor: Color, modifier: Modifier, onSelect: () -> Unit) {
     val backgroundColor by animateColorAsState(if (isSelected) accentColor else Color.White.copy(alpha = 0.6f), label = "bg")
-    val textColor by animateColorAsState(if (isSelected) Color.White else Color(0xFF3D405B), label = "text")
+    val textColor by animateColorAsState(if (isSelected) Color.White else com.korkoor.pardos.ui.design.Navy, label = "text")
 
-    Surface(
+    JellySurface(
         onClick = onSelect,
         // 🚀 Ajustamos la altura y el radio de las tarjetas para que no se vean toscas
         modifier = modifier.height(60.dp).scale(if (isSelected) 1.03f else 1f),
@@ -298,6 +301,6 @@ fun SectionHeader(icon: ImageVector, title: String, accentColor: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(start = 8.dp)) {
         Icon(icon, null, tint = accentColor, modifier = Modifier.size(16.dp))
         Spacer(Modifier.width(10.dp))
-        Text(title, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF3D405B).copy(alpha = 0.4f), letterSpacing = 1.2.sp)
+        Text(title, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.4f), letterSpacing = 1.2.sp)
     }
 }

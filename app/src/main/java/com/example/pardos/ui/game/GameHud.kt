@@ -1,5 +1,8 @@
 package com.korkoor.pardos.ui.game
 
+import androidx.compose.material.icons.rounded.CallMerge
+import androidx.compose.material.icons.rounded.Whatshot
+import com.korkoor.pardos.ui.design.accent
 import com.korkoor.pardos.ui.design.*
 import com.korkoor.pardos.ui.theme.inkColor
 import androidx.compose.material.icons.rounded.SwipeRight
@@ -92,7 +95,9 @@ internal fun GameHeader(
     extraTimes: Int = 0,
     onExtraTime: (() -> Unit)? = null,
     /** Reemplaza "JUGADOR n" (p. ej. "TU RETO" en duelos a distancia). */
-    titleOverride: String? = null
+    titleOverride: String? = null,
+    /** Niveles de campaña ganados seguidos (0 = no se enseña). */
+    winStreak: Int = 0
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -125,8 +130,15 @@ internal fun GameHeader(
                 targetPiece = state.levelLimit,
                 boardSize = state.boardSize,
                 progress = state.levelProgress,
-                theme = currentTheme
+                theme = currentTheme,
+                goal = state.goal,
+                goalCount = state.goalCount,
+                score = state.score,
+                goalStats = state.goalStats,
+                tileValues = state.tiles.mapTo(HashSet()) { it.value }
             )
+            LevelRuleChips(state, Modifier.padding(top = 6.dp))
+            if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = 6.dp))
         }
 
         if (state.maxTime != null) {
@@ -161,7 +173,7 @@ internal fun TimerDisplay(
     isLowTime: Boolean,
     modifier: Modifier = Modifier,
     accentColor: Color = Color(0xFFE07A5F),
-    textColor: Color = Color(0xFF3D405B)
+    textColor: Color = com.korkoor.pardos.ui.design.Navy
 ) {
     val animatedTextColor by animateColorAsState(
         targetValue = if (isLowTime) accentColor else textColor.copy(alpha = 0.7f),
@@ -287,7 +299,8 @@ internal fun GameBoard(
     haptic: HapticFeedback,
     currentTheme: GameTheme,
     onMoveSound: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    guide: BoardGuide? = null
 ) {
     val gridSize = state.boardSize
     val isLargeGrid = gridSize >= 4
@@ -321,7 +334,8 @@ internal fun GameBoard(
                 haptic = haptic,
                 currentTheme = currentTheme,
                 onMoveSound = onMoveSound,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                guide = guide
             )
         }
 
@@ -415,15 +429,25 @@ internal fun ObjectiveCard(
     boardSize: Int,
     progress: Float,
     theme: GameTheme,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    goal: com.korkoor.pardos.domain.level.LevelGoal = com.korkoor.pardos.domain.level.LevelGoal.REACH_TILE,
+    goalCount: Int = 1,
+    score: Int = 0,
+    goalStats: com.korkoor.pardos.domain.level.GoalStats = com.korkoor.pardos.domain.level.GoalStats(),
+    tileValues: Set<Int> = emptySet()
 ) {
+    val isScore = goal == com.korkoor.pardos.domain.level.LevelGoal.SCORE
+    val isMerges = goal == com.korkoor.pardos.domain.level.LevelGoal.MERGES
+    val isCombo = goal == com.korkoor.pardos.domain.level.LevelGoal.COMBO
+    val isLadder = goal == com.korkoor.pardos.domain.level.LevelGoal.LADDER
+    val plainTile = !isScore && !isMerges && !isCombo
     // La barra usa escala logarítmica: duplicar la ficha mayor siempre se siente como un avance parejo
     val animated by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 120f),
         label = "ObjectiveProgress"
     )
-    Surface(
+    JellySurface(
         modifier = modifier,
         color = Color.White,
         shape = RoundedCornerShape(20.dp),
@@ -433,37 +457,81 @@ internal fun ObjectiveCard(
             modifier = Modifier.padding(start = 10.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Mini ficha con la meta
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(getTileColor(targetPiece, theme)),
-                contentAlignment = Alignment.Center
-            ) {
+            // Mini ficha con la meta (o una estrella si la meta son puntos); "×2" cuando hacen falta dos fichas
+            Box(contentAlignment = Alignment.TopEnd) {
                 Box(
-                    Modifier.fillMaxSize().background(
-                        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.Transparent)
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            when {
+                                isMerges -> com.korkoor.pardos.domain.level.LevelKind.MARATHON.accent()
+                                isCombo -> com.korkoor.pardos.domain.level.LevelKind.COMBO.accent()
+                                isScore -> Gold
+                                else -> getTileColor(targetPiece, theme)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.Transparent)
+                        )
                     )
-                )
-                Text(
-                    text = "$targetPiece",
-                    fontSize = if (targetPiece >= 1000) 12.sp else 15.sp,
-                    fontWeight = FontWeight.Black,
-                    color = getTileTextColor(targetPiece)
-                )
+                    if (isMerges) {
+                        Icon(Icons.Rounded.CallMerge, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    } else if (isCombo) {
+                        Icon(Icons.Rounded.Whatshot, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    } else if (isScore) {
+                        Icon(Icons.Rounded.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = "$targetPiece",
+                            fontSize = if (targetPiece >= 1000) 12.sp else 15.sp,
+                            fontWeight = FontWeight.Black,
+                            color = getTileTextColor(targetPiece)
+                        )
+                    }
+                }
+                if (goalCount > 1 && plainTile && !isLadder) {
+                    Text(
+                        text = "×$goalCount",
+                        fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White,
+                        modifier = Modifier.offset(x = 6.dp, y = (-6).dp).clip(RoundedCornerShape(50)).background(Navy).padding(horizontal = 5.dp, vertical = 1.dp)
+                    )
+                }
             }
             Spacer(Modifier.width(12.dp))
             Column {
                 Text(
-                    text = stringResource(R.string.objective_title).uppercase(),
+                    text = when {
+                        isScore -> "PUNTOS  $score / $targetPiece"
+                        isMerges -> "FUSIONES  ${goalStats.merges} / $targetPiece"
+                        isCombo -> "COMBO DE $targetPiece  ·  MEJOR ${goalStats.bestChain}" + if (goalCount > 1) "  ·  ${goalStats.comboHits.coerceAtMost(goalCount)}/$goalCount" else ""
+                        isLadder -> "ESCALERA"
+                        else -> stringResource(R.string.objective_title).uppercase()
+                    },
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Black,
                     color = Navy.copy(alpha = 0.45f),
                     letterSpacing = 2.sp
                 )
                 Spacer(Modifier.height(5.dp))
-                Box(
+                if (isLadder) {
+                    // Cada peldaño se enciende cuando ya está en el tablero
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.width(120.dp)) {
+                        com.korkoor.pardos.domain.level.ladderRungs(targetPiece, goalCount).forEach { rung ->
+                            val on = rung in tileValues
+                            Box(
+                                modifier = Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(5.dp))
+                                    .background(if (on) getTileColor(rung, theme) else Navy.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("$rung", fontSize = 8.sp, fontWeight = FontWeight.Black, color = if (on) getTileTextColor(rung) else Navy.copy(alpha = 0.4f), maxLines = 1)
+                            }
+                        }
+                    }
+                } else Box(
                     modifier = Modifier
                         .width(120.dp)
                         .height(6.dp)
@@ -498,7 +566,7 @@ internal fun StatCard(
     modifier: Modifier = Modifier,
     animateValue: Boolean = true
 ) {
-    Surface(
+    JellySurface(
         modifier = modifier,
         color = Color.White,
         shape = RoundedCornerShape(20.dp),

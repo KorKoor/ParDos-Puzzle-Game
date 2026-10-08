@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game
 
+import com.korkoor.pardos.ui.design.ToyAlertDialog
 import android.content.Context
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.foundation.layout.Arrangement
@@ -375,7 +376,7 @@ fun AccessibleGameScreen(
         )
         val stepText = tutorialSteps[tutorialStepIndex]
 
-        AlertDialog(
+        ToyAlertDialog(
             onDismissRequest = { closeTutorial() },
             title = { Text(text = stepTitle) },
             text = { Text(text = stepText) },
@@ -405,7 +406,7 @@ fun AccessibleGameScreen(
     }
 
     if (viewModel.showLevelSummary || state.isLevelCompleted) {
-        AlertDialog(
+        ToyAlertDialog(
             onDismissRequest = {},
             title = { Text(text = stringResource(R.string.accessible_mode_win_title)) },
             text = { Text(text = stringResource(R.string.accessible_mode_win_body)) },
@@ -423,7 +424,7 @@ fun AccessibleGameScreen(
     }
 
     if (state.isGameOver) {
-        AlertDialog(
+        ToyAlertDialog(
             onDismissRequest = {},
             title = { Text(text = stringResource(R.string.accessible_mode_game_over_title)) },
             text = { Text(text = stringResource(R.string.accessible_mode_game_over_body)) },

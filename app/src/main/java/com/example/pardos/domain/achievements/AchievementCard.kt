@@ -20,7 +20,7 @@ import com.korkoor.pardos.domain.achievements.Achievement
 @Composable
 fun AchievementCard(achievement: Achievement, isUnlocked: Boolean) {
     // 🎨 Colores dinámicos basados en el estado de desbloqueo
-    val mainColor = if (isUnlocked) achievement.color else Color(0xFF3D405B).copy(alpha = 0.2f)
+    val mainColor = if (isUnlocked) achievement.color else com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.2f)
     val contentAlpha = if (isUnlocked) 1f else 0.4f
 
     Surface(
@@ -55,14 +55,14 @@ fun AchievementCard(achievement: Achievement, isUnlocked: Boolean) {
                     text = stringResource(achievement.titleResId),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF3D405B).copy(alpha = contentAlpha)
+                    color = com.korkoor.pardos.ui.design.Navy.copy(alpha = contentAlpha)
                 )
                 Text(
                     // ✅ Cambiamos achievement.description por stringResource
                     text = stringResource(achievement.descriptionResId),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xFF3D405B).copy(alpha = if (isUnlocked) 0.6f else 0.3f),
+                    color = com.korkoor.pardos.ui.design.Navy.copy(alpha = if (isUnlocked) 0.6f else 0.3f),
                     lineHeight = 16.sp
                 )
             }

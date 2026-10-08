@@ -1,5 +1,8 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.ToyAlertDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -19,7 +22,7 @@ fun ExitGameDialog(
     onDismiss: () -> Unit,
     currentTheme: GameTheme
 ) {
-    AlertDialog(
+    ToyAlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(28.dp),
         containerColor = Color.White,
@@ -28,7 +31,7 @@ fun ExitGameDialog(
                 text = stringResource(R.string.exit_dialog_title), // ✅ "¿Deseas salir?"
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF3D405B),
+                color = com.korkoor.pardos.ui.design.Navy,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
@@ -37,13 +40,13 @@ fun ExitGameDialog(
             Text(
                 text = stringResource(R.string.exit_dialog_message), // ✅ "Tu progreso se perderá..."
                 fontSize = 14.sp,
-                color = Color(0xFF3D405B).copy(alpha = 0.7f),
+                color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,
                 lineHeight = 20.sp
             )
         },
         confirmButton = {
-            Button(
+            ToyButton(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = currentTheme.accentColor,
@@ -59,7 +62,7 @@ fun ExitGameDialog(
             }
         },
         dismissButton = {
-            TextButton(
+            ToyTextButton(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {

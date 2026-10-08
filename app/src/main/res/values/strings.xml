@@ -21,7 +21,7 @@
 
     <string name="mode_classic">Campaña</string>
     <string name="mode_campaign_title">MODO CAMPAÑA</string>
-    <string name="mode_campaign_desc">Supera 2,400 niveles diseñados a mano. Gana estrellas y desbloquea nuevos retos.</string>
+    <string name="mode_campaign_desc">Supera 2.400 niveles con reglas distintas: piedras, sprints, relojes y jefes. Gana estrellas y desbloquea retos.</string>
 
     <string name="mode_tables">Multi-Mates</string>
     <string name="mode_tables_title">MULTI-MATES</string>
@@ -112,7 +112,7 @@
     <string name="records_empty">Aún no tienes récords. ¡Empieza a jugar!</string>
     <string name="score_format">Puntaje: %1$d</string>
     <string name="date_format">Fecha: %1$s</string>
-    <string name="mode_classic_desc">Supera niveles diseñados a mano y progresa en el mapa.</string>
+    <string name="mode_classic_desc">Supera niveles con reglas distintas y progresa en el mapa.</string>
 
     <string name="ach_first_steps_title">Primeros Pasos</string>
     <string name="ach_first_steps_desc">Alcanza la ficha 64 por primera vez.</string>

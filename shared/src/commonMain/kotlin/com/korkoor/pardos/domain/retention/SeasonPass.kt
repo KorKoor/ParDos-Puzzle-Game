@@ -67,9 +67,11 @@ data class SeasonReward(
     /** Id de un avatar exclusivo (0 = ninguno). */
     val avatar: Int = 0,
     /** Id de un banner de perfil exclusivo (0 = ninguno). */
-    val banner: Int = 0
+    val banner: Int = 0,
+    /** Efecto de fusión exclusivo (null = ninguno). */
+    val fx: com.korkoor.pardos.domain.shop.MergeFx? = null
 ) {
-    val isEmpty: Boolean get() = coins == 0 && gems == 0 && chest == null && freezes == 0 && undos == 0 && skin == null && avatar == 0 && banner == 0
+    val isEmpty: Boolean get() = coins == 0 && gems == 0 && chest == null && freezes == 0 && undos == 0 && skin == null && avatar == 0 && banner == 0 && fx == null
 
     /** Valor aproximado en monedas (para balancear). */
     val coinValue: Int
@@ -111,6 +113,11 @@ object SeasonPass {
     /** Niveles donde cae un banner de perfil exclusivo (gratis / premium). */
     const val FREE_BANNER_TIER = 9
     const val PREMIUM_BANNER_TIER = 22
+    /** Niveles donde cae un efecto de fusión: uno de muestra en la vía gratis y el exclusivo (Rayo) en la premium. */
+    const val FREE_FX_TIER = 25
+    const val PREMIUM_FX_TIER = 26
+    val FREE_FX = com.korkoor.pardos.domain.shop.MergeFx.SPARKS
+    val PREMIUM_FX = com.korkoor.pardos.domain.shop.MergeFx.LIGHTNING
 
     fun freeReward(tier: Int, seasonId: Int = 0): SeasonReward {
         require(tier in 1..TIERS)
@@ -126,7 +133,8 @@ object SeasonPass {
             freezes = if (tier == 10 || tier == 20) 1 else 0,
             undos = if (tier == 7 || tier == 17 || tier == 27) 2 else 0,
             avatar = if (tier == FREE_AVATAR_TIER) com.korkoor.pardos.domain.shop.Avatars.seasonFree(seasonId).id else 0,
-            banner = if (tier == FREE_BANNER_TIER) com.korkoor.pardos.domain.shop.Banners.seasonFree(seasonId).id else 0
+            banner = if (tier == FREE_BANNER_TIER) com.korkoor.pardos.domain.shop.Banners.seasonFree(seasonId).id else 0,
+            fx = if (tier == FREE_FX_TIER) FREE_FX else null
         )
     }
 
@@ -146,7 +154,8 @@ object SeasonPass {
             undos = if (tier == 4 || tier == 14 || tier == 24) 3 else 0,
             skin = if (tier == TIERS) SeasonCalendar.skinFor(seasonId) else null,
             avatar = if (tier == PREMIUM_AVATAR_TIER) com.korkoor.pardos.domain.shop.Avatars.seasonPremium(seasonId).id else 0,
-            banner = if (tier == PREMIUM_BANNER_TIER) com.korkoor.pardos.domain.shop.Banners.seasonPremium(seasonId).id else 0
+            banner = if (tier == PREMIUM_BANNER_TIER) com.korkoor.pardos.domain.shop.Banners.seasonPremium(seasonId).id else 0,
+            fx = if (tier == PREMIUM_FX_TIER) PREMIUM_FX else null
         )
     }
 

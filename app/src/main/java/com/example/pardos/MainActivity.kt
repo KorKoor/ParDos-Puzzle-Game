@@ -116,7 +116,7 @@ class MainActivity : ComponentActivity() {
 
         routeFromNotification = intent?.getStringExtra(com.korkoor.pardos.notifications.NotificationRoute.EXTRA)
         notificationManager = ZenNotificationManager(this)
-        requestNotificationPermissionIfNeeded()
+        // El permiso de avisos ya no se pide al abrir: lo pide `NotificationPrimerDialog` tras la primera victoria
 
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -133,7 +133,12 @@ class MainActivity : ComponentActivity() {
         } else profileManager.syncFromFirebase { cloudProfile ->
             if (cloudProfile != null) {
                 val localProfile = profileManager.getProfile()
-                if (cloudProfile.playerLevel >= localProfile.playerLevel) {
+                val freshLocal = localProfile.playerLevel == 1 && localProfile.currentXp == 0 && localProfile.name == "Jugador Zen"
+                val cloudAhead = cloudProfile.playerLevel > localProfile.playerLevel ||
+                    (cloudProfile.playerLevel == localProfile.playerLevel &&
+                        (cloudProfile.currentCampaignLevel > localProfile.currentCampaignLevel || cloudProfile.currentXp > localProfile.currentXp))
+                // Solo se restaura si la nube va por delante: guardar un perfil idéntico provocaría una subida inútil
+                if (cloudAhead || freshLocal) {
                     Log.d(TAG, "Restoring cloud profile at level=${cloudProfile.playerLevel}")
                     profileManager.saveProfile(cloudProfile)
                     gameViewModel.loadLevelsWithProgress()
@@ -252,10 +257,21 @@ class MainActivity : ComponentActivity() {
                     ) { target ->
                         when (target) {
                             Screen.Splash -> AnimatedSplashScreen(onAnimationFinished = {
+                                // Solo en builds de depuración: `--ei debug_level N` abre ese nivel de campaña directamente
+                                val debuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                                val debugLevel = if (debuggable) intent?.getIntExtra("debug_level", 0) ?: 0 else 0
+                                if (debugLevel > 0) {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.startCampaignLevel(debugLevel)
+                                    intent?.getIntExtra("debug_move_limit", 0)?.takeIf { it > 0 }?.let { gameViewModel.debugSetMoveLimit(it) }
+                                    currentScreen = Screen.Game
+                                    return@AnimatedSplashScreen
+                                }
                                 currentScreen = when (routeFromNotification) {
                                     "wheel" -> Screen.Wheel
                                     "season" -> Screen.Season
                                     "friends" -> Screen.Friends
+                                    "album" -> Screen.Collection
                                     "shop" -> Screen.Shop
                                     "chest", "piggy" -> {
                                         com.korkoor.pardos.notifications.NotificationRoute.pendingDialog = routeFromNotification
@@ -355,12 +371,7 @@ class MainActivity : ComponentActivity() {
                                 currentTheme = currentTheme,
                                 onLevelSelected = { selectedLevel ->
                                     gameViewModel.updateAccessibilitySpawnAssist(false)
-                                    gameViewModel.setupCustomGame(
-                                        size = ProgressionEngine.calculateBoardSize(selectedLevel.target),
-                                        target = selectedLevel.target,
-                                        difficulty = selectedLevel.difficultyName,
-                                        level = selectedLevel.id
-                                    )
+                                    gameViewModel.startCampaignLevel(selectedLevel.id)
                                     currentScreen = Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.ModeSelection },

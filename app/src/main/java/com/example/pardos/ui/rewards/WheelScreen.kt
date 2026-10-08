@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -17,9 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -51,6 +54,13 @@ private fun sliceColor(i: Int, s: WheelSlice): Color = when (s.kind) {
     WheelKind.SEASON_POINTS -> Sage
 }
 
+private fun sliceKind(s: WheelSlice): CozyKind = when (s.kind) {
+    WheelKind.COINS -> CozyKind.COIN
+    WheelKind.GEMS -> CozyKind.GEM
+    WheelKind.CHEST -> CozyKind.CHEST
+    WheelKind.SEASON_POINTS -> CozyKind.CROWN
+}
+
 private fun sliceIcon(s: WheelSlice): ImageVector = when (s.kind) {
     WheelKind.COINS -> Icons.Rounded.MonetizationOn
     WheelKind.GEMS -> Icons.Rounded.Diamond
@@ -75,8 +85,24 @@ fun WheelScreen(onBack: () -> Unit) {
     var spinning by remember { mutableStateOf(false) }
     var prize by remember { mutableStateOf<WheelSlice?>(null) }
     val scope = rememberCoroutineScope()
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var prizeCount by remember { mutableIntStateOf(0) }
     val slices = DailyWheel.slices
     val sliceAngle = 360f / slices.size
+
+    // Un "clic" de vibración cada vez que el puntero cruza una casilla
+    LaunchedEffect(spinning) {
+        if (spinning) {
+            var last = (rotation.value / (360f / slices.size)).toInt()
+            snapshotFlow { (rotation.value / (360f / slices.size)).toInt() }.collect { n ->
+                if (n != last) { last = n; haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove) }
+            }
+        }
+    }
+
+    val blink by androidx.compose.animation.core.rememberInfiniteTransition(label = "bulbs").animateFloat(
+        0f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(1600, easing = androidx.compose.animation.core.LinearEasing)), label = "blink"
+    )
 
     fun startSpin(viaAd: Boolean) {
         if (spinning) return
@@ -93,13 +119,15 @@ fun WheelScreen(onBack: () -> Unit) {
             rotation.animateTo(target, tween(4800, easing = CubicBezierEasing(0.12f, 0.62f, 0.08f, 1f)))
             retention.applyWheelPrize(slices[idx])
             prize = slices[idx]
+            prizeCount++
+            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
             spinning = false
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            PardosTopBar(eyebrow = "Cada día", title = "Ruleta", onBack = onBack) {
+            PardosTopBar(eyebrow = com.korkoor.pardos.ui.design.Season.text("Cada día", "¿Truco o trato?"), title = "Ruleta", onBack = onBack) {
                 CurrencyPill(Icons.Rounded.MonetizationOn, coins, Gold)
                 Spacer(Modifier.width(8.dp))
                 CurrencyPill(Icons.Rounded.Diamond, gems, GemBlue)
@@ -114,8 +142,24 @@ fun WheelScreen(onBack: () -> Unit) {
                 // ---- Rueda ----
                 val wheelSize = 300.dp
                 Box(modifier = Modifier.size(wheelSize + 24.dp), contentAlignment = Alignment.Center) {
-                    // Marco
-                    Box(Modifier.size(wheelSize + 20.dp).shadow(14.dp, CircleShape, spotColor = Gold).background(Navy, CircleShape))
+                    // Marco: aro oscuro con borde dorado y bombillas que corren mientras gira
+                    Box(
+                        Modifier.size(wheelSize + 22.dp).shadow(14.dp, CircleShape, spotColor = Gold)
+                            .background(Brush.verticalGradient(listOf(Color(0xFF55597A), Navy, Color(0xFF2B2D45))), CircleShape)
+                    )
+                    Canvas(Modifier.size(wheelSize + 22.dp)) {
+                        val c = Offset(size.width / 2, size.height / 2)
+                        val rr = size.minDimension / 2 - 8.dp.toPx()
+                        val n = 20
+                        repeat(n) { i ->
+                            val a = Math.toRadians((i * 360.0 / n) - 90.0)
+                            val pos = Offset(c.x + (rr * cos(a)).toFloat(), c.y + (rr * sin(a)).toFloat())
+                            val speed = if (spinning) 3 else 1
+                            val on = ((blink * n * speed).toInt() + i) % 2 == 0
+                            drawCircle(Gold.copy(alpha = if (on) 0.35f else 0.10f), 7.dp.toPx(), pos)
+                            drawCircle(if (on) Color(0xFFFFE08A) else Color(0xFF8A7A52), 3.6.dp.toPx(), pos)
+                        }
+                    }
 
                     Box(
                         modifier = Modifier.size(wheelSize).graphicsLayer { rotationZ = rotation.value },
@@ -124,8 +168,9 @@ fun WheelScreen(onBack: () -> Unit) {
                         Canvas(Modifier.fillMaxSize()) {
                             val d = size.minDimension
                             slices.forEachIndexed { i, s ->
+                                val base = sliceColor(i, s)
                                 drawArc(
-                                    color = sliceColor(i, s),
+                                    brush = Brush.radialGradient(listOf(base.deepen(0.10f), base, base.lighten(0.16f)), Offset(d / 2, d / 2), d / 2),
                                     startAngle = -90f + i * sliceAngle, sweepAngle = sliceAngle, useCenter = true,
                                     topLeft = Offset.Zero, size = Size(d, d)
                                 )
@@ -151,23 +196,31 @@ fun WheelScreen(onBack: () -> Unit) {
                                     .graphicsLayer { rotationZ = theta },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(sliceIcon(s), null, tint = Color.White, modifier = Modifier.size(24.dp))
-                                Text(s.label, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center)
+                                CozyIcon(sliceKind(s), Modifier.size(36.dp))
+                                Text(
+                                    s.label, fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center,
+                                    style = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color.Black.copy(alpha = 0.35f), Offset(0f, 2f), 4f))
+                                )
                             }
                         }
                     }
                     // Centro
-                    Box(Modifier.size(54.dp).shadow(6.dp, CircleShape).background(Color.White, CircleShape), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Star, null, tint = Gold, modifier = Modifier.size(28.dp))
+                    JellyCard(Modifier.size(64.dp), shape = CircleShape, lipHeight = 5.dp) {
+                        CozyIcon(CozyKind.STAR, Modifier.align(Alignment.Center).size(38.dp).breathing(0.07f, 1100))
                     }
+                    com.korkoor.pardos.ui.game.components.MergeBurst(
+                        com.korkoor.pardos.domain.shop.MergeFx.FIREWORKS, prizeCount, 4096, wheelSize, Modifier.zIndex(5f)
+                    )
                     // Puntero fijo
                     Canvas(Modifier.size(wheelSize + 24.dp)) {
                         val cx = size.width / 2
                         val path = Path().apply {
-                            moveTo(cx - 16f, 0f); lineTo(cx + 16f, 0f); lineTo(cx, 44f); close()
+                            moveTo(cx - 22f, 0f); lineTo(cx + 22f, 0f); lineTo(cx, 62f); close()
                         }
-                        drawPath(path, Terracotta)
+                        drawPath(path.also { }, Color.Black.copy(alpha = 0.25f), style = Stroke(10f))
+                        drawPath(path, Brush.verticalGradient(listOf(Color(0xFFF08A70), Color(0xFFC95C42))))
                         drawPath(path, Color.White, style = Stroke(4f))
+                        drawCircle(Color.White.copy(alpha = 0.7f), 4f, Offset(cx, 10f))
                     }
                 }
 
@@ -175,12 +228,13 @@ fun WheelScreen(onBack: () -> Unit) {
 
                 // ---- Resultado ----
                 prize?.let { p ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Gold.copy(alpha = 0.16f)).padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    JellyRow(
+                        modifier = Modifier.fillMaxWidth().popIn(),
+                        shape = RoundedCornerShape(20.dp), fill = Gold.lighten(0.84f), lip = Gold.copy(alpha = 0.5f),
+                        padding = PaddingValues(14.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Icon(sliceIcon(p), null, tint = Gold, modifier = Modifier.size(28.dp))
+                        CozyIcon(sliceKind(p), Modifier.size(34.dp))
                         Spacer(Modifier.width(10.dp))
                         Text(
                             "¡Ganaste " + when (p.kind) {
@@ -211,11 +265,24 @@ fun WheelScreen(onBack: () -> Unit) {
                         fontSize = 13.sp, fontWeight = FontWeight.Bold, color = InkSecondary, textAlign = TextAlign.Center
                     )
                 }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    "Premios: monedas, gemas, cofres y puntos del pase de temporada.",
-                    fontSize = 11.sp, color = InkTertiary, textAlign = TextAlign.Center
-                )
+                Spacer(Modifier.height(18.dp))
+                JellyColumn(modifier = Modifier.fillMaxWidth().staggerIn(1), padding = PaddingValues(16.dp)) {
+                    SectionLabel("Qué puedes ganar")
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        listOf(CozyKind.COIN to "Monedas", CozyKind.GEM to "Gemas", CozyKind.CHEST to "Cofres", CozyKind.CROWN to "Pase").forEach { (k, label) ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CozyIcon(k, Modifier.size(42.dp))
+                                Text(label.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 1.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Giros de hoy: ${allowance.freeLeft} gratis · ${allowance.adLeft} con anuncio",
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Navy.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }

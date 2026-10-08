@@ -81,6 +81,23 @@ object Economy {
     const val STARTER_GEMS = 300
     const val STARTER_RARE_CHESTS = 3
 
+    // ---------------- Monetización amable ----------------
+    /** Primera compra de cada pack de gemas: se multiplican por esto. */
+    const val FIRST_PURCHASE_MULTIPLIER = 2
+    /** VIP: gemas que se pueden reclamar cada día y % extra de monedas por victoria. */
+    const val VIP_DAILY_GEMS = 5
+    const val VIP_COIN_BONUS_PERCENT = 20
+    /** Impulso de monedas: victorias que dura, % extra y precio en gemas. */
+    const val COIN_BOOST_WINS = 5
+    const val COIN_BOOST_PERCENT = 50
+    const val COIN_BOOST_PRICE_GEMS = 20
+
+    // ---------------- Efectos de fusión (cosméticos) ----------------
+    const val MERGE_FX_PRICE_COMMON = 700
+    const val MERGE_FX_PRICE_RARE = 1_500
+    const val MERGE_FX_GEMS_EPIC = 70
+    const val MERGE_FX_GEMS_LEGENDARY = 140
+
     // ---------------- Retención ----------------
     /** Espera entre cofres gratis. */
     const val FREE_CHEST_COOLDOWN_MS: Long = 4L * 60 * 60 * 1000

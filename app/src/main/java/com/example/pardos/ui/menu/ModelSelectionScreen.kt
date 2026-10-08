@@ -45,7 +45,7 @@ fun ModeSelectionScreen(
     val context = LocalContext.current
     val campaignLevel = remember { ProfileManager(context).getProfile().currentCampaignLevel }
 
-    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(currentTheme.colors))) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop(Brush.verticalGradient(currentTheme.colors))) {
         PicnicBackgroundOptimized(color = currentTheme.accentColor.copy(alpha = 0.05f))
 
         Column(
@@ -60,7 +60,7 @@ fun ModeSelectionScreen(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
+                JellySurface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back), tint = Navy)
                     }
@@ -141,19 +141,14 @@ fun ModeSelectionScreen(
 private fun CampaignHero(level: Int, onClick: () -> Unit) {
     val shape = RoundedCornerShape(30.dp)
     val progress = (level.toFloat() / TOTAL_LEVELS).coerceIn(0f, 1f)
-    Surface(
+    JellyCard(
         onClick = onClick,
         shape = shape,
-        color = Color.Transparent,
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(16.dp, shape, spotColor = Color(0xFF6B9E86))
+        fill = Sage, lip = SageDark.darker(0.7f), lipHeight = 7.dp,
+        brush = Brush.verticalGradient(listOf(SageLight, Sage, SageDark)),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Box(
-            modifier = Modifier
-                .background(Brush.linearGradient(listOf(Color(0xFF7FB69C), Color(0xFF5A8C74))))
-                .padding(22.dp)
-        ) {
+        Box(modifier = Modifier.padding(22.dp)) {
             // Fichas decorativas
             Box(
                 modifier = Modifier
@@ -222,7 +217,7 @@ private fun ModeRow(
     color: Color,
     onClick: () -> Unit
 ) {
-    Surface(
+    JellySurface(
         onClick = onClick,
         shape = RoundedCornerShape(26.dp),
         color = Color.White,

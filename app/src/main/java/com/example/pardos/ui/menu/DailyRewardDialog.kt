@@ -1,5 +1,12 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.JellyCard
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.Animatable
 import com.korkoor.pardos.ui.design.CozyText
 
 import com.korkoor.pardos.ui.design.*
@@ -35,18 +42,32 @@ import com.korkoor.pardos.domain.rewards.Reward
 
 @Composable
 fun CurrencyPill(icon: ImageVector, value: Int, color: Color, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .border(1.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+    // El número "corre" hasta su nuevo valor y la píldora da un saltito cuando sube
+    val shown by animateIntAsState(value, tween(650, easing = FastOutSlowInEasing), label = "pillCount")
+    val bump = remember { Animatable(1f) }
+    var last by remember { mutableIntStateOf(value) }
+    LaunchedEffect(value) {
+        if (value > last) {
+            bump.snapTo(1.16f)
+            bump.animateTo(1f, spring(dampingRatio = 0.35f, stiffness = 380f))
+        }
+        last = value
+    }
+    JellyCard(
+        modifier = modifier.graphicsLayer { scaleX = bump.value; scaleY = bump.value },
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        lipHeight = 4.dp,
+        fill = Color.White
     ) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(5.dp))
-        Text(text = "$value", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Navy)
+        Row(
+            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(text = "$shown", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy)
+        }
     }
 }
 
@@ -89,16 +110,21 @@ fun DailyRewardDialog(
     var claimed by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface(
+        JellyCard(
+            modifier = Modifier.popIn(),
             shape = RoundedCornerShape(32.dp),
-            color = Color(0xFFFFFBF5),
-            shadowElevation = 16.dp
+            fill = Color(0xFFFFFBF5),
+            lipHeight = 8.dp
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Rounded.LocalFireDepartment, contentDescription = null, tint = Terracotta, modifier = Modifier.size(40.dp))
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.korkoor.pardos.R.drawable.ico_fire),
+                    contentDescription = null,
+                    modifier = Modifier.size(68.dp).breathing(0.09f, 900)
+                )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = if (streak == 1) "¡Primer día!" else "¡Racha de $streak días!",
@@ -125,24 +151,22 @@ fun DailyRewardDialog(
 
                 Spacer(Modifier.height(22.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            if (claimed) Brush.linearGradient(listOf(Navy.copy(alpha = 0.15f), Navy.copy(alpha = 0.15f)))
-                            else Brush.linearGradient(listOf(Color(0xFF7FB69C), Color(0xFF5A8C74)))
-                        )
-                        .clickable {
-                            if (!claimed) {
-                                claimed = true
-                                onClaim()
-                            } else onDismiss()
-                        },
-                    contentAlignment = Alignment.Center
+                JellyCard(
+                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    onClick = {
+                        if (!claimed) {
+                            claimed = true
+                            onClaim()
+                        } else onDismiss()
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    fill = if (claimed) Color(0xFFE9E4D8) else Sage,
+                    lip = if (claimed) Color(0xFFCDB894) else Color(0xFF3F6B57),
+                    lipHeight = 6.dp,
+                    brush = if (claimed) null else Brush.verticalGradient(listOf(SageLight, Sage, SageDark))
                 ) {
                     CozyText(
+                        modifier = Modifier.align(Alignment.Center),
                         text = if (claimed) "¡LISTO!" else "RECLAMAR +${reward.coins}" + if (reward.gems > 0) "  +${reward.gems}◆" else "",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Black,
@@ -173,42 +197,31 @@ private fun DayTile(day: Int, today: Int, claimed: Boolean, modifier: Modifier, 
         isToday -> Sage
         else -> Navy
     }
-    Column(
-        modifier = modifier
-            .scale(pulse)
-            .height(92.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                when {
-                    isToday -> accent.copy(alpha = 0.16f)
-                    isPast -> Navy.copy(alpha = 0.05f)
-                    else -> Color.White
-                }
-            )
-            .border(
-                width = if (isToday) 2.dp else 1.dp,
-                color = if (isToday) accent else Navy.copy(alpha = 0.08f),
-                shape = RoundedCornerShape(20.dp)
-            )
-            .padding(vertical = 8.dp),
+    JellyColumn(
+        modifier = modifier.scale(pulse).height(100.dp),
+        shape = RoundedCornerShape(20.dp),
+        fill = when {
+            isToday -> accent.lighten(0.84f)
+            isPast -> Color(0xFFEFE9DD)
+            else -> Color.White
+        },
+        lip = if (isToday) accent.copy(alpha = 0.55f) else Color(0xFFCDB894).copy(alpha = 0.5f),
+        lipHeight = 5.dp,
+        borderColor = if (isToday) accent else null, borderWidth = 2.dp,
+        padding = PaddingValues(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+        verticalArrangement = Arrangement.SpaceBetween,
+        fillHeight = true
     ) {
         Text("DÍA $day", fontSize = 9.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 1.sp)
-        Box(
-            modifier = Modifier.size(34.dp).background((if (isPast) Sage else Gold).copy(alpha = 0.16f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = when {
-                    isPast -> Icons.Rounded.Check
-                    reward.isChest -> Icons.Rounded.Inventory2
-                    else -> Icons.Rounded.MonetizationOn
-                },
-                contentDescription = null,
-                tint = if (isPast) Sage else if (reward.isChest) Gold else Gold,
-                modifier = Modifier.size(20.dp)
-            )
+        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+            if (isPast) {
+                Box(Modifier.size(30.dp).background(Sage.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Check, contentDescription = null, tint = Sage, modifier = Modifier.size(20.dp))
+                }
+            } else {
+                CozyIcon(if (reward.isChest) CozyKind.CHEST else CozyKind.COIN, Modifier.size(if (isToday) 36.dp else 30.dp).then(if (isToday) Modifier.breathing(0.08f, 800) else Modifier))
+            }
         }
         CozyText(
             text = "${reward.coins}" + if (reward.gems > 0) " +${reward.gems}◆" else "",

@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.rewards
 
+import androidx.compose.ui.graphics.compositeOver
 import com.korkoor.pardos.ui.design.CozyText
 
 import android.app.Activity
@@ -44,6 +45,8 @@ import com.korkoor.pardos.domain.retention.SeasonPass
 import com.korkoor.pardos.ui.collection.chestColor
 import com.korkoor.pardos.ui.collection.chestName
 import com.korkoor.pardos.ui.design.*
+import com.korkoor.pardos.R
+import androidx.compose.ui.graphics.graphicsLayer
 import com.korkoor.pardos.ui.game.logic.AdManager
 import kotlinx.coroutines.delay
 
@@ -96,22 +99,22 @@ fun TodayStrip(
 
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         TodayTile(
-            icon = Icons.Rounded.Inventory2, color = Terracotta, title = "COFRE",
+            icon = Icons.Rounded.Inventory2, color = Terracotta, title = "COFRE", art = if (Season.halloween) R.drawable.ico_pumpkin else null,
             status = if (chestReady) "¡LISTO!" else formatWait(remaining), hot = chestReady,
             modifier = Modifier.weight(1f), onClick = onChest
         )
         TodayTile(
-            icon = Icons.Rounded.Casino, color = Violet, title = "RULETA",
+            icon = Icons.Rounded.Casino, color = Violet, title = "RULETA", art = if (Season.halloween) R.drawable.ico_ghost else null,
             status = if (wheel.freeLeft > 0) "GRATIS" else if (wheel.adLeft > 0) "+${wheel.adLeft} con ad" else "Mañana", hot = wheel.freeLeft > 0,
             modifier = Modifier.weight(1f), onClick = onWheel
         )
         TodayTile(
-            icon = Icons.Rounded.WorkspacePremium, color = Gold, title = "PASE",
+            icon = Icons.Rounded.WorkspacePremium, color = Gold, title = "PASE", art = if (Season.halloween) R.drawable.ico_bat else null,
             status = "Nivel $tier", hot = claimable > 0, badge = claimable.takeIf { it > 0 },
             modifier = Modifier.weight(1f), onClick = onSeason
         )
         TodayTile(
-            icon = Icons.Rounded.Savings, color = GemBlue, title = "HUCHA",
+            icon = Icons.Rounded.Savings, color = GemBlue, title = "HUCHA", art = if (Season.halloween) R.drawable.ico_candy else null,
             status = "$piggy ◆", hot = false,
             modifier = Modifier.weight(1f), onClick = onPiggy
         )
@@ -121,7 +124,7 @@ fun TodayStrip(
 @Composable
 private fun TodayTile(
     icon: ImageVector, color: Color, title: String, status: String, hot: Boolean,
-    modifier: Modifier, onClick: () -> Unit, badge: Int? = null
+    modifier: Modifier, onClick: () -> Unit, badge: Int? = null, art: Int? = null
 ) {
     val pulse by rememberInfiniteTransition(label = "tile").animateFloat(
         initialValue = 1f, targetValue = if (hot) 1.05f else 1f,
@@ -129,20 +132,26 @@ private fun TodayTile(
     )
     val shape = RoundedCornerShape(20.dp)
     Box(modifier = modifier.scale(pulse)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(if (hot) color.copy(alpha = 0.14f) else Color.White)
-                .border(if (hot) 2.dp else 1.dp, if (hot) color else Navy.copy(alpha = 0.07f), shape)
-                .clickable(onClick = onClick)
-                .padding(vertical = 12.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        JellyCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onClick,
+            shape = shape,
+            fill = if (hot) color.lighten(0.86f) else Color.White,
+            lip = if (hot) color.copy(alpha = 0.55f) else Color(0xFFCDB894).copy(alpha = 0.55f),
+            lipHeight = 4.dp
         ) {
-            IconTile(icon, color, size = 38.dp)
-            Spacer(Modifier.height(6.dp))
-            Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 1.5.sp)
-            CozyText(status, fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (hot) color else Navy, maxLines = 1)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (hot) Modifier.border(2.dp, color, shape) else Modifier)
+                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (art != null) SeasonTile(art, color, 38.dp) else IconTile(icon, color, size = 38.dp)
+                Spacer(Modifier.height(6.dp))
+                Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 1.5.sp)
+                CozyText(status, fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (hot) color else Navy, maxLines = 1)
+            }
         }
         if (badge != null) {
             Box(
@@ -160,23 +169,45 @@ private fun TodayTile(
 @Composable
 internal fun CardDialog(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(Radius.XLarge)).background(Color.White).padding(22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            content = content
-        )
+        Box(Modifier.fillMaxWidth().popIn()) {
+            JellyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(Radius.XLarge),
+                lipHeight = 8.dp,
+                padding = PaddingValues(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                content = content
+            )
+            // Noche de brujas: telaraña colgando de la esquina de la tarjeta
+            if (Season.halloween) {
+                androidx.compose.foundation.Image(
+                    androidx.compose.ui.res.painterResource(R.drawable.ico_web), contentDescription = null,
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = 2.dp).size(84.dp)
+                        .then(Modifier.graphicsLayer { scaleX = -1f; alpha = 0.55f })
+                )
+            }
+        }
     }
 }
 
 @Composable
 internal fun DialogButton(text: String, color: Color, enabled: Boolean = true, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxWidth().height(50.dp).clip(RoundedCornerShape(Radius.Medium))
-            .background(if (enabled) color else Navy.copy(alpha = 0.08f))
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center
+    val base = if (enabled) color else Navy.copy(alpha = 0.10f).compositeOver(Color.White)
+    JellyCard(
+        modifier = Modifier.fillMaxWidth().height(54.dp),
+        onClick = onClick, enabled = enabled,
+        shape = RoundedCornerShape(Radius.Medium),
+        fill = base, lip = if (enabled) base.deepen(0.38f) else Navy.copy(alpha = 0.10f), lipHeight = 5.dp,
+        brush = if (enabled) base.toyGradient() else null
     ) {
-        Text(text.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp, color = if (enabled) Color.White else Navy.copy(alpha = 0.35f))
+        if (enabled) Box(
+            Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 16.dp, end = 16.dp).fillMaxWidth().height(7.dp)
+                .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(50))
+        )
+        Text(
+            text.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp,
+            color = if (enabled) Color.White else Navy.copy(alpha = 0.35f), modifier = Modifier.align(Alignment.Center)
+        )
     }
 }
 

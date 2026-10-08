@@ -70,8 +70,8 @@ fun LeagueCard(retention: RetentionManager, modifier: Modifier = Modifier) {
     val risk = Leagues.atRisk(league, stars)
     val next = league.next()
 
-    Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    JellySurface(
+        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(32.dp),
         color = Color.White,
         shadowElevation = 12.dp,

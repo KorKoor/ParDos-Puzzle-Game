@@ -25,7 +25,7 @@ fun AchievementPopUp(achievement: Achievement) {
             .fillMaxWidth(0.9f)
             .height(85.dp),
         shape = RoundedCornerShape(24.dp),
-        color = Color(0xFF3D405B),
+        color = com.korkoor.pardos.ui.design.Navy,
         shadowElevation = 15.dp,
         border = BorderStroke(1.dp, achievement.color.copy(alpha = 0.3f))
     ) {

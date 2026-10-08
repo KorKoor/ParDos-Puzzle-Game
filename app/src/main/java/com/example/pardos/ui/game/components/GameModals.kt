@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +26,7 @@ fun GameModal(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF3D405B).copy(alpha = 0.4f)),
+            .background(com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.4f)),
         contentAlignment = Alignment.Center
     ) {
         Card(
@@ -43,7 +45,7 @@ fun GameModal(
                     text = title,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF3D405B),
+                    color = com.korkoor.pardos.ui.design.Navy,
                     letterSpacing = 1.sp
                 )
 
@@ -55,7 +57,7 @@ fun GameModal(
                     fontWeight = FontWeight.Medium
                 )
 
-                Button(
+                ToyButton(
                     onClick = onAction,
                     colors = ButtonDefaults.buttonColors(containerColor = color),
                     shape = RoundedCornerShape(24.dp),

@@ -1,44 +1,18 @@
 package com.korkoor.pardos.domain.model
 
-import com.korkoor.pardos.domain.logic.ProgressionEngine
-import com.korkoor.pardos.domain.model.LevelInfo
+import com.korkoor.pardos.domain.level.LevelCatalog
+import com.korkoor.pardos.domain.level.LevelSpec
 
 object LevelRepository {
-        fun getGeneratedLevels(): List<LevelInfo> {
-            val totalLevels = 2400
-            val levels = mutableListOf<LevelInfo>()
+    /** Los niveles de la campaña, tal como los define [LevelCatalog] (solo el primero empieza desbloqueado). */
+    fun getGeneratedLevels(): List<LevelInfo> = LevelCatalog.all().map(::infoFor)
 
-            for (i in 1..totalLevels) {
-                // ✅ FIX: Usamos el Engine para que la meta coincida con la del juego real.
-                // (Si el Engine dice que Nivel 7 es 512, aquí también será 512).
-                val finalTarget = ProgressionEngine.calculateTargetForLevel(i)
-
-                // ⏱️ TU LÓGICA DE TIEMPO (Se mantiene igual, estaba bien)
-                val isChallenge = i % 5 == 0
-                val maxTime = if (isChallenge) {
-                    // El tiempo empieza en 180s y baja 2s cada 10 niveles (mínimo 45s)
-                    (180L - (i / 10 * 2)).coerceAtMost(600L).coerceAtLeast(45L)
-                } else null
-
-                levels.add(
-                    LevelInfo(
-                        id = i,
-                        target = finalTarget,
-                        isLocked = i > 1, // Solo el 1 empieza desbloqueado
-                        starsEarned = 0,
-                        // ✅ Inicializamos los nuevos campos en 0
-                        bestTime = 0L,
-                        bestMoves = 0,
-                        difficultyName = when {
-                            i % 25 == 0 -> "ÉPICO"
-                            isChallenge -> "Desafío"
-                            i % 2 == 0 -> "Normal"
-                            else -> "Zen"
-                        },
-                        maxTime = maxTime
-                    )
-                )
-            }
-            return levels
-        }
-    }
+    fun infoFor(spec: LevelSpec) = LevelInfo(
+        id = spec.id,
+        target = spec.goalValue,
+        isLocked = spec.id > 1,
+        difficultyName = spec.title,
+        maxTime = spec.timeLimitMs?.let { it / 1000 },
+        spec = spec
+    )
+}

@@ -8,4 +8,5 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="halloween_night">#FF1B0F3A</color>
+    <color name="splash_paper">#FFFFF4E3</color>
 </resources>

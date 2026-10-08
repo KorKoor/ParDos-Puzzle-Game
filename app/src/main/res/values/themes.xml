@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fondo de la ventana mientras carga: la noche de Halloween, para que no haya destello blanco -->
+    <!-- Fondo de la ventana mientras carga: papel cálido (el mismo del inicio de la app), sin destello oscuro ni blanco -->
     <style name="Theme.ParDos" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@color/halloween_night</item>
+        <item name="android:windowBackground">@color/splash_paper</item>
     </style>
 </resources>

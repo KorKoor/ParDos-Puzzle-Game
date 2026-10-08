@@ -6,13 +6,17 @@ enum class ProductKind { GEMS, VIP, STARTER, STUDIO, SEASON_PASS, PIGGY }
 data class StoreProduct(
     val id: String,
     val kind: ProductKind,
-    val gems: Int = 0
+    val gems: Int = 0,
+    /** Precio de referencia en centavos de dólar (solo para calcular el "% extra" que se enseña; el cobro real lo fija Play). */
+    val usdCents: Int = 0
 )
 
 object ShopCatalog {
+    const val GEMS_TINY = "gems_tiny"
     const val GEMS_SMALL = "gems_small"
     const val GEMS_MEDIUM = "gems_medium"
     const val GEMS_LARGE = "gems_large"
+    const val GEMS_HUGE = "gems_huge"
     const val VIP_FOREVER = "vip_forever"
     const val STARTER_PACK = "starter_pack"
     /** Desbloquea el editor de la skin Studio (compra única). */
@@ -23,9 +27,11 @@ object ShopCatalog {
     const val PIGGY_BREAK = "piggy_break"
 
     val products: List<StoreProduct> = listOf(
-        StoreProduct(GEMS_SMALL, ProductKind.GEMS, gems = 100),
-        StoreProduct(GEMS_MEDIUM, ProductKind.GEMS, gems = 550),
-        StoreProduct(GEMS_LARGE, ProductKind.GEMS, gems = 1200),
+        StoreProduct(GEMS_TINY, ProductKind.GEMS, gems = 45, usdCents = 99),
+        StoreProduct(GEMS_SMALL, ProductKind.GEMS, gems = 100, usdCents = 199),
+        StoreProduct(GEMS_MEDIUM, ProductKind.GEMS, gems = 550, usdCents = 999),
+        StoreProduct(GEMS_LARGE, ProductKind.GEMS, gems = 1200, usdCents = 1999),
+        StoreProduct(GEMS_HUGE, ProductKind.GEMS, gems = 3500, usdCents = 4999),
         StoreProduct(VIP_FOREVER, ProductKind.VIP),
         StoreProduct(STARTER_PACK, ProductKind.STARTER),
         StoreProduct(SKIN_STUDIO, ProductKind.STUDIO),

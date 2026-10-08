@@ -265,7 +265,7 @@ fun LevelSelectorScreen(
                     .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 4.dp, modifier = Modifier.size(42.dp)) {
+                JellySurface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 4.dp, modifier = Modifier.size(42.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Atrás", tint = Navy)
                     }
@@ -344,9 +344,9 @@ fun LevelSelectorScreen(
         ) {
             Row(
                 modifier = Modifier
-                    .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = Color(0xFF6B9E86))
+                    .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = Sage)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Brush.horizontalGradient(listOf(Color(0xFF7FB69C), Color(0xFF5A8C74))))
+                    .background(Brush.horizontalGradient(listOf(SageLight, SageDark)))
                     .clickable { scope.launch { listState.animateScrollToItem((currentIndex - 3).coerceAtLeast(0)) } }
                     .padding(horizontal = 22.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -411,11 +411,12 @@ fun LevelSelectorScreen(
 
 @Composable
 private fun LevelPreviewCard(level: LevelInfo, onPlay: () -> Unit) {
-    val color = chapterColor(chapterOf(level.id))
-    val size = ProgressionEngine.calculateBoardSize(level.target)
-    val timeText = level.maxTime?.let { "${it / 60}:${(it % 60).toString().padStart(2, '0')}" }
+    val chapterColor = chapterColor(chapterOf(level.id))
+    val spec = level.spec
+    val kind = level.kind
+    val color = if (spec != null && kind != com.korkoor.pardos.domain.level.LevelKind.ZEN) kind.accent() else chapterColor
 
-    Surface(
+    JellySurface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         color = Color(0xFFFFFBF5),
@@ -426,76 +427,97 @@ private fun LevelPreviewCard(level: LevelInfo, onPlay: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(Modifier.width(40.dp).height(4.dp).background(Navy.copy(alpha = 0.12f), CircleShape))
-            Spacer(Modifier.height(16.dp))
-            Text("NIVEL ${level.id}", fontSize = 24.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 2.sp)
-            Text(level.difficultyName.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Black, color = color, letterSpacing = 2.sp)
-
             Spacer(Modifier.height(14.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                com.korkoor.pardos.ui.game.components.KindBadge(kind, 40.dp)
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text("NIVEL ${level.id}", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 2.sp)
+                    Text((spec?.title ?: level.difficultyName).uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Black, color = color.darker(0.85f), letterSpacing = 2.sp)
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 repeat(3) { i ->
                     Icon(
                         Icons.Rounded.Star, contentDescription = null,
                         tint = if (i < level.starsEarned) Color(0xFFFFC83D) else Navy.copy(alpha = 0.12f),
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                PreviewStat("META", "${level.target}")
-                PreviewStat("TABLERO", "${size}×$size")
-                PreviewStat("TIEMPO", timeText ?: "Libre")
+            if (spec != null) {
+                Spacer(Modifier.height(14.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.korkoor.pardos.ui.game.components.BoardMiniPreview(spec, boardSize = 92.dp)
+                    Spacer(Modifier.width(18.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        PreviewStat("META", when {
+                            spec.goal == com.korkoor.pardos.domain.level.LevelGoal.SCORE -> com.korkoor.pardos.domain.level.formatThousands(spec.goalValue) + " pts"
+                            spec.goal == com.korkoor.pardos.domain.level.LevelGoal.MERGES -> "${spec.goalValue} fusiones"
+                            spec.goal == com.korkoor.pardos.domain.level.LevelGoal.COMBO -> "Combo de ${spec.goalValue}" + if (spec.goalCount > 1) " ×${spec.goalCount}" else ""
+                            spec.goal == com.korkoor.pardos.domain.level.LevelGoal.LADDER -> "${spec.goalValue shr (spec.goalCount - 1)}…${spec.goalValue}"
+                            spec.goalCount > 1 -> "${spec.goalCount}×${spec.goalValue}"
+                            else -> "${spec.goalValue}"
+                        }, Alignment.Start)
+                        PreviewStat("LÍMITE", when {
+                            spec.moveLimit != null -> "${spec.moveLimit} mov."
+                            spec.timeLimitMs != null -> com.korkoor.pardos.domain.level.formatClock(spec.timeLimitMs!!)
+                            else -> "Libre"
+                        }, Alignment.Start)
+                        PreviewStat("TABLERO", "${spec.boardSize}×${spec.boardSize}" + if (spec.stones.isNotEmpty()) " · ${spec.stones.size} ${if (spec.stones.size == 1) "piedra" else "piedras"}" else "", Alignment.Start)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    kind.rule, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Navy.copy(alpha = 0.6f), textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    com.korkoor.pardos.domain.level.LevelRules.threeStarHint(spec),
+                    fontSize = 11.sp, color = Navy.copy(alpha = 0.45f), textAlign = TextAlign.Center
+                )
             }
 
             val toChest = com.korkoor.pardos.domain.rewards.ChapterRewards.lastLevelOf(chapterOf(level.id)) - level.id
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
-                modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(color.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 7.dp),
+                modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(chapterColor.copy(alpha = 0.12f)).padding(horizontal = 12.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+                Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = chapterColor, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
                     if (toChest <= 0) "Este nivel abre el cofre del capítulo" else "Cofre del capítulo en $toChest ${if (toChest == 1) "nivel" else "niveles"}",
-                    fontSize = 11.sp, fontWeight = FontWeight.Black, color = color.darker(0.8f)
+                    fontSize = 11.sp, fontWeight = FontWeight.Black, color = chapterColor.darker(0.8f)
                 )
             }
 
             if (level.bestMoves > 0) {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
                     "Tu mejor: ${level.bestMoves} mov.",
                     fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Navy.copy(alpha = 0.5f)
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF7FB69C), Color(0xFF5A8C74))))
-                    .clickable(onClick = onPlay),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(26.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (level.starsEarned > 0) "JUGAR DE NUEVO" else "JUGAR",
-                        fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 2.sp
-                    )
-                }
-            }
+            Spacer(Modifier.height(16.dp))
+            PrimaryButton(
+                text = if (level.starsEarned > 0) "Jugar de nuevo" else "Jugar",
+                onClick = onPlay,
+                icon = Icons.Rounded.PlayArrow,
+                height = 60.dp,
+                color = color.actionTone()
+            )
         }
     }
 }
 
 @Composable
-private fun PreviewStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun PreviewStat(label: String, value: String, align: Alignment.Horizontal = Alignment.CenterHorizontally) {
+    Column(horizontalAlignment = align) {
         Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
         Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.4f), letterSpacing = 1.5.sp)
     }
@@ -511,7 +533,7 @@ private fun ChapterSheet(
     chapters: List<Int>, levels: List<LevelInfo>, currentChapter: Int, visibleChapter: Int,
     onPick: (Int) -> Unit, onClose: () -> Unit
 ) {
-    Surface(
+    JellySurface(
         modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp),
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
         color = Color(0xFFFFFBF5), shadowElevation = 20.dp

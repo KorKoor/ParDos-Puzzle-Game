@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
@@ -55,12 +56,10 @@ import com.korkoor.pardos.ui.profile.getAvatarResource
 @Composable
 fun PlayerHeader(profile: UserProfile, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val xpProgress = (profile.currentXp.toFloat() / profile.xpToNextLevel.coerceAtLeast(1)).coerceIn(0f, 1f)
-    Surface(
+    JellyCard(
         onClick = onClick,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
-        color = Color.White,
-        shadowElevation = 6.dp
+        shape = RoundedCornerShape(26.dp)
     ) {
         Box {
         // Tu banner asoma por la derecha; a la izquierda un velo claro mantiene el texto legible
@@ -146,7 +145,28 @@ fun StreakChip(days: Int) {
     }
 }
 
-/** Botón principal: continúa la campaña desde el nivel actual. */
+/** Ficha pequeña decorativa del botón principal: flota y se balancea como si el tablero estuviera vivo. */
+@Composable
+private fun FloatingTile(value: Int, size: androidx.compose.ui.unit.Dp, tilt: Float, phase: Int, modifier: Modifier = Modifier) {
+    val bob by rememberInfiniteTransition(label = "tileBob$value").animateFloat(
+        initialValue = -3f, targetValue = 3f,
+        animationSpec = infiniteRepeatable(tween(1700 + phase * 260, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "bob"
+    )
+    val face = when (value) { 2 -> Color(0xFFFFF3E2); 4 -> Color(0xFFFBDDB0); else -> Color(0xFFF2B27A) }
+    Box(
+        modifier = modifier
+            .size(size)
+            .graphicsLayer { translationY = bob.dp.toPx(); rotationZ = tilt + bob * 0.8f }
+            .background(Color.Black.copy(alpha = 0.10f), RoundedCornerShape(size * 0.26f))
+            .padding(bottom = 3.dp)
+            .background(Brush.verticalGradient(listOf(face.lighten(0.35f), face)), RoundedCornerShape(size * 0.26f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("$value", fontSize = (size.value * 0.46f).sp, fontWeight = FontWeight.Black, color = Color(0xFF7A4B2A))
+    }
+}
+
+/** Botón principal: continúa la campaña desde el nivel actual. Pieza de juguete grande con fichas flotando. */
 @Composable
 fun HeroPlayCard(
     title: String,
@@ -154,62 +174,58 @@ fun HeroPlayCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 300f),
-        label = "heroScale"
-    )
-    val shape = RoundedCornerShape(30.dp)
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(116.dp)
-            .scale(scale)
-            .shadow(if (pressed) 4.dp else 18.dp, shape, spotColor = Sage)
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(Color(0xFF7FB69C), Color(0xFF5A8C74))))
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = 24.dp),
-        contentAlignment = Alignment.CenterStart
+    val base = Sage
+    val halloween = Season.halloween
+    JellyCard(
+        modifier = modifier.fillMaxWidth().height(124.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(30.dp),
+        fill = base,
+        lip = if (halloween) SageDark.darker(0.62f) else Color(0xFF3F6B57),
+        lipHeight = 7.dp,
+        brush = Brush.verticalGradient(listOf(SageLight, Sage, SageDark))
     ) {
-        // Fichas decorativas al fondo
+        // brillo de plástico
         Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .offset(x = 18.dp)
-                .size(96.dp)
-                .background(Color.White.copy(alpha = 0.10f), RoundedCornerShape(28.dp))
+            Modifier.align(Alignment.TopCenter).padding(top = 6.dp, start = 26.dp, end = 26.dp)
+                .fillMaxWidth().height(14.dp).background(Color.White.copy(alpha = 0.20f), RoundedCornerShape(50))
         )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = (-30).dp, y = 14.dp)
-                .size(34.dp)
-                .background(Color.White.copy(alpha = 0.14f), RoundedCornerShape(11.dp))
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // fichas flotantes (en Noche de brujas: calabaza, fantasma y murciélago)
+        if (halloween) {
+            FloatingSprite(com.korkoor.pardos.R.drawable.ico_pumpkin, 50.dp, 8f, 2, Modifier.align(Alignment.TopEnd).offset(x = (-16).dp, y = 14.dp))
+            FloatingSprite(com.korkoor.pardos.R.drawable.ico_ghost, 40.dp, -10f, 0, Modifier.align(Alignment.CenterEnd).offset(x = (-70).dp, y = 18.dp))
+            FloatingSprite(com.korkoor.pardos.R.drawable.ico_bat, 36.dp, 10f, 1, Modifier.align(Alignment.BottomEnd).offset(x = (-24).dp, y = (-10).dp))
+        } else {
+            FloatingTile(8, 40.dp, 10f, 2, Modifier.align(Alignment.TopEnd).offset(x = (-22).dp, y = 22.dp))
+            FloatingTile(2, 34.dp, -12f, 0, Modifier.align(Alignment.CenterEnd).offset(x = (-78).dp, y = 12.dp))
+            FloatingTile(4, 30.dp, 8f, 1, Modifier.align(Alignment.BottomEnd).offset(x = (-26).dp, y = (-18).dp))
+        }
+        Row(
+            modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Box(
-                modifier = Modifier.size(54.dp).background(Color.White.copy(alpha = 0.22f), CircleShape),
+                modifier = Modifier.size(58.dp).breathing(0.06f, 1300)
+                    .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.34f), Color.White.copy(alpha = 0.16f))), CircleShape)
+                    .border(1.5.dp, Color.White.copy(alpha = 0.45f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(34.dp))
+                Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
             }
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(
                     text = title.uppercase(),
-                    fontSize = 22.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Black,
                     color = Color.White,
                     letterSpacing = 3.sp
                 )
                 Text(
-                    text = subtitle,
+                    text = if (halloween) "$subtitle  ·  ¡BUU!" else subtitle,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.White.copy(alpha = 0.85f),
                     letterSpacing = 1.sp
                 )
             }
@@ -227,15 +243,14 @@ fun QuickActionCard(
     modifier: Modifier = Modifier,
     dark: Boolean = false
 ) {
-    Surface(
+    JellyCard(
         onClick = onClick,
-        modifier = modifier.height(84.dp),
+        modifier = modifier.height(88.dp),
         shape = RoundedCornerShape(24.dp),
-        color = if (dark) Navy else Color.White,
-        shadowElevation = 8.dp
+        fill = if (dark) Navy else Color.White
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp),
+            modifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -268,11 +283,9 @@ data class DockItem(val label: String, val icon: ImageVector, val color: Color, 
 /** Barra de navegación flotante inferior. */
 @Composable
 fun BottomDock(items: List<DockItem>, modifier: Modifier = Modifier) {
-    Surface(
+    JellyCard(
         modifier = modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = Color.White.copy(alpha = 0.97f),
-        shadowElevation = 14.dp
+        shape = RoundedCornerShape(28.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
@@ -344,22 +357,35 @@ fun EventBanner(
             EventStyle(R.string.event_independence_title, R.string.event_independence_desc, Icons.Rounded.Celebration, Color(0xFF1B8A5A))
     }
     val left = event.daysLeft(today)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.18f), color.copy(alpha = 0.06f))))
-            .border(1.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+    val art = when (event.type) {
+        com.korkoor.pardos.domain.events.EventType.HALLOWEEN -> R.drawable.ico_pumpkin
+        com.korkoor.pardos.domain.events.EventType.DAY_OF_THE_DEAD -> R.drawable.ico_skull
+        com.korkoor.pardos.domain.events.EventType.CHRISTMAS -> R.drawable.ico_xmas
+        com.korkoor.pardos.domain.events.EventType.NEW_YEAR -> R.drawable.ico_fireworks
+        com.korkoor.pardos.domain.events.EventType.VALENTINE -> R.drawable.ico_cupid
+        com.korkoor.pardos.domain.events.EventType.SPRING -> R.drawable.ico_tulip
+        com.korkoor.pardos.domain.events.EventType.SUMMER -> R.drawable.ico_beach
+        com.korkoor.pardos.domain.events.EventType.INDEPENDENCE -> R.drawable.ico_balloon
+        com.korkoor.pardos.domain.events.EventType.WEEKEND_GOLD -> R.drawable.ico_star
+        com.korkoor.pardos.domain.events.EventType.XP_WEDNESDAY -> R.drawable.ico_sparkles
+        com.korkoor.pardos.domain.events.EventType.FESTIVAL_WEEK -> R.drawable.ico_party
+    }
+    JellyRow(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        fill = color.lighten(0.88f),
+        lip = color.copy(alpha = 0.45f),
+        lipHeight = 5.dp,
+        borderColor = color.copy(alpha = 0.40f),
+        padding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(40.dp).background(color.copy(alpha = 0.2f), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(24.dp))
-        }
+        Image(
+            painter = androidx.compose.ui.res.painterResource(art),
+            contentDescription = null,
+            modifier = Modifier.size(48.dp).wobble(6f, 1900)
+        )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(

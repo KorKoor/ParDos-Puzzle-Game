@@ -54,4 +54,17 @@ class DeterminismTest {
         assertEquals(setOf(4, 5), configs.map { it.boardSize }.toSet())
         assertEquals(setOf(1024, 2048), configs.map { it.target }.toSet())
     }
+
+    @Test fun dailyChallengeHasADifferentRuleEachWeekdayAndIsPlayable() {
+        val days = (20000..20400).map { DailyChallenge.forDay(it) }
+        // el tipo de reto sigue al día de la semana
+        days.forEach { assertEquals(DailyChallenge.WEEK[DailyChallenge.weekday(it.day)], it.spec.kind) }
+        assertEquals(DailyChallenge.WEEK.toSet(), days.map { it.spec.kind }.toSet())
+        // el día 0 (1-1-1970) fue jueves
+        assertEquals(3, DailyChallenge.weekday(0))
+        // y todos los retos son válidos
+        val problems = days.flatMap { com.korkoor.pardos.domain.level.LevelValidator.problems(it.spec) }
+        assertTrue(problems.isEmpty(), problems.take(10).joinToString("; "))
+        assertTrue(days.all { it.spec.boardSize == it.boardSize })
+    }
 }

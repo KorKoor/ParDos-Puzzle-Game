@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.JellySurface
+import com.korkoor.pardos.ui.design.Sage
 import android.app.Activity
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -55,7 +57,7 @@ fun PowerUpBar(
     viewModel: GameViewModel,
     activity: Activity?,
     modifier: Modifier = Modifier,
-    labelColor: Color = Color(0xFF3D405B)
+    labelColor: Color = com.korkoor.pardos.ui.design.Navy
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val isVip by remember { com.korkoor.pardos.data.local.EconomyManager(context).isVip }.collectAsState()
@@ -78,7 +80,7 @@ fun PowerUpBar(
         PowerUpButton(
             label = stringResource(R.string.clean_powerup),
             glyph = PowerGlyph.WAND,
-            color = Color(0xFF6B9E86),
+            color = Sage,
             lastUseTime = viewModel.lastCleanTime,
             viewModel = viewModel,
             labelColor = labelColor,
@@ -246,7 +248,7 @@ private fun PowerOrb(
                     )
                     if (centerText != null) {
                         Text(
-                            text = centerText, fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B).copy(alpha = 0.7f),
+                            text = centerText, fontSize = 10.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f),
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
                         )
                     }

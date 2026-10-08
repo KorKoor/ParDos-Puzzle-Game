@@ -74,7 +74,7 @@ fun StudioScreen(onBack: () -> Unit, price: String?, onBuy: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     val style = remember(draft) { draft.toStyle() }
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             PardosTopBar(eyebrow = "Skin de autor", title = "Studio", onBack = onBack)
 

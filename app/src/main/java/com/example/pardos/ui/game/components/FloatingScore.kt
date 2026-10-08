@@ -53,7 +53,7 @@ fun FloatingScore(
 
     Text(
         text = "+${score.value}",
-        color = Color(0xFF3D405B).copy(alpha = currentAlpha),
+        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = currentAlpha),
         fontSize = 20.sp,
         fontWeight = FontWeight.ExtraBold,
         modifier = Modifier

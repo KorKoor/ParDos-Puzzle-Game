@@ -69,6 +69,7 @@ import com.korkoor.pardos.ui.design.Gold
 import com.korkoor.pardos.ui.design.Navy
 import com.korkoor.pardos.ui.design.Sage
 import com.korkoor.pardos.ui.design.darker
+import com.korkoor.pardos.ui.design.accent
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -78,11 +79,11 @@ import kotlin.random.Random
 //  MUNDOS DEL MAPA: cada capítulo tiene color, nombre y paisaje propios
 // =====================================================================================
 
-internal enum class SceneryKind { DUNES, PINES, RIVER, HILLS, CLOUDS, LAVENDER, LANTERNS, MOUNTAINS, CHERRY, GOLD_DUNES, MOON, BAMBOO }
+internal enum class SceneryKind { DUNES, PINES, RIVER, HILLS, CLOUDS, LAVENDER, LANTERNS, MOUNTAINS, CHERRY, GOLD_DUNES, MOON, BAMBOO, GRAVEYARD, DEAD_FOREST, PUMPKINS, HAUNTED }
 
 internal data class ChapterTheme(val name: String, val color: Color, val scenery: SceneryKind)
 
-internal val chapterThemes = listOf(
+private val dayThemes = listOf(
     ChapterTheme("Jardín de Arena", Color(0xFF6B9E86), SceneryKind.DUNES),
     ChapterTheme("Bosque Sereno", Color(0xFF3F9468), SceneryKind.PINES),
     ChapterTheme("Orilla del Río", Color(0xFF4E8FA6), SceneryKind.RIVER),
@@ -96,6 +97,24 @@ internal val chapterThemes = listOf(
     ChapterTheme("Bahía Lunar", Color(0xFF4B5BA8), SceneryKind.MOON),
     ChapterTheme("Templo de Bambú", Color(0xFF3E9E7A), SceneryKind.BAMBOO)
 )
+
+/** Los mundos de Noche de brujas: mismos paisajes de siempre con otro nombre y color, más cuatro nuevos (cementerio, bosque, calabazar, mansión). */
+private val nightThemes = listOf(
+    ChapterTheme("Cementerio Sereno", Color(0xFF7A56C0), SceneryKind.GRAVEYARD),
+    ChapterTheme("Bosque Encantado", Color(0xFF2F8A7A), SceneryKind.DEAD_FOREST),
+    ChapterTheme("Pantano Brumoso", Color(0xFF5E9C45), SceneryKind.RIVER),
+    ChapterTheme("Calabazar", Color(0xFFE8772E), SceneryKind.PUMPKINS),
+    ChapterTheme("Faro Fantasma", Color(0xFF8E86C0), SceneryKind.CLOUDS),
+    ChapterTheme("Mansión Embrujada", Color(0xFF6A3FA0), SceneryKind.HAUNTED),
+    ChapterTheme("Mercado de Brujas", Color(0xFFE0782F), SceneryKind.LANTERNS),
+    ChapterTheme("Pico Aullante", Color(0xFF5668A8), SceneryKind.MOUNTAINS),
+    ChapterTheme("Árbol de las Almas", Color(0xFF9B5FD0), SceneryKind.CHERRY),
+    ChapterTheme("Tumbas de Momias", Color(0xFFD59A2B), SceneryKind.GOLD_DUNES),
+    ChapterTheme("Bahía del Barco Fantasma", Color(0xFF3F4FA0), SceneryKind.MOON),
+    ChapterTheme("Templo Maldito", Color(0xFFB33C5E), SceneryKind.BAMBOO)
+)
+
+internal val chapterThemes: List<ChapterTheme> get() = if (com.korkoor.pardos.ui.design.Season.halloween) nightThemes else dayThemes
 
 internal fun chapterTheme(chapter: Int): ChapterTheme = chapterThemes[chapter % chapterThemes.size]
 
@@ -124,7 +143,90 @@ internal fun DrawScope.drawScenery(kind: SceneryKind, tone: Color, left: Boolean
             SceneryKind.CHERRY -> cherry(cx, cy, s, tone, r)
             SceneryKind.MOON -> moon(cx, cy, s, r)
             SceneryKind.BAMBOO -> bamboo(cx, cy, s, tone)
+            SceneryKind.GRAVEYARD -> graveyard(cx, cy, s, tone, r)
+            SceneryKind.DEAD_FOREST -> deadTree(cx, cy, s, tone)
+            SceneryKind.PUMPKINS -> pumpkinPatch(cx, cy, s, r)
+            SceneryKind.HAUNTED -> hauntedHouse(cx, cy, s, tone)
         }
+    }
+    // Noche de brujas: en cualquier mundo asoma, de vez en cuando, una calabaza o una lápida junto al camino
+    if (com.korkoor.pardos.ui.design.Season.halloween && r.nextFloat() < 0.55f) {
+        val ex = if (left) w * (0.05f + r.nextFloat() * 0.14f) else w * (0.80f + r.nextFloat() * 0.15f)
+        val ey = u * (0.62f + r.nextFloat() * 0.22f)
+        if (r.nextBoolean()) pumpkin(ex, ey, u * (0.30f + r.nextFloat() * 0.12f), glow = r.nextBoolean(), a = 0.78f)
+        else tomb(ex, ey + u * 0.14f, u * 0.17f, u * 0.3f, tone.darker(0.5f).copy(alpha = 0.55f))
+    }
+}
+
+// ---- Paisajes de Noche de brujas ----
+
+private fun DrawScope.tomb(x: Float, base: Float, w: Float, h: Float, c: Color) {
+    val p = Path().apply {
+        moveTo(x - w / 2, base); lineTo(x - w / 2, base - h + w / 2)
+        arcTo(androidx.compose.ui.geometry.Rect(x - w / 2, base - h, x + w / 2, base - h + w), 180f, 180f, false)
+        lineTo(x + w / 2, base); close()
+    }
+    drawPath(p, c)
+    drawLine(Color.White.copy(alpha = 0.22f), Offset(x - w * 0.2f, base - h * 0.55f), Offset(x + w * 0.2f, base - h * 0.55f), strokeWidth = w * 0.07f, cap = StrokeCap.Round)
+    drawLine(Color.White.copy(alpha = 0.22f), Offset(x - w * 0.12f, base - h * 0.4f), Offset(x + w * 0.12f, base - h * 0.4f), strokeWidth = w * 0.07f, cap = StrokeCap.Round)
+}
+
+private fun DrawScope.graveyard(cx: Float, cy: Float, s: Float, tone: Color, r: Random) {
+    val base = cy + s * 0.45f
+    drawOval(tone.darker(0.5f).copy(alpha = 0.30f), Offset(cx - s * 0.7f, base - s * 0.06f), Size(s * 1.4f, s * 0.14f))
+    tomb(cx - s * 0.3f, base, s * 0.3f, s * 0.5f, tone.darker(0.55f).copy(alpha = 0.55f))
+    tomb(cx + s * 0.18f, base, s * 0.26f, s * 0.38f, tone.darker(0.5f).copy(alpha = 0.5f))
+    // cruz torcida
+    val kx = cx + s * 0.55f
+    drawLine(tone.darker(0.5f).copy(alpha = 0.5f), Offset(kx, base), Offset(kx + s * 0.02f, base - s * 0.5f), strokeWidth = s * 0.06f, cap = StrokeCap.Round)
+    drawLine(tone.darker(0.5f).copy(alpha = 0.5f), Offset(kx - s * 0.12f, base - s * 0.36f), Offset(kx + s * 0.14f, base - s * 0.4f), strokeWidth = s * 0.06f, cap = StrokeCap.Round)
+}
+
+private fun DrawScope.deadTree(cx: Float, cy: Float, s: Float, tone: Color) {
+    val c = tone.darker(0.45f).copy(alpha = 0.6f)
+    val base = cy + s * 0.5f
+    drawLine(c, Offset(cx, base), Offset(cx + s * 0.03f, cy - s * 0.2f), strokeWidth = s * 0.1f, cap = StrokeCap.Round)
+    listOf(Triple(-0.3f, -0.45f, 0.1f), Triple(0.32f, -0.5f, 0.12f), Triple(-0.22f, -0.1f, 0.15f), Triple(0.28f, -0.12f, 0.2f)).forEach { (ex, ey, sy) ->
+        drawLine(c, Offset(cx + s * 0.02f, cy + s * sy), Offset(cx + s * ex, cy + s * ey), strokeWidth = s * 0.05f, cap = StrokeCap.Round)
+    }
+    // ojos que brillan en el tronco
+    drawCircle(Color(0xFFFFE08A).copy(alpha = 0.85f), s * 0.025f, Offset(cx - s * 0.03f, cy + s * 0.12f))
+    drawCircle(Color(0xFFFFE08A).copy(alpha = 0.85f), s * 0.025f, Offset(cx + s * 0.06f, cy + s * 0.12f))
+}
+
+private fun DrawScope.pumpkin(cx: Float, cy: Float, s: Float, glow: Boolean, a: Float = 0.8f) {
+    val body = Color(0xFFE8772E)
+    if (glow) drawCircle(Color(0xFFFFA03A).copy(alpha = 0.22f), s * 0.7f, Offset(cx, cy))
+    drawOval(body.darker(0.8f).copy(alpha = a), Offset(cx - s * 0.5f, cy - s * 0.36f), Size(s, s * 0.78f))
+    drawOval(body.copy(alpha = a), Offset(cx - s * 0.3f, cy - s * 0.38f), Size(s * 0.6f, s * 0.8f))
+    drawOval(body.darker(0.8f).copy(alpha = a), Offset(cx - s * 0.12f, cy - s * 0.4f), Size(s * 0.24f, s * 0.82f))
+    drawLine(Color(0xFF4F7A3A).copy(alpha = a), Offset(cx, cy - s * 0.38f), Offset(cx + s * 0.08f, cy - s * 0.54f), strokeWidth = s * 0.07f, cap = StrokeCap.Round)
+    if (glow) {
+        val face = Color(0xFFFFE08A)
+        drawPath(Path().apply { moveTo(cx - s * 0.26f, cy - s * 0.08f); lineTo(cx - s * 0.1f, cy - s * 0.08f); lineTo(cx - s * 0.18f, cy - s * 0.22f); close() }, face)
+        drawPath(Path().apply { moveTo(cx + s * 0.26f, cy - s * 0.08f); lineTo(cx + s * 0.1f, cy - s * 0.08f); lineTo(cx + s * 0.18f, cy - s * 0.22f); close() }, face)
+        drawPath(Path().apply {
+            moveTo(cx - s * 0.26f, cy + s * 0.08f); lineTo(cx - s * 0.14f, cy + s * 0.2f); lineTo(cx - s * 0.05f, cy + s * 0.1f)
+            lineTo(cx + s * 0.05f, cy + s * 0.2f); lineTo(cx + s * 0.14f, cy + s * 0.1f); lineTo(cx + s * 0.26f, cy + s * 0.08f)
+            lineTo(cx + s * 0.1f, cy + s * 0.28f); lineTo(cx - s * 0.1f, cy + s * 0.28f); close()
+        }, face)
+    }
+}
+
+private fun DrawScope.pumpkinPatch(cx: Float, cy: Float, s: Float, r: Random) {
+    pumpkin(cx - s * 0.32f, cy + s * 0.18f, s * 0.5f, glow = false, a = 0.6f)
+    pumpkin(cx + s * 0.3f, cy + s * 0.22f, s * 0.42f, glow = false, a = 0.55f)
+    pumpkin(cx, cy + s * 0.05f, s * 0.62f, glow = r.nextBoolean(), a = 0.7f)
+}
+
+private fun DrawScope.hauntedHouse(cx: Float, cy: Float, s: Float, tone: Color) {
+    val ink = tone.darker(0.4f).copy(alpha = 0.7f)
+    val base = cy + s * 0.5f
+    drawRect(ink, Offset(cx - s * 0.4f, base - s * 0.4f), Size(s * 0.8f, s * 0.4f))
+    drawPath(Path().apply { moveTo(cx - s * 0.46f, base - s * 0.4f); lineTo(cx, base - s * 0.7f); lineTo(cx + s * 0.46f, base - s * 0.4f); close() }, ink)
+    drawRect(ink, Offset(cx + s * 0.24f, base - s * 0.78f), Size(s * 0.08f, s * 0.2f))
+    listOf(-0.22f, 0f, 0.22f).forEach { fx ->
+        drawRoundRect(Color(0xFFFFB347).copy(alpha = 0.8f), Offset(cx + s * fx - s * 0.04f, base - s * 0.3f), Size(s * 0.08f, s * 0.12f), CornerRadius(s * 0.03f))
     }
 }
 
@@ -318,7 +420,9 @@ internal fun MapNode(
     val color = theme.color
     val locked = level.isLocked
     val completed = !locked && level.starsEarned > 0
-    val isChallenge = level.id % 5 == 0
+    val kind = level.kind
+    val isBoss = level.spec?.isBoss == true
+    val isChallenge = isBoss
     val isEpic = level.id % 25 == 0
 
     val myX = nodeX(level.id)
@@ -334,7 +438,7 @@ internal fun MapNode(
         1f, if (isCurrent) 1.07f else 1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
     )
 
-    val nodeSize = if (isCurrent) 70.dp else if (isChallenge) 60.dp else 56.dp
+    val nodeSize = if (isCurrent) 70.dp else if (isBoss) 62.dp else 56.dp
 
     BoxWithConstraints(
         modifier = Modifier
@@ -439,6 +543,7 @@ internal fun MapNode(
                     width = if (isEpic) 3.dp else 2.dp,
                     color = when {
                         isEpic && !locked -> Gold
+                        isBoss && !locked -> kind.accent()
                         isCurrent -> Color.White
                         completed -> Color.White.copy(alpha = 0.55f)
                         else -> Navy.copy(alpha = 0.08f)
@@ -510,19 +615,14 @@ internal fun MapNode(
             }
         }
 
-        // Insignia de reto cronometrado
-        if (isChallenge && !locked) {
-            Box(
-                modifier = Modifier
-                    .offset(x = maxWidth * myX + nodeSize / 2 - 16.dp, y = (ROW_HEIGHT - nodeSize) / 2 - 5.dp)
-                    .size(22.dp)
+        // Insignia del tipo de nivel (piedras, sprint, reloj...): se ve de un vistazo qué trae cada nivel
+        if (kind != com.korkoor.pardos.domain.level.LevelKind.ZEN && !locked) {
+            com.korkoor.pardos.ui.game.components.KindBadge(
+                kind, 24.dp,
+                Modifier
+                    .offset(x = maxWidth * myX + nodeSize / 2 - 17.dp, y = (ROW_HEIGHT - nodeSize) / 2 - 6.dp)
                     .shadow(3.dp, CircleShape)
-                    .background(Color(0xFFE07A5F), CircleShape)
-                    .border(2.dp, Color.White, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Rounded.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-            }
+            )
         }
 
         // Amigos que van en este nivel: sus avatares asoman junto al nodo

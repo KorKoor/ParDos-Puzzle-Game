@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.shop
 
+import com.korkoor.pardos.ui.game.components.MergeFxPreview
+import com.korkoor.pardos.domain.collection.Rarity
 import com.korkoor.pardos.ui.design.CozyText
 
 import android.app.Activity
@@ -47,6 +49,7 @@ import com.korkoor.pardos.ui.theme.GameTheme
 private enum class ShopTab(val label: String, val icon: ImageVector) {
     FEATURED("Destacado", Icons.Rounded.AutoAwesome),
     SKINS("Skins", Icons.Rounded.Palette),
+    EFFECTS("Efectos", Icons.Rounded.AutoAwesome),
     CHESTS("Cofres", Icons.Rounded.Inventory2),
     GEMS("Gemas", Icons.Rounded.Diamond)
 }
@@ -72,6 +75,9 @@ fun ShopScreen(
     val freezes by economy.streakFreezes.collectAsState()
     val undos by economy.undos.collectAsState()
     val extraTimes by economy.extraTimes.collectAsState()
+    val boostWins by economy.coinBoostWins.collectAsState()
+    val ownedFx by economy.ownedFx.collectAsState()
+    val equippedFx by economy.equippedFx.collectAsState()
     val isVip by economy.isVip.collectAsState()
     val equippedSkin by economy.equippedSkin.collectAsState()
     val ownedSkins by economy.ownedSkins.collectAsState()
@@ -89,7 +95,7 @@ fun ShopScreen(
 
     LaunchedEffect(Unit) { billing.connect() }
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             PardosTopBar(title = "Tienda", onBack = onBack) {
                 CurrencyPill(Icons.Rounded.MonetizationOn, coins, Gold)
@@ -105,13 +111,11 @@ fun ShopScreen(
             ) {
                 items(ShopTab.entries.toList()) { t ->
                     val sel = t == tab
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(if (sel) Navy else Color.White)
-                            .clickable { tab = t }
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    JellyRow(
+                        onClick = { tab = t },
+                        shape = RoundedCornerShape(18.dp), fill = if (sel) Navy else Color.White, lipHeight = 4.dp,
+                        lip = if (sel) Color(0xFF1E2036) else Color(0xFFCDB894).copy(alpha = 0.55f),
+                        padding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         Icon(t.icon, contentDescription = null, tint = if (sel) Color.White else Navy.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
@@ -133,7 +137,7 @@ fun ShopScreen(
             }
 
             Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp)
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp).staggerIn(0, distance = 26.dp, key = tab)
             ) {
                 when (tab) {
                     ShopTab.FEATURED -> {
@@ -177,8 +181,27 @@ fun ShopScreen(
                         StudioPromo(owned = TileSkin.STUDIO.id in ownedSkins, price = prices[ShopCatalog.SKIN_STUDIO], config = studioConfig, onClick = onStudio)
                         Spacer(Modifier.height(12.dp))
                         VipCard(owned = isVip, price = prices[ShopCatalog.VIP_FOREVER], onBuy = { billing.purchase(activity, ShopCatalog.VIP_FOREVER) })
+                        if (isVip) {
+                            var vipTick by remember { mutableIntStateOf(0) }
+                            val canClaim = remember(vipTick) { economy.canClaimVipDaily() }
+                            Spacer(Modifier.height(10.dp))
+                            ShopRow(
+                                icon = Icons.Rounded.CardGiftcard, color = Gold,
+                                title = "Regalo VIP de hoy", subtitle = if (canClaim) "${VipPerks.DAILY_GEMS} gemas te esperan" else "Ya lo cobraste. Vuelve mañana",
+                                priceText = if (canClaim) "COBRAR" else "LISTO", priceIcon = Icons.Rounded.Diamond, priceColor = GemBlue, enabled = canClaim,
+                                onClick = { val g = economy.claimVipDaily(); if (g > 0) localMessage = "+$g gemas del VIP"; vipTick++ }
+                            )
+                        }
 
                         SectionTitle("CONSUMIBLES")
+                        ShopRow(
+                            icon = Icons.Rounded.Bolt, color = Gold,
+                            title = "Impulso de monedas", subtitle = "+${CoinBoost.BONUS_PERCENT}% en tus próximas ${CoinBoost.WINS} victorias · Activo: $boostWins",
+                            priceText = "${CoinBoost.PRICE_GEMS}", priceIcon = Icons.Rounded.Diamond, priceColor = GemBlue,
+                            enabled = CoinBoost.canBuy(gems, boostWins),
+                            onClick = { localMessage = if (economy.buyCoinBoost()) "¡Impulso activado!" else "No se pudo comprar" }
+                        )
+                        Spacer(Modifier.height(10.dp))
                         ShopRow(
                             icon = Icons.AutoMirrored.Rounded.Undo, color = Terracotta,
                             title = "Deshacer x3", subtitle = "Vuelve atrás un movimiento · Tienes $undos",
@@ -303,6 +326,40 @@ fun ShopScreen(
                         }
                     }
 
+                    ShopTab.EFFECTS -> {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Lo que sale volando cuando dos fichas se juntan. Solo es decoración: no cambia el juego.", fontSize = 12.sp, color = InkSecondary)
+                        Spacer(Modifier.height(12.dp))
+                        MergeFx.entries.chunked(2).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+                                row.forEach { fx ->
+                                    val owned = fx.isFree || fx.id in ownedFx
+                                    FxCard(
+                                        fx = fx, owned = owned, equipped = fx == equippedFx,
+                                        canAfford = coins >= fx.coinPrice && gems >= fx.gemPrice,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            if (owned) {
+                                                economy.equipFx(fx); localMessage = "Efecto equipado: ${fx.displayName}"
+                                            } else when (economy.buyFx(fx)) {
+                                                is MergeFxInventory.Purchase.Ok -> { economy.equipFx(fx); localMessage = "¡${fx.displayName} desbloqueado y equipado!" }
+                                                MergeFxInventory.Purchase.NotEnoughCoins -> localMessage = "Te faltan monedas"
+                                                MergeFxInventory.Purchase.NotEnoughGems -> localMessage = "Te faltan gemas"
+                                                MergeFxInventory.Purchase.NotPurchasable -> localMessage = when (fx.source) {
+                                                    FxSource.STARTER -> "Viene en el Pack inicial"
+                                                    FxSource.SEASON -> "Se consigue en el Pase de temporada"
+                                                    else -> "No está a la venta"
+                                                }
+                                                MergeFxInventory.Purchase.AlreadyOwned -> Unit
+                                            }
+                                        }
+                                    )
+                                }
+                                if (row.size == 1) Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+
                     ShopTab.CHESTS -> {
                         Spacer(Modifier.height(8.dp))
                         Text("Los cofres traen piezas del Álbum. Hay garantías: nunca pasarás muchos cofres sin una pieza épica.", fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp)
@@ -330,16 +387,25 @@ fun ShopScreen(
 
                     ShopTab.GEMS -> {
                         Spacer(Modifier.height(8.dp))
-                        Text("Las gemas sirven para skins premium y cofres raros y épicos.", fontSize = 12.sp, color = InkSecondary)
+                        Text("Las gemas sirven para skins premium, cofres raros y épicos, impulsos y efectos.", fontSize = 12.sp, color = InkSecondary)
                         Spacer(Modifier.height(12.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            listOf(ShopCatalog.GEMS_SMALL to "Puñado", ShopCatalog.GEMS_MEDIUM to "Bolsa", ShopCatalog.GEMS_LARGE to "Cofre").forEach { (id, label) ->
-                                val product = ShopCatalog.byId(id)!!
-                                GemPackCard(label, product.gems, prices[id], highlight = id == ShopCatalog.GEMS_MEDIUM, modifier = Modifier.weight(1f)) {
-                                    billing.purchase(activity, id)
+                        val firstFlags = remember(gems) { GemPacks.packs.associate { it.id to economy.isFirstPurchase(it.id) } }
+                        GemPacks.packs.chunked(3).forEach { row ->
+                            Row(modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                row.forEach { product ->
+                                    GemPackCard(
+                                        label = gemPackLabel(product.id), gems = product.gems, price = prices[product.id],
+                                        highlight = product.id == GemPacks.bestValueId,
+                                        bonusPercent = GemPacks.bonusPercent(product),
+                                        doubled = firstFlags[product.id] == true,
+                                        modifier = Modifier.weight(1f)
+                                    ) { billing.purchase(activity, product.id) }
                                 }
+                                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                             }
+                            Spacer(Modifier.height(10.dp))
                         }
+                        Text("¡La primera compra de cada pack da el doble de gemas!", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = GemBlue)
                         Spacer(Modifier.height(20.dp))
                         PiggyShopCard(
                             gems = piggy, price = prices[ShopCatalog.PIGGY_BREAK],
@@ -381,13 +447,11 @@ private fun DailyOfferCard(
     val price = original.discounted(offer.discountPercent)
     val canAfford = coins >= price.coins && gems >= price.gems
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(10.dp, shape, spotColor = Terracotta)
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(Terracotta, Terracotta.darker(0.8f))))
-            .padding(20.dp)
+    JellyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape, fill = Terracotta, lip = Terracotta.deepen(0.5f), lipHeight = 7.dp,
+        brush = Terracotta.toyGradient(),
+        padding = PaddingValues(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("OFERTA DEL DÍA", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White.copy(alpha = 0.85f), letterSpacing = 3.sp, modifier = Modifier.weight(1f))
@@ -412,15 +476,15 @@ private fun DailyOfferCard(
             }
         }
         Spacer(Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth().height(50.dp)
-                .clip(RoundedCornerShape(Radius.Medium))
-                .background(if (owned) Color.White.copy(alpha = 0.25f) else Color.White)
-                .clickable(enabled = !owned && canAfford, onClick = onBuy),
-            contentAlignment = Alignment.Center
+        JellyCard(
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            onClick = onBuy, enabled = !owned && canAfford,
+            shape = RoundedCornerShape(Radius.Medium),
+            fill = if (owned) Terracotta.lighten(0.22f) else Color.White,
+            lip = if (owned) Terracotta.deepen(0.45f) else Terracotta.deepen(0.55f)
         ) {
             CozyText(
+                modifier = Modifier.align(Alignment.Center),
                 text = when {
                     owned -> "YA LA TIENES"
                     price.gems > 0 -> "${price.gems} ◆   (antes ${original.gems})"
@@ -437,21 +501,19 @@ private fun DailyOfferCard(
 @Composable
 private fun StarterPackCard(price: String?, onBuy: () -> Unit) {
     val shape = RoundedCornerShape(Radius.XLarge)
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(2.dp, Gold, shape)
-            .clip(shape)
-            .background(Gold.copy(alpha = 0.10f))
-            .clickable(enabled = price != null, onClick = onBuy)
-            .padding(18.dp)
+    JellyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onBuy, enabled = price != null,
+        shape = shape, fill = Gold.lighten(0.88f), lip = Gold.deepen(0.12f).copy(alpha = 0.65f), lipHeight = 6.dp,
+        borderColor = Gold, borderWidth = 2.dp,
+        padding = PaddingValues(18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconTile(Icons.Rounded.CardGiftcard, Gold, size = 50.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text("PACK INICIAL", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.5.sp)
-                Text("Una sola vez · el mejor valor de la tienda", fontSize = 11.sp, color = InkSecondary)
+                Text("Una sola vez · el mejor valor", fontSize = 11.sp, color = InkSecondary)
             }
             Box(Modifier.clip(RoundedCornerShape(14.dp)).background(Gold).padding(horizontal = 14.dp, vertical = 9.dp)) {
                 Text(price ?: "Pronto", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color.White)
@@ -472,15 +534,14 @@ private fun StarterPackCard(price: String?, onBuy: () -> Unit) {
 @Composable
 private fun VipCard(owned: Boolean, price: String?, onBuy: () -> Unit) {
     val shape = RoundedCornerShape(28.dp)
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(Brush.linearGradient(listOf(Color(0xFF4B4F73), Navy)))
-            .clickable(enabled = !owned && price != null, onClick = onBuy)
-            .padding(20.dp)
+    JellyRow(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onBuy, enabled = !owned && price != null,
+        shape = shape, fill = Navy, lip = Color(0xFF1E2036), lipHeight = 7.dp,
+        brush = Brush.verticalGradient(listOf(Color(0xFF5E628C), Color(0xFF4B4F73), Navy)),
+        padding = PaddingValues(20.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        run {
             Box(Modifier.size(54.dp).background(Color.White.copy(alpha = 0.12f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = Color(0xFFF2CC8F), modifier = Modifier.size(32.dp))
             }
@@ -488,7 +549,7 @@ private fun VipCard(owned: Boolean, price: String?, onBuy: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("PASE VIP", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 2.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("Poderes con anuncio gratis y x2 monedas sin ver anuncios. Para siempre.", fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f), lineHeight = 16.sp)
+                Text("Sin anuncios en los poderes, x2 monedas sin verlos, +${VipPerks.COIN_BONUS_PERCENT}% de monedas por victoria y ${VipPerks.DAILY_GEMS} gemas cada día. Para siempre.", fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f), lineHeight = 16.sp)
             }
             Spacer(Modifier.width(10.dp))
             Box(
@@ -559,13 +620,13 @@ private fun SkinCard(
 ) {
     val shape = RoundedCornerShape(24.dp)
     val st = skin.style
-    Column(
-        modifier = modifier
-            .clip(shape)
-            .background(Color.White)
-            .border(if (equipped) 2.dp else 1.dp, if (equipped) Sage else Navy.copy(alpha = 0.08f), shape)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+    JellyColumn(
+        modifier = modifier,
+        onClick = onClick,
+        shape = shape, fill = if (equipped) Sage.lighten(0.90f) else Color.White,
+        lip = if (equipped) Sage.copy(alpha = 0.55f) else Color(0xFFCDB894).copy(alpha = 0.55f),
+        borderColor = if (equipped) Sage else null, borderWidth = 2.dp,
+        padding = PaddingValues(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Vista previa con el FONDO real de la skin
@@ -610,17 +671,62 @@ private fun SkinCard(
     }
 }
 
+@Composable
+private fun FxCard(
+    fx: MergeFx, owned: Boolean, equipped: Boolean, canAfford: Boolean,
+    modifier: Modifier, onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(24.dp)
+    val rarityColor = when (fx.rarity) { Rarity.COMMON -> InkTertiary; Rarity.RARE -> GemBlue; Rarity.EPIC -> Violet; Rarity.LEGENDARY -> Gold }
+    JellyColumn(
+        modifier = modifier,
+        onClick = onClick,
+        shape = shape, fill = if (equipped) Sage.lighten(0.90f) else Color.White,
+        lip = if (equipped) Sage.copy(alpha = 0.55f) else Color(0xFFCDB894).copy(alpha = 0.55f),
+        borderColor = if (equipped) Sage else null, borderWidth = 2.dp,
+        padding = PaddingValues(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(96.dp).clip(RoundedCornerShape(16.dp))
+                .background(Brush.verticalGradient(listOf(com.korkoor.pardos.ui.design.Navy, Color(0xFF2A2C42)))),
+            contentAlignment = Alignment.Center
+        ) {
+            SkinTilePreview(TileSkin.DEFAULT, 16, size = 44.dp)
+            MergeFxPreview(fx, tileSize = 44.dp)
+            if (fx == MergeFx.CLASSIC) Text("sin efecto", fontSize = 9.sp, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(fx.displayName, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, maxLines = 1)
+        Text(
+            when (fx.rarity) { Rarity.COMMON -> "COMÚN"; Rarity.RARE -> "RARO"; Rarity.EPIC -> "ÉPICO"; Rarity.LEGENDARY -> "LEGENDARIO" },
+            fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, color = rarityColor
+        )
+        Spacer(Modifier.height(8.dp))
+        val label: String; val bg: Color; val fg: Color
+        when {
+            equipped -> { label = "EQUIPADO"; bg = Sage; fg = Color.White }
+            owned -> { label = "EQUIPAR"; bg = Sage.copy(alpha = 0.16f); fg = Sage }
+            fx.source == FxSource.STARTER -> { label = "PACK INICIAL"; bg = Gold.copy(alpha = 0.18f); fg = Gold }
+            fx.source == FxSource.SEASON -> { label = "PASE PREMIUM"; bg = Violet.copy(alpha = 0.16f); fg = Violet }
+            fx.gemPrice > 0 -> { label = "${fx.gemPrice} ◆"; bg = if (canAfford) GemBlue.copy(alpha = 0.16f) else Navy.copy(alpha = 0.06f); fg = if (canAfford) GemBlue else Navy.copy(alpha = 0.35f) }
+            else -> { label = "${fx.coinPrice} ●"; bg = if (canAfford) Gold.copy(alpha = 0.18f) else Navy.copy(alpha = 0.06f); fg = if (canAfford) Gold else Navy.copy(alpha = 0.35f) }
+        }
+        Box(Modifier.clip(RoundedCornerShape(14.dp)).background(bg).padding(horizontal = 14.dp, vertical = 7.dp)) {
+            CozyText(label, fontSize = 11.sp, fontWeight = FontWeight.Black, color = fg, letterSpacing = 1.sp)
+        }
+    }
+}
+
 /** Skin secreta aún sin descubrir: silueta misteriosa y una pista poética. */
 @Composable
 private fun HiddenSkinCard(hint: String, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(24.dp)
-    Column(
-        modifier = modifier
-            .clip(shape)
-            .background(Color.White)
-            .border(1.dp, Navy.copy(alpha = 0.08f), shape)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+    JellyColumn(
+        modifier = modifier,
+        onClick = onClick,
+        shape = shape,
+        padding = PaddingValues(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
@@ -669,27 +775,44 @@ fun SkinTilePreview(skin: TileSkin, value: Int, size: androidx.compose.ui.unit.D
 
 // ============================ Gemas / filas ============================
 
+private fun gemPackLabel(id: String) = when (id) {
+    ShopCatalog.GEMS_TINY -> "Chispa"
+    ShopCatalog.GEMS_SMALL -> "Puñado"
+    ShopCatalog.GEMS_MEDIUM -> "Bolsa"
+    ShopCatalog.GEMS_LARGE -> "Cofre"
+    else -> "Tesoro"
+}
+
 @Composable
-private fun GemPackCard(label: String, gems: Int, price: String?, highlight: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun GemPackCard(
+    label: String, gems: Int, price: String?, highlight: Boolean, bonusPercent: Int, doubled: Boolean,
+    modifier: Modifier, onClick: () -> Unit
+) {
     val shape = RoundedCornerShape(24.dp)
-    Column(
-        modifier = modifier
-            .clip(shape)
-            .background(Color.White)
-            .border(if (highlight) 2.dp else 1.dp, if (highlight) GemBlue else Navy.copy(alpha = 0.08f), shape)
-            .clickable(enabled = price != null, onClick = onClick)
-            .padding(vertical = 16.dp, horizontal = 8.dp),
+    JellyColumn(
+        modifier = modifier.fillMaxHeight(),
+        onClick = onClick, enabled = price != null,
+        shape = shape, fill = if (highlight) GemBlue.lighten(0.92f) else Color.White,
+        lip = if (highlight) GemBlue.copy(alpha = 0.5f) else Color(0xFFCDB894).copy(alpha = 0.55f),
+        borderColor = if (highlight) GemBlue else null, borderWidth = 2.dp,
+        padding = PaddingValues(vertical = 14.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (highlight) Text("MEJOR VALOR", fontSize = 8.sp, fontWeight = FontWeight.Black, color = GemBlue, letterSpacing = 1.sp) else Spacer(Modifier.height(10.dp))
-        Spacer(Modifier.height(6.dp))
-        Box(Modifier.size(52.dp).background(GemBlue.copy(alpha = 0.12f), CircleShape), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Diamond, contentDescription = null, tint = GemBlue, modifier = Modifier.size(30.dp))
+        when {
+            doubled -> Text("1ª COMPRA x2", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Terracotta, letterSpacing = 0.8.sp)
+            highlight -> Text("MEJOR VALOR", fontSize = 8.sp, fontWeight = FontWeight.Black, color = GemBlue, letterSpacing = 1.sp)
+            else -> Spacer(Modifier.height(10.dp))
         }
+        Spacer(Modifier.height(6.dp))
+        CozyIcon(CozyKind.GEM, Modifier.size(if (gems >= 1000) 56.dp else if (gems >= 500) 50.dp else 42.dp))
         Spacer(Modifier.height(8.dp))
-        Text("$gems", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
+        Text(if (doubled) "${gems * Economy.FIRST_PURCHASE_MULTIPLIER}" else "$gems", fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
         Text(label.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Navy.copy(alpha = 0.45f), letterSpacing = 1.sp)
-        Spacer(Modifier.height(12.dp))
+        if (bonusPercent > 0) {
+            Spacer(Modifier.height(4.dp))
+            Text("+$bonusPercent% extra", fontSize = 9.sp, fontWeight = FontWeight.Black, color = Sage)
+        } else Spacer(Modifier.height(13.dp))
+        Spacer(Modifier.weight(1f).heightIn(min = 8.dp))
         Box(Modifier.clip(RoundedCornerShape(14.dp)).background(if (price != null) Sage else Navy.copy(alpha = 0.08f)).padding(horizontal = 12.dp, vertical = 7.dp)) {
             Text(price ?: "Pronto", fontSize = 11.sp, fontWeight = FontWeight.Black, color = if (price != null) Color.White else Navy.copy(alpha = 0.4f), maxLines = 1)
         }
@@ -701,9 +824,10 @@ private fun ShopRow(
     icon: ImageVector, color: Color, title: String, subtitle: String,
     priceText: String, priceIcon: ImageVector, priceColor: Color, enabled: Boolean, onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color.White).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+    JellyRow(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        padding = PaddingValues(14.dp)
     ) {
         IconTile(icon, color, size = 46.dp)
         Spacer(Modifier.width(12.dp))
@@ -722,10 +846,12 @@ private fun ShopRow(
 @Composable
 private fun PromoCard(icon: ImageVector, color: Color, title: String, tag: String, text: String, action: String, onClick: () -> Unit) {
     val shape = RoundedCornerShape(Radius.XLarge)
-    Row(
-        modifier = Modifier.fillMaxWidth().clip(shape).background(color.copy(alpha = 0.10f))
-            .border(1.5.dp, color.copy(alpha = 0.5f), shape).clickable(onClick = onClick).padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+    JellyRow(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = shape, fill = color.lighten(0.90f), lip = color.copy(alpha = 0.45f), lipHeight = 6.dp,
+        borderColor = color.copy(alpha = 0.5f),
+        padding = PaddingValues(16.dp)
     ) {
         IconTile(icon, color, size = 50.dp)
         Spacer(Modifier.width(12.dp))
@@ -748,8 +874,12 @@ private fun StudioPromo(owned: Boolean, price: String?, config: StudioConfig, on
     val live = remember(config) { config.toStyle() }
     val inkColor = Color(live.ink ?: 0xFFFFFFFF)
     val bg = Brush.linearGradient(listOf(Color(live.bgTop ?: 0xFF3D405B), Color(live.bgBottom ?: 0xFF6C63FF)))
-    Column(
-        modifier = Modifier.fillMaxWidth().shadow(8.dp, shape, spotColor = Violet).clip(shape).background(bg).clickable(onClick = onClick).padding(18.dp)
+    JellyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        shape = shape, fill = Color(live.bgBottom ?: 0xFF6C63FF), lip = Color(live.bgTop ?: 0xFF3D405B).deepen(0.45f), lipHeight = 7.dp,
+        brush = bg,
+        padding = PaddingValues(18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -781,9 +911,10 @@ private fun StudioPromo(owned: Boolean, price: String?, config: StudioConfig, on
 @Composable
 private fun PiggyShopCard(gems: Int, price: String?, onBreak: () -> Unit) {
     val shape = RoundedCornerShape(Radius.Large)
-    Row(
-        modifier = Modifier.fillMaxWidth().clip(shape).background(Color.White).border(1.dp, GemBlue.copy(alpha = 0.35f), shape).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
+    JellyRow(
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape, borderColor = GemBlue.copy(alpha = 0.35f), borderWidth = 1.dp,
+        padding = PaddingValues(14.dp)
     ) {
         IconTile(Icons.Rounded.Savings, GemBlue, size = 50.dp)
         Spacer(Modifier.width(12.dp))

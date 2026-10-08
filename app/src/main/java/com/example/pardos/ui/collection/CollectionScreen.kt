@@ -24,6 +24,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -91,6 +95,30 @@ fun collectibleIcon(key: String): ImageVector = when (key) {
     "premium" -> Icons.Rounded.WorkspacePremium
     "star" -> Icons.Rounded.AutoAwesome
     "diamond" -> Icons.Rounded.Diamond
+    "set_meal" -> Icons.Rounded.SetMeal
+    "water_drop" -> Icons.Rounded.WaterDrop
+    "bubble_chart" -> Icons.Rounded.BubbleChart
+    "beach_access" -> Icons.Rounded.BeachAccess
+    "pool" -> Icons.Rounded.Pool
+    "surfing" -> Icons.Rounded.Surfing
+    "scuba_diving" -> Icons.Rounded.ScubaDiving
+    "water" -> Icons.Rounded.Water
+    "celebration" -> Icons.Rounded.Celebration
+    "confirmation_number" -> Icons.Rounded.ConfirmationNumber
+    "card_giftcard" -> Icons.Rounded.CardGiftcard
+    "fireplace" -> Icons.Rounded.Fireplace
+    "theater_comedy" -> Icons.Rounded.TheaterComedy
+    "attractions" -> Icons.Rounded.Attractions
+    "festival" -> Icons.Rounded.Festival
+    "flare" -> Icons.Rounded.Flare
+    "nightlight" -> Icons.Rounded.Nightlight
+    "emoji_objects" -> Icons.Rounded.EmojiObjects
+    "local_fire_department" -> Icons.Rounded.LocalFireDepartment
+    "scatter_plot" -> Icons.Rounded.ScatterPlot
+    "auto_stories" -> Icons.Rounded.AutoStories
+    "science" -> Icons.Rounded.Science
+    "blur_circular" -> Icons.Rounded.BlurCircular
+    "auto_fix_high" -> Icons.Rounded.AutoFixHigh
     else -> Icons.Rounded.Star
 }
 
@@ -122,6 +150,8 @@ fun CollectionScreen(onBack: () -> Unit) {
     val chests by manager.chests.collectAsState()
     val claimed by manager.claimedSeries.collectAsState()
     val albumClaimed by manager.albumClaimed.collectAsState()
+    val foil by manager.foil.collectAsState()
+    val gemsNow by com.korkoor.pardos.data.local.EconomyManager(context).gems.collectAsState()
     val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
 
     var opening by remember { mutableStateOf<ChestResult?>(null) }
@@ -131,7 +161,7 @@ fun CollectionScreen(onBack: () -> Unit) {
     val total = CollectibleCatalog.all.size
     val have = owned.size
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             PardosTopBar(eyebrow = "Álbum", title = "Colección", onBack = onBack) {
                 Row(
@@ -159,7 +189,7 @@ fun CollectionScreen(onBack: () -> Unit) {
                             }
                             Spacer(Modifier.height(8.dp))
                             ProgressBar(have.toFloat() / total, Gold)
-                            val bonus = AlbumBonus.breakdown(owned)
+                            val bonus = AlbumBonus.breakdown(owned, foil)
                             Spacer(Modifier.height(10.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Gold.copy(alpha = 0.14f)).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -170,7 +200,7 @@ fun CollectionScreen(onBack: () -> Unit) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Bono del álbum: +${bonus.total}% monedas", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Navy)
                                     Text(
-                                        "+1% cada ${8} piezas · +${AlbumBonus.PER_SERIES}% por serie completa · +${AlbumBonus.FULL_ALBUM}% álbum entero (máx. ${AlbumBonus.MAX_PERCENT}%)",
+                                        "+1% cada 8 piezas · +${AlbumBonus.PER_SERIES}% por serie completa · +${AlbumBonus.FULL_ALBUM}% álbum entero · +1% cada ${FoilRules.PER_PERCENT} brillantes (máx. ${AlbumBonus.MAX_PERCENT}%)",
                                         fontSize = 10.sp, color = InkSecondary, lineHeight = 13.sp
                                     )
                                 }
@@ -186,7 +216,7 @@ fun CollectionScreen(onBack: () -> Unit) {
                                 }
                             } else {
                                 Spacer(Modifier.height(6.dp))
-                                Text("Completa las 6 series para ganar la skin exclusiva Oro Real.", fontSize = 11.sp, color = InkSecondary)
+                                Text("Completa las ${Series.entries.size} series para ganar la skin exclusiva Oro Real.", fontSize = 11.sp, color = InkSecondary)
                             }
                         }
                     }
@@ -213,6 +243,37 @@ fun CollectionScreen(onBack: () -> Unit) {
                     )
                 }
 
+                // --- Esencia ---
+                item {
+                    val packsToday = manager.shardPacksToday()
+                    val canBuy = ShardShop.canBuy(gemsNow, packsToday)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(Radius.Medium)).background(Violet.copy(alpha = 0.10f)).padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.AutoFixHigh, contentDescription = null, tint = Violet, modifier = Modifier.size(26.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Esencia: $shards", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy)
+                            Text("Crea piezas que te faltan o hazlas Brillantes. Hoy: $packsToday/${ShardShop.MAX_PACKS_PER_DAY} packs", fontSize = 11.sp, color = InkSecondary, lineHeight = 14.sp)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Row(
+                            modifier = Modifier.clip(RoundedCornerShape(14.dp))
+                                .background(if (canBuy) Violet else Navy.copy(alpha = 0.08f))
+                                .clickable(enabled = canBuy) {
+                                    toast = if (manager.buyShardPack()) "+${ShardShop.SHARDS_PER_PACK} de esencia" else "No se pudo comprar"
+                                }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("+${ShardShop.SHARDS_PER_PACK}", fontSize = 12.sp, fontWeight = FontWeight.Black, color = if (canBuy) Color.White else Navy.copy(alpha = 0.35f))
+                            Spacer(Modifier.width(6.dp))
+                            CozyText("${ShardShop.GEMS_PER_PACK} ◆", fontSize = 12.sp, fontWeight = FontWeight.Black, color = if (canBuy) Color.White else Navy.copy(alpha = 0.35f))
+                        }
+                    }
+                }
+
                 toast?.let { msg ->
                     item {
                         Box(
@@ -228,6 +289,7 @@ fun CollectionScreen(onBack: () -> Unit) {
                         SeriesBlock(
                             series = series,
                             owned = owned,
+                            foil = foil,
                             claimed = series.id in claimed,
                             claimable = manager.isSeriesClaimable(series),
                             onClaim = {
@@ -249,9 +311,15 @@ fun CollectionScreen(onBack: () -> Unit) {
             CollectibleDialog(
                 c = c,
                 owned = c.id in owned,
+                foil = c.id in foil,
+                canFoil = FoilRules.canUpgrade(c, owned, foil, shards),
                 shards = shards,
                 onCraft = {
                     if (manager.craft(c)) toast = "¡Creaste ${c.nameEs}!"
+                    detail = null
+                },
+                onFoil = {
+                    if (manager.upgradeFoil(c)) toast = "¡${c.nameEs} ahora es Brillante!"
                     detail = null
                 },
                 onDismiss = { detail = null }
@@ -301,7 +369,7 @@ private fun ChestSlot(type: ChestType, count: Int, modifier: Modifier, onClick: 
 
 @Composable
 private fun SeriesBlock(
-    series: Series, owned: Set<String>, claimed: Boolean, claimable: Boolean,
+    series: Series, owned: Set<String>, foil: Set<String>, claimed: Boolean, claimable: Boolean,
     onClaim: () -> Unit, onPick: (Collectible) -> Unit
 ) {
     val (have, total) = CollectibleCatalog.progress(series, owned)
@@ -329,7 +397,7 @@ private fun SeriesBlock(
                 items.chunked(4).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { c ->
-                            CollectibleTile(c, c.id in owned, Modifier.weight(1f)) { onPick(c) }
+                            CollectibleTile(c, c.id in owned, Modifier.weight(1f), foil = c.id in foil) { onPick(c) }
                         }
                     }
                 }
@@ -338,8 +406,27 @@ private fun SeriesBlock(
     }
 }
 
+/** Destello que recorre la pieza de izquierda a derecha: así se distinguen las Brillantes. */
+fun Modifier.foilShimmer(): Modifier = composed {
+    val t by rememberInfiniteTransition(label = "foil").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "foilT"
+    )
+    drawWithContent {
+        drawContent()
+        val w = size.width
+        val x = (t * 2.2f - 0.6f) * w
+        drawRect(
+            Brush.linearGradient(
+                listOf(Color.Transparent, Color.White.copy(alpha = 0.55f), Color(0xFFFFE9A8).copy(alpha = 0.35f), Color.Transparent),
+                start = Offset(x - w * 0.35f, 0f), end = Offset(x + w * 0.35f, size.height)
+            )
+        )
+    }
+}
+
 @Composable
-fun CollectibleTile(c: Collectible, owned: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun CollectibleTile(c: Collectible, owned: Boolean, modifier: Modifier = Modifier, foil: Boolean = false, onClick: () -> Unit) {
     val color = rarityColor(c.rarity)
     val shape = RoundedCornerShape(16.dp)
     Column(
@@ -347,7 +434,8 @@ fun CollectibleTile(c: Collectible, owned: Boolean, modifier: Modifier = Modifie
             .aspectRatio(0.82f)
             .clip(shape)
             .background(if (owned) color.copy(alpha = 0.12f) else Navy.copy(alpha = 0.05f))
-            .border(if (owned) 1.5.dp else 1.dp, if (owned) color.copy(alpha = 0.6f) else Navy.copy(alpha = 0.06f), shape)
+            .border(if (foil) 2.dp else if (owned) 1.5.dp else 1.dp, if (foil) Gold else if (owned) color.copy(alpha = 0.6f) else Navy.copy(alpha = 0.06f), shape)
+            .then(if (foil) Modifier.foilShimmer() else Modifier)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -365,13 +453,13 @@ fun CollectibleTile(c: Collectible, owned: Boolean, modifier: Modifier = Modifie
 }
 
 @Composable
-private fun CollectibleDialog(c: Collectible, owned: Boolean, shards: Int, onCraft: () -> Unit, onDismiss: () -> Unit) {
+private fun CollectibleDialog(c: Collectible, owned: Boolean, foil: Boolean, canFoil: Boolean, shards: Int, onCraft: () -> Unit, onFoil: () -> Unit, onDismiss: () -> Unit) {
     val color = rarityColor(c.rarity)
     val canCraft = CraftRules.canCraft(c, if (owned) setOf(c.id) else emptySet(), shards)
     Dialog(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.clip(RoundedCornerShape(Radius.XLarge)).background(Cream).padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        JellyColumn(
+            modifier = Modifier.popIn(), shape = RoundedCornerShape(Radius.XLarge), fill = Cream, lipHeight = 8.dp,
+            padding = PaddingValues(24.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(Modifier.size(96.dp).background(color.copy(alpha = if (owned) 0.18f else 0.07f), CircleShape), contentAlignment = Alignment.Center) {
                 Icon(collectibleIcon(c.iconKey), contentDescription = null, tint = if (owned) color else Navy.copy(alpha = 0.18f), modifier = Modifier.size(52.dp))
@@ -383,6 +471,19 @@ private fun CollectibleDialog(c: Collectible, owned: Boolean, shards: Int, onCra
             Spacer(Modifier.height(18.dp))
             if (owned) {
                 Text("Si te sale repetida vale ${c.rarity.shardValue} de esencia.", fontSize = 12.sp, color = InkSecondary, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(14.dp))
+                if (foil) {
+                    Text("✦ BRILLANTE", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Gold, letterSpacing = 2.sp)
+                } else {
+                    PrimaryButton(
+                        text = "HACER BRILLANTE · ${FoilRules.cost(c)} esencia",
+                        onClick = onFoil, enabled = canFoil, height = 50.dp, fontSize = 12.sp
+                    )
+                    Text(
+                        if (canFoil) "Brilla en tu álbum y suma monedas extra para siempre." else "Te faltan ${FoilRules.cost(c) - shards} de esencia. Cada 6 brillantes = +1% de monedas.",
+                        fontSize = 11.sp, color = InkSecondary, modifier = Modifier.padding(top = 8.dp), textAlign = TextAlign.Center
+                    )
+                }
             } else {
                 PrimaryButton(
                     text = "CREAR · ${c.rarity.craftCost} esencia",
@@ -401,19 +502,33 @@ private fun CollectibleDialog(c: Collectible, owned: Boolean, shards: Int, onCra
 private fun ChestOpeningDialog(result: ChestResult, onDone: () -> Unit) {
     // Las cartas se revelan una a una
     var revealed by remember { mutableIntStateOf(0) }
+    val haptic = LocalHapticFeedback.current
     LaunchedEffect(Unit) {
         for (i in 1..result.drops.size) {
-            kotlinx.coroutines.delay(550)
+            val rarity = result.drops[i - 1].collectible.rarity
+            // Suspense: las piezas buenas se hacen esperar un poco más
+            kotlinx.coroutines.delay(if (rarity.ordinal >= Rarity.EPIC.ordinal) 950L else 550L)
             revealed = i
+            haptic.performHapticFeedback(if (rarity.ordinal >= Rarity.RARE.ordinal) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove)
         }
     }
     val all = revealed >= result.drops.size
+    val best = result.drops.maxOf { it.collectible.rarity.ordinal }
     Dialog(onDismissRequest = { if (all) onDone() }) {
-        Column(
-            Modifier.clip(RoundedCornerShape(Radius.XLarge)).background(Cream).padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        JellyColumn(
+            modifier = Modifier.popIn(), shape = RoundedCornerShape(Radius.XLarge), fill = Cream, lipHeight = 8.dp,
+            padding = PaddingValues(20.dp), horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(if (all) "¡Tu botín!" else "Abriendo…", fontSize = 22.sp, fontWeight = FontWeight.Black, color = Navy)
+            Text(
+                when {
+                    !all -> "Abriendo…"
+                    best == Rarity.LEGENDARY.ordinal -> "¡LEGENDARIA!"
+                    best == Rarity.EPIC.ordinal -> "¡Pieza épica!"
+                    else -> "¡Tu botín!"
+                },
+                fontSize = 22.sp, fontWeight = FontWeight.Black,
+                color = if (all && best == Rarity.LEGENDARY.ordinal) Gold else Navy
+            )
             Spacer(Modifier.height(16.dp))
             result.drops.chunked(2).forEachIndexed { rowIdx, row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
@@ -439,10 +554,23 @@ private fun ChestOpeningDialog(result: ChestResult, onDone: () -> Unit) {
 private fun DropCard(drop: Drop, visible: Boolean, modifier: Modifier) {
     val c = drop.collectible
     val color = rarityColor(c.rarity)
-    AnimatedVisibility(visible = visible, modifier = modifier, enter = scaleIn(spring(dampingRatio = 0.5f)) + fadeIn()) {
+    // Estallido de partículas al revelar: más vistoso cuanto más rara es la pieza
+    val burstFx = when (c.rarity) {
+        Rarity.COMMON -> com.korkoor.pardos.domain.shop.MergeFx.CLASSIC
+        Rarity.RARE -> com.korkoor.pardos.domain.shop.MergeFx.SPARKS
+        Rarity.EPIC -> com.korkoor.pardos.domain.shop.MergeFx.STARS
+        Rarity.LEGENDARY -> com.korkoor.pardos.domain.shop.MergeFx.FIREWORKS
+    }
+    val pulse by rememberInfiniteTransition(label = "legend").animateFloat(
+        initialValue = 0.35f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "legendA"
+    )
+    val glow = if (visible && c.rarity == Rarity.LEGENDARY) pulse else 0f
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    AnimatedVisibility(visible = visible, modifier = Modifier.fillMaxWidth(), enter = scaleIn(spring(dampingRatio = 0.5f)) + fadeIn()) {
         Column(
-            Modifier.clip(RoundedCornerShape(Radius.Large)).background(color.copy(alpha = 0.12f))
-                .border(2.dp, color, RoundedCornerShape(Radius.Large)).padding(vertical = 14.dp),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(Radius.Large)).background(color.copy(alpha = 0.12f + 0.12f * glow))
+                .border(if (glow > 0f) 3.dp else 2.dp, if (glow > 0f) Gold.copy(alpha = 0.5f + 0.5f * glow) else color, RoundedCornerShape(Radius.Large)).padding(vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(collectibleIcon(c.iconKey), contentDescription = null, tint = color, modifier = Modifier.size(40.dp))
@@ -455,5 +583,7 @@ private fun DropCard(drop: Drop, visible: Boolean, modifier: Modifier) {
                 Text("repetida", fontSize = 9.sp, color = InkTertiary, modifier = Modifier.padding(top = 4.dp))
             }
         }
+    }
+    com.korkoor.pardos.ui.game.components.MergeBurst(burstFx, if (visible) 1 else 0, 1024, 96.dp, Modifier.zIndex(5f))
     }
 }

@@ -88,6 +88,7 @@ internal fun rewardLines(r: SeasonReward): List<RewardLine> = buildList {
     r.skin?.let { add(RewardLine(Icons.Rounded.Palette, it.displayName, Violet)) }
     if (r.avatar != 0) add(RewardLine(Icons.Rounded.Palette, Avatars.byId(r.avatar).name, Terracotta, avatarId = r.avatar))
     if (r.banner != 0) add(RewardLine(Icons.Rounded.Palette, Banners.byId(r.banner).name, Violet))
+    r.fx?.let { add(RewardLine(Icons.Rounded.AutoAwesome, "Efecto ${it.displayName}", Violet)) }
 }
 
 /** Colores de la pantalla: salen de la skin exclusiva de la temporada, así cada mes se siente distinto. */
@@ -127,19 +128,8 @@ fun SeasonScreen(
         )
     }
 
-    // Con un fondo oscuro, los iconos de la barra de estado pasan a claros mientras esta pantalla está abierta
-    val view = androidx.compose.ui.platform.LocalView.current
-    DisposableEffect(pal.dark) {
-        val window = (view.context as? android.app.Activity)?.window
-        val ctrl = window?.let { androidx.core.view.WindowCompat.getInsetsController(it, view) }
-        val prevStatus = ctrl?.isAppearanceLightStatusBars
-        val prevNav = ctrl?.isAppearanceLightNavigationBars
-        if (pal.dark) { ctrl?.isAppearanceLightStatusBars = false; ctrl?.isAppearanceLightNavigationBars = false }
-        onDispose {
-            if (ctrl != null && prevStatus != null) ctrl.isAppearanceLightStatusBars = prevStatus
-            if (ctrl != null && prevNav != null) ctrl.isAppearanceLightNavigationBars = prevNav
-        }
-    }
+    // Con un fondo oscuro, los iconos de las barras del sistema pasan a claros mientras esta pantalla está abierta
+    com.korkoor.pardos.ui.design.DarkSystemBars(pal.dark)
 
     val tier = SeasonPass.tierFor(points)
     val inTier = SeasonPass.pointsInTier(points)
@@ -445,7 +435,7 @@ private fun PremiumCard(pal: Pal, seasonId: Int, skinName: String, premium: Bool
     val shape = RoundedCornerShape(28.dp)
     if (premium) {
         Row(
-            Modifier.fillMaxWidth().clip(shape).background(Brush.horizontalGradient(listOf(Color(0xFF6B9E86), Color(0xFF4F8C74)))).padding(horizontal = 18.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().clip(shape).background(Brush.horizontalGradient(listOf(Sage, SageDark))).padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(30.dp))
@@ -596,7 +586,7 @@ private fun RewardTile(
     val glow by rememberInfiniteTransition(label = "tile").animateFloat(
         0.4f, 1f, infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "tg"
     )
-    val special = reward.skin != null || reward.avatar != 0 || reward.banner != 0 || reward.chest != null
+    val special = reward.skin != null || reward.avatar != 0 || reward.banner != 0 || reward.chest != null || reward.fx != null
     Box(
         modifier = modifier.scale(bounce.value).clip(shape)
             .background(
@@ -628,7 +618,7 @@ private fun RewardTile(
                     }
                 }
             }
-            val named = reward.skin?.displayName ?: reward.avatar.takeIf { it != 0 }?.let { Avatars.byId(it).name } ?: reward.banner.takeIf { it != 0 }?.let { Banners.byId(it).name }
+            val named = reward.skin?.displayName ?: reward.avatar.takeIf { it != 0 }?.let { Avatars.byId(it).name } ?: reward.banner.takeIf { it != 0 }?.let { Banners.byId(it).name } ?: reward.fx?.displayName
             if (named != null) Text(named, fontSize = 10.sp, fontWeight = FontWeight.Black, color = pal.ink.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (reward.chest != null) Text(rewardLines(reward).first { it.icon == Icons.Rounded.Inventory2 }.text, fontSize = 10.sp, fontWeight = FontWeight.Black, color = pal.ink.copy(alpha = 0.75f), maxLines = 1)
             if (canClaim) {

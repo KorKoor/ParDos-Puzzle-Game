@@ -77,7 +77,7 @@ fun BannerSelectorDialog(
     val isOwned = Banners.isOwned(preview, owned)
 
     Dialog(onDismissRequest = onDismissRequest) {
-        Surface(shape = RoundedCornerShape(32.dp), color = Cream, shadowElevation = 24.dp, modifier = Modifier.fillMaxWidth()) {
+        JellySurface(shape = RoundedCornerShape(32.dp), color = Cream, shadowElevation = 24.dp, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("TU BANNER", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 2.sp)
                 Spacer(Modifier.height(10.dp))

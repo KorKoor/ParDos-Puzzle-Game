@@ -46,6 +46,11 @@ class ZenNotificationManager(private val context: Context) {
             com.korkoor.pardos.domain.shop.EventSkins.skinFor(e.type)?.let { it.id !in ownedSkins } == true
         }
 
+        val missionManager = com.korkoor.pardos.data.local.MissionManager(context)
+        val todaysMissions = missionManager.getTodayMissions()
+        val claimable = todaysMissions.count { it.isCompleted && !missionManager.isMissionClaimed(it.id) }
+        val open = todaysMissions.count { !missionManager.isMissionClaimed(it.id) }
+
         val plan = ReminderPlanner.plan(
             ReminderInput(
                 nowMs = now,
@@ -66,6 +71,12 @@ class ZenNotificationManager(private val context: Context) {
                 eventSkinName = activeEvent?.let { com.korkoor.pardos.domain.shop.EventSkins.skinFor(it.type)?.displayName } ?: "",
                 eventDaysLeft = activeEvent?.daysLeft(today) ?: Int.MAX_VALUE,
                 eventWinsLeft = activeEvent?.let { com.korkoor.pardos.domain.shop.EventSkins.winsLeft(retention.eventWins(it)) } ?: 0,
+                missionsClaimable = claimable,
+                missionsOpen = open,
+                perfectDays = retention.perfectDays(),
+                perfectToday = retention.perfectToday(),
+                unopenedChests = com.korkoor.pardos.data.local.CollectionManager(context).totalChests,
+                dailyChallengeOpen = !retention.dailyChallengeDoneToday(),
                 upcomingEvents = com.korkoor.pardos.domain.events.EventCalendar.upcoming(today, 14).mapNotNull { (type, days) ->
                     val skin = com.korkoor.pardos.domain.shop.EventSkins.skinFor(type) ?: return@mapNotNull null
                     if (skin.id in ownedSkins) null

@@ -20,6 +20,7 @@ class SettingsManager(context: Context) {
             _music.value = prefs.getBoolean(K_MUSIC, true)
             _haptics.value = prefs.getBoolean(K_HAPTICS, true)
             _notifications.value = prefs.getBoolean(K_NOTIFICATIONS, true)
+            _autoNext.value = prefs.getBoolean(K_AUTONEXT, true)
             loaded = true
         }
     }
@@ -33,6 +34,10 @@ class SettingsManager(context: Context) {
     /** Avisos para volver (cofre listo, racha, liga…). */
     val notificationsEnabled: StateFlow<Boolean> = _notifications.asStateFlow()
 
+    /** Pasar solo al siguiente nivel unos segundos después de ganar (cualquier toque lo pausa). */
+    val autoNextEnabled: StateFlow<Boolean> = _autoNext.asStateFlow()
+
+    fun setAutoNext(on: Boolean) { _autoNext.value = on; prefs.edit().putBoolean(K_AUTONEXT, on).apply() }
     fun setSound(on: Boolean) { _sound.value = on; prefs.edit().putBoolean(K_SOUND, on).apply() }
     fun setMusic(on: Boolean) { _music.value = on; prefs.edit().putBoolean(K_MUSIC, on).apply() }
     fun setHaptics(on: Boolean) { _haptics.value = on; prefs.edit().putBoolean(K_HAPTICS, on).apply() }
@@ -43,10 +48,12 @@ class SettingsManager(context: Context) {
         const val K_MUSIC = "music"
         const val K_HAPTICS = "haptics"
         const val K_NOTIFICATIONS = "notifications"
+        const val K_AUTONEXT = "auto_next"
         val _sound = MutableStateFlow(true)
         val _music = MutableStateFlow(true)
         val _haptics = MutableStateFlow(true)
         val _notifications = MutableStateFlow(true)
+        val _autoNext = MutableStateFlow(true)
         var loaded = false
     }
 }

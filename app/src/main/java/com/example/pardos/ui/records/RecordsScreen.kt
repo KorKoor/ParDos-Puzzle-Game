@@ -1,5 +1,11 @@
 package com.korkoor.pardos.ui.records
 
+import androidx.compose.foundation.shape.CircleShape
+import com.korkoor.pardos.ui.design.*
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.korkoor.pardos.ui.design.pardosBackdrop
+import com.korkoor.pardos.ui.design.JellySurface
 import android.content.res.Configuration // ✅ Importado para orientación
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -57,7 +63,7 @@ fun RecordsScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(bgGradient)) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop(bgGradient)) {
 
         if (isLandscape) {
             // ---------------------------------------------------------
@@ -83,14 +89,14 @@ fun RecordsScreen(
                         text = "HALL OF FAME",
                         fontSize = 28.sp, // Un poco más pequeño para landscape
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF3D405B),
+                        color = com.korkoor.pardos.ui.design.Navy,
                         letterSpacing = 4.sp,
                         textAlign = TextAlign.Center
                     )
                     Text(
                         text = stringResource(R.string.records_subtitle),
                         fontSize = 12.sp,
-                        color = Color(0xFF3D405B).copy(alpha = 0.5f),
+                        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f),
                         letterSpacing = 1.sp,
                         textAlign = TextAlign.Center
                     )
@@ -98,23 +104,12 @@ fun RecordsScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     // Botón en la columna izquierda
-                    Button(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.back_to_menu),
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp,
-                            fontSize = 14.sp,
-                            color = Color.White
-                        )
-                    }
+                    PrimaryButton(
+                    text = stringResource(R.string.back_to_menu),
+                    onClick = onBack,
+                    color = currentTheme.actionColor,
+                    modifier = Modifier.padding(bottom = 24.dp, top = 12.dp)
+                )
                 }
 
                 // COLUMNA DERECHA: La lista de récords
@@ -134,8 +129,8 @@ fun RecordsScreen(
                                 item {
                                     SectionHeader(modeKey, currentTheme.accentColor)
                                 }
-                                items(topRecords) { record ->
-                                    RecordCard(record)
+                                itemsIndexed(topRecords) { rank, record ->
+                                    RecordCard(record, rank)
                                 }
                             }
                         }
@@ -160,13 +155,13 @@ fun RecordsScreen(
                     text = "HALL OF FAME",
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF3D405B),
+                    color = com.korkoor.pardos.ui.design.Navy,
                     letterSpacing = 6.sp
                 )
                 Text(
                     text = stringResource(R.string.records_subtitle),
                     fontSize = 13.sp,
-                    color = Color(0xFF3D405B).copy(alpha = 0.5f),
+                    color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f),
                     letterSpacing = 1.sp,
                     textAlign = TextAlign.Center
                 )
@@ -187,31 +182,19 @@ fun RecordsScreen(
                             item {
                                 SectionHeader(modeKey, currentTheme.accentColor)
                             }
-                            items(topRecords) { record ->
-                                RecordCard(record)
+                            itemsIndexed(topRecords) { rank, record ->
+                                RecordCard(record, rank)
                             }
                         }
                     }
                 }
 
-                Button(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .padding(bottom = 32.dp, top = 16.dp)
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 12.dp)
-                ) {
-                    Text(
+                PrimaryButton(
                         text = stringResource(R.string.back_to_menu),
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
-                        fontSize = 16.sp,
-                        color = Color.White
+                        onClick = onBack,
+                        color = currentTheme.actionColor,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                }
             }
         }
     }
@@ -225,12 +208,12 @@ private fun EmptyStateView() {
             Icons.Default.Star,
             null,
             modifier = Modifier.size(48.dp),
-            tint = Color(0xFF3D405B).copy(alpha = 0.1f)
+            tint = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.1f)
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.records_empty),
-            color = Color(0xFF3D405B).copy(alpha = 0.4f),
+            color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.4f),
             textAlign = TextAlign.Center,
             fontSize = 14.sp
         )
@@ -265,26 +248,36 @@ private fun SectionHeader(modeKey: String, themeAccent: Color) {
 }
 
 @Composable
-private fun RecordCard(record: Record) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = Color.White.copy(alpha = 0.75f)
+private fun RecordCard(record: Record, rank: Int = 0) {
+    val medal = listOf(Color(0xFFE0A93B), Color(0xFF9AA5B1), Color(0xFFC0814A)).getOrNull(rank)
+    JellyRow(
+        modifier = Modifier.fillMaxWidth().staggerIn(rank),
+        shape = RoundedCornerShape(26.dp),
+        fill = if (rank == 0) Gold.lighten(0.88f) else Color.White,
+        lip = if (rank == 0) Gold.copy(alpha = 0.5f) else defaultLip(Color.White),
+        padding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        // medalla de posición
+        Box(
+            Modifier.size(42.dp).background(
+                Brush.verticalGradient(listOf((medal ?: Navy).lighten(0.25f), medal ?: Navy.copy(alpha = 0.35f))), CircleShape
+            ),
+            contentAlignment = Alignment.Center
         ) {
+            if (rank == 0) CozyIcon(CozyKind.TROPHY, Modifier.size(28.dp))
+            else Text("${rank + 1}", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color.White)
+        }
+        Spacer(Modifier.width(12.dp))
+        run {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.EmojiEvents, null, tint = Color(0xFFFFD700), modifier = Modifier.size(22.dp))
-                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (record.mode.uppercase().contains("CARRERA")) "${record.score} " + stringResource(R.string.race_stages_cleared).lowercase() else String.format("%,d", record.score),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF3D405B)
+                        color = com.korkoor.pardos.ui.design.Navy
                     )
                 }
 
@@ -302,7 +295,7 @@ private fun RecordCard(record: Record) {
                     Text(
                         text = detailText,
                         fontSize = 12.sp,
-                        color = Color(0xFF3D405B).copy(alpha = 0.6f),
+                        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -310,13 +303,13 @@ private fun RecordCard(record: Record) {
 
             Column(horizontalAlignment = Alignment.End) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, null, modifier = Modifier.size(12.dp), tint = Color(0xFF3D405B).copy(alpha = 0.3f))
+                    Icon(Icons.Default.DateRange, null, modifier = Modifier.size(12.dp), tint = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.3f))
                     Spacer(Modifier.width(4.dp))
                     Text(
                         text = formatDate(record.date),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF3D405B).copy(alpha = 0.4f)
+                        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.4f)
                     )
                 }
             }

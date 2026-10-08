@@ -279,7 +279,7 @@ object gameAchievements {
             titleResId = R.string.ach_century_title,
             descriptionResId = R.string.ach_century_desc,
             icon = Icons.Default.FitnessCenter,
-            color = Color(0xFF3D405B),
+            color = com.korkoor.pardos.ui.design.Navy,
             condition = { it.moveCount >= 100 }
         ),
         Achievement(
@@ -287,7 +287,7 @@ object gameAchievements {
             titleResId = R.string.ach_moves_150_title,
             descriptionResId = R.string.ach_moves_150_desc,
             icon = Icons.Default.DirectionsRun,
-            color = Color(0xFF3D405B),
+            color = com.korkoor.pardos.ui.design.Navy,
             condition = { it.moveCount >= 150 }
         ),
         Achievement(

@@ -1,5 +1,13 @@
 package com.korkoor.pardos.domain.model
 
+import com.korkoor.pardos.domain.level.Cell
+import com.korkoor.pardos.domain.level.GoalStats
+import com.korkoor.pardos.domain.level.LevelGoal
+import com.korkoor.pardos.domain.level.LevelKind
+import com.korkoor.pardos.domain.level.LevelRules
+import com.korkoor.pardos.domain.level.Storm
+import com.korkoor.pardos.domain.level.StormStone
+import com.korkoor.pardos.domain.level.Twist
 import kotlin.math.log2
 
 
@@ -26,7 +34,31 @@ data class BoardState(
     val allowPowerUps: Boolean = true,
     val starsEarned: Int = 0,
     val showTutorialHand: Boolean = false,
-    val secondChanceUsed: Boolean = false
+    val secondChanceUsed: Boolean = false,
+    // --- Reglas del nivel de campaña (ver domain/level) ---
+    /** Qué hay que conseguir: [levelLimit] es la ficha meta, o los puntos si la meta es de puntos. */
+    val goal: LevelGoal = LevelGoal.REACH_TILE,
+    /** Cuántas fichas de [levelLimit] hacen falta a la vez. */
+    val goalCount: Int = 1,
+    /** Piedras: casillas bloqueadas. */
+    val blocked: List<Cell> = emptyList(),
+    /** Movimientos permitidos en total; `null` = sin límite. */
+    val moveLimit: Int? = null,
+    /** Tipo de nivel y su nombre (solo en campaña). */
+    val levelKind: LevelKind? = null,
+    val levelTitle: String? = null,
+    val levelTip: String? = null,
+    /** La partida acabó por quedarse sin movimientos (no por tablero lleno). */
+    val outOfMoves: Boolean = false,
+    /** Fusiones hechas en esta partida (las usa el tutorial para saber cuándo ya sabe jugar). */
+    val merges: Int = 0,
+    /** Cuentas para las metas de maratón y combo (fusiones, mejor cadena, veces que se logró el combo). */
+    val goalStats: GoalStats = GoalStats(),
+    /** Giro de los controles del nivel. */
+    val twist: Twist = Twist.NONE,
+    /** Tormenta del nivel y las piedras temporales que hay ahora (ya incluidas en [blocked]). */
+    val storm: Storm? = null,
+    val stormStones: List<StormStone> = emptyList()
 )
 {
     // --- PROPIEDADES CALCULADAS ---
@@ -46,13 +78,20 @@ data class BoardState(
      */
     val levelProgress: Float
         get() {
-            val maxTileValue = tiles.maxOfOrNull { it.value } ?: return 0f
-            if (levelLimit <= 2 || maxTileValue <= 1) return 0f
-            return (log2(maxTileValue.toFloat()) / log2(levelLimit.toFloat())).coerceIn(0f, 1f)
+            if (goal != LevelGoal.REACH_TILE) return LevelRules.progress(goal, levelLimit, goalCount, tiles, score, goalStats)
+            if (levelLimit <= 2) return 0f
+            val best = tiles.map { it.value }.sortedDescending().take(goalCount.coerceAtLeast(1))
+            if (best.isEmpty()) return 0f
+            val per = best.sumOf { v -> if (v <= 1) 0.0 else (log2(v.toFloat()) / log2(levelLimit.toFloat())).coerceIn(0f, 1f).toDouble() }
+            return (per / goalCount.coerceAtLeast(1)).toFloat()
         }
 
+    /** Movimientos que quedan (`null` si el nivel no tiene límite). */
+    val movesLeft: Int?
+        get() = moveLimit?.let { (it - moveCount).coerceAtLeast(0) }
+
     val emptySpaces: Int
-        get() = (boardSize * boardSize) - tiles.size
+        get() = (boardSize * boardSize) - blocked.size - tiles.size
 
     val hasMovesAvailable: Boolean
         get() = emptySpaces > 0 || canMerge()
@@ -108,7 +147,8 @@ data class BoardState(
         isPaused = false,
         moveCount = 0,
         combo = 0,
-        starsEarned = 0
+        starsEarned = 0,
+        goalStats = GoalStats()
     )
 
     fun reset(): BoardState = copy(
@@ -120,7 +160,8 @@ data class BoardState(
         isPaused = false,
         elapsedTime = maxTime ?: 0L,
         combo = 0,
-        starsEarned = 0
+        starsEarned = 0,
+        outOfMoves = false
     )
 
     // --- VALIDACIÓN ---
@@ -131,7 +172,7 @@ data class BoardState(
         if (boardSize !in MIN_BOARD_SIZE..MAX_BOARD_SIZE) {
             errors.add("Tamaño de tablero inválido: $boardSize")
         }
-        if (tiles.size > boardSize * boardSize) {
+        if (tiles.size > boardSize * boardSize - blocked.size) {
             errors.add("Demasiadas fichas: ${tiles.size}")
         }
         if (tiles.any { it.row >= boardSize || it.col >= boardSize }) {
@@ -140,8 +181,11 @@ data class BoardState(
         if (tiles.groupBy { it.row to it.col }.any { it.value.size > 1 }) {
             errors.add("Múltiples fichas en la misma posición")
         }
+        if (tiles.any { (it.row to it.col) in blocked }) {
+            errors.add("Ficha sobre una piedra")
+        }
         if (currentLevel < 1) errors.add("Nivel inválido: $currentLevel")
-        if (levelLimit < 2 || !isPowerOfTwo(levelLimit)) errors.add("Límite inválido: $levelLimit")
+        if (levelLimit < 2 || ((goal == LevelGoal.REACH_TILE || goal == LevelGoal.LADDER) && !isPowerOfTwo(levelLimit))) errors.add("Límite inválido: $levelLimit")
         if (score < 0) errors.add("Puntuación negativa: $score")
         if (moveCount < 0) errors.add("Movimientos negativos: $moveCount")
         if (elapsedTime < 0) errors.add("Tiempo negativo: $elapsedTime")

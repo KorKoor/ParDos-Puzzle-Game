@@ -34,15 +34,17 @@ class ReminderAndAlbumTest {
 
     @Test fun fullAlbumReachesTheCap() {
         val all = CollectibleCatalog.all.map { it.id }.toSet()
-        assertEquals(AlbumBonus.MAX_PERCENT, AlbumBonus.coinPercent(all))
-        assertEquals(6 + 18 + 6, AlbumBonus.breakdown(all).total)
+        assertEquals(AlbumBonus.MAX_PERCENT, AlbumBonus.coinPercent(all, all), "con todas brillantes se llega al tope")
+        // 9 % por piezas + 27 % por series + 6 % del álbum = 42 % (sin brillantes)
+        assertEquals(9 + 27 + 6, AlbumBonus.breakdown(all).total)
     }
 
     @Test fun unknownIdsAreIgnored() = assertEquals(0, AlbumBonus.coinPercent((1..40).map { "x$it" }.toSet()))
 
     @Test fun albumBonusAddsToEventMultiplier() {
         val all = CollectibleCatalog.all.map { it.id }.toSet()
-        assertEquals(2.30, AlbumBonus.combine(2.0, all), 1e-9)
+        assertEquals(2.45, AlbumBonus.combine(2.0, all, all), 1e-9)
+        assertEquals(2.42, AlbumBonus.combine(2.0, all), 1e-9)
         assertEquals(1.0, AlbumBonus.combine(1.0, emptySet()), 1e-9)
     }
 
@@ -106,5 +108,31 @@ class ReminderAndAlbumTest {
         assertTrue("league_end" in keys("Oro", 5, false, 2), "cerca de subir")
         assertTrue("league_end" in keys("Plata", 30, true, 1), "en riesgo de bajar")
         assertTrue("league_end" !in keys("", 5, true, 1), "sin liga no hay aviso")
+    }
+
+    @Test fun missionAndChestRemindersAreConditional() {
+        val calm = ReminderPlanner.plan(input()).map { it.key }
+        assertTrue("missions_claim" !in calm && "perfect_streak" !in calm && "daily_challenge" !in calm && "chests_unopened" !in calm)
+        assertTrue("daily_missions" in calm, "las misiones nuevas se avisan siempre")
+        val busy = ReminderPlanner.plan(
+            input().copy(missionsClaimable = 2, perfectDays = 4, perfectToday = false, dailyChallengeOpen = true, unopenedChests = 3)
+        ).map { it.key }
+        assertTrue(listOf("missions_claim", "perfect_streak", "daily_challenge", "chests_unopened").all { it in busy })
+        // si hoy ya completó el día, no se le recuerda la racha
+        assertTrue("perfect_streak" !in ReminderPlanner.plan(input().copy(perfectDays = 4, perfectToday = true)).map { it.key })
+    }
+
+    @Test fun newRemindersNeverFallInQuietHoursAndIdsStayUnique() {
+        for (minute in listOf(0, 8 * 60, 9 * 60, 12 * 60, 20 * 60, 21 * 60 + 40, 23 * 60 + 59)) {
+            val plan = ReminderPlanner.plan(
+                input(minuteOfDay = minute, streak = 5).copy(missionsClaimable = 1, perfectDays = 3, dailyChallengeOpen = true, unopenedChests = 2)
+            )
+            assertEquals(plan.size, plan.map { it.id }.toSet().size)
+            assertEquals(plan.size, plan.map { it.key }.toSet().size)
+            plan.filter { it.key in setOf("missions_claim", "perfect_streak", "daily_missions", "daily_challenge", "chests_unopened") }.forEach { r ->
+                val target = (((minute + r.delayMs / min) % 1440) + 1440) % 1440
+                assertTrue(target in (9 * 60)..(21 * 60 + 29), "${r.key} cae a $target (hoy $minute)")
+            }
+        }
     }
 }

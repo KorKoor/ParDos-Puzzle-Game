@@ -29,12 +29,12 @@ class MissionManager(context: Context) {
 
     // Comprueba si es un día nuevo para cambiar las misiones
     private fun checkAndRotateMissions() {
-        val currentDay = Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        val currentDay = LocalDay.today()   // día local (y compatible con el salto de días de depuración)
         val savedDay = prefs.getInt("last_mission_day", -1)
 
         if (currentDay != savedDay) {
-            // ¡NUEVO DÍA! Elegimos 3 misiones al azar
-            val newMissions = MissionPool.allMissions.shuffled().take(3)
+            // ¡NUEVO DÍA! Una fácil, una media y una difícil, de tipos distintos (ver DailyMissionPlan)
+            val newMissions = com.korkoor.pardos.domain.model.DailyMissionPlan.forDay(currentDay)
             val idsString = newMissions.joinToString(",") { it.id.toString() }
 
             prefs.edit().apply {

@@ -154,8 +154,11 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
                     val params = ConsumeParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
                     client.consumeAsync(params) { consumeResult, _ ->
                         if (consumeResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                            economy.addGems(product.gems)
-                            _message.value = "+${product.gems} gemas"
+                            val first = economy.isFirstPurchase(product.id)
+                            val gems = com.korkoor.pardos.domain.shop.GemPacks.gemsForPurchase(product, first)
+                            economy.markPurchased(product.id)
+                            economy.addGems(gems)
+                            _message.value = if (first) "+$gems gemas (¡primera compra x2!)" else "+$gems gemas"
                         }
                     }
                 }

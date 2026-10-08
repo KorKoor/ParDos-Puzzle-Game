@@ -39,3 +39,8 @@ secrets.properties
 service-account*.json
 amdin-key.json
 *-key.json
+
+# Bundles/APK firmados y certificados de subida (no van al repositorio)
+*.aab
+*.pem
+/app/release/

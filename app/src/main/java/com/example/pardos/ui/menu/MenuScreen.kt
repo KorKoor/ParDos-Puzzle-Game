@@ -1,5 +1,10 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.ToyAlertDialog
+import com.korkoor.pardos.ui.design.JellySurface
+import androidx.compose.ui.graphics.luminance
 import com.korkoor.pardos.ui.design.CozyText
 
 import android.content.res.Configuration
@@ -61,6 +66,9 @@ import com.korkoor.pardos.ui.theme.GameTheme
 import com.korkoor.pardos.ui.theme.particleKind
 import com.korkoor.pardos.ui.theme.particleTintColor
 import com.korkoor.pardos.R
+import com.korkoor.pardos.ui.design.Season
+import com.korkoor.pardos.ui.design.Sage
+import com.korkoor.pardos.ui.design.HalloweenGarland
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,6 +103,9 @@ fun MenuScreen(
     val currentTheme = themeViewModel.currentTheme
     val bgBrush = androidx.compose.ui.graphics.Brush.verticalGradient(currentTheme.colors.map { it.copy(alpha = 0.98f) }.let { if (it.size == 1) it + it else it })
     val textColor = currentTheme.mainTextColor
+
+    val menuDark = remember(currentTheme) { com.korkoor.pardos.ui.design.isDarkBackground(currentTheme.colors) }
+    com.korkoor.pardos.ui.design.DarkSystemBars(menuDark)
     val prefs = context.getSharedPreferences("pardos_prefs", android.content.Context.MODE_PRIVATE)
 
 // Estados para mostrar los diálogos
@@ -160,6 +171,7 @@ fun MenuScreen(
     ) {
         // Fondo de patrón picnic aesthetic
         PicnicBackgroundOptimized(currentTheme.accentColor.copy(alpha = 0.06f))
+        // Noche de brujas: cuerda de luces colgando de lado a lado
         // Con una skin temática, las partículas también viven en el menú
         if (currentTheme is com.korkoor.pardos.ui.theme.GameTheme.Skinned) {
             com.korkoor.pardos.ui.game.components.AmbientParticles(
@@ -187,7 +199,7 @@ fun MenuScreen(
             ) {
                 // Izquierda: jugador, monedas y marca
                 Column(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
@@ -202,16 +214,19 @@ fun MenuScreen(
                         CurrencyPill(Icons.Rounded.MonetizationOn, coins, Color(0xFFE0A93B), onClick = onShopClick)
                         CurrencyPill(Icons.Rounded.Diamond, gems, Color(0xFF4E8FA6), onClick = onShopClick)
                     }
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(8.dp))
                     AnimatedTitle("PARDOS", textColor, fontSize = 40.sp)
                     Text(
-                        text = stringResource(R.string.menu_slogan),
+                        text = Season.text(stringResource(R.string.menu_slogan), "SUMA… SI TE ATREVES"),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
-                        color = textColor.copy(alpha = 0.4f),
+                        color = textColor.copy(alpha = if (menuDark) 0.7f else 0.4f),
                         letterSpacing = 5.sp,
                         modifier = Modifier.padding(top = 6.dp)
                     )
+                    // El dock vive aquí para no quedar enterrado en el scroll de la derecha
+                    Spacer(Modifier.height(4.dp))
+                    BottomDock(items = dockItemsL, modifier = Modifier.padding(horizontal = 0.dp))
                 }
 
                 // Derecha: acciones y misiones con scroll
@@ -240,7 +255,7 @@ fun MenuScreen(
                         QuickActionCard(
                             label = stringResource(R.string.menu_customize),
                             icon = Icons.Rounded.Tune,
-                            color = Color(0xFF81B29A),
+                            color = if (Season.halloween) Sage else Color(0xFF81B29A),
                             onClick = onCustomClick,
                             modifier = Modifier.weight(1f)
                         )
@@ -252,7 +267,6 @@ fun MenuScreen(
                         onProfileChanged = { profileTick++ }
                     )
                     activeEvents.take(2).forEach { ev -> MenuEventBanner(ev, todayDay, retentionForCards) { eventDialog = ev } }
-                    BottomDock(items = dockItemsL, modifier = Modifier.padding(horizontal = 0.dp))
                     com.korkoor.pardos.ui.rewards.LeagueCard(retention = retentionForCards)
                     DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
                     WeeklyMissionsCard(retention = retentionForCards)
@@ -297,10 +311,10 @@ fun MenuScreen(
                     Spacer(Modifier.height(20.dp))
                     AnimatedTitle("PARDOS", textColor, fontSize = 44.sp)
                     Text(
-                        text = stringResource(R.string.menu_slogan),
+                        text = Season.text(stringResource(R.string.menu_slogan), "SUMA… SI TE ATREVES"),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
-                        color = textColor.copy(alpha = 0.4f),
+                        color = textColor.copy(alpha = if (menuDark) 0.7f else 0.4f),
                         letterSpacing = 6.sp,
                         modifier = Modifier.padding(top = 8.dp, bottom = 22.dp)
                     )
@@ -324,7 +338,7 @@ fun MenuScreen(
                         QuickActionCard(
                             label = stringResource(R.string.menu_customize),
                             icon = Icons.Rounded.Tune,
-                            color = Color(0xFF81B29A),
+                            color = if (Season.halloween) Sage else Color(0xFF81B29A),
                             onClick = onCustomClick,
                             modifier = Modifier.weight(1f)
                         )
@@ -367,6 +381,9 @@ fun MenuScreen(
             }
         }
 
+        // Noche de brujas: cuerda de luces en lo más alto, por encima del contenido
+        if (Season.halloween) HalloweenGarland(Modifier.align(Alignment.TopCenter), height = 36.dp)
+
         // --- DIÁLOGO DE APOYO ---
         if (showSupportDialog) {
             AlertDialog(
@@ -391,7 +408,7 @@ fun MenuScreen(
 fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
     val uriHandler = LocalUriHandler.current
 
-    Surface(
+    JellySurface(
         modifier = Modifier
             .fillMaxWidth(0.85f)
             .wrapContentHeight(),
@@ -419,12 +436,12 @@ fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 lineHeight = 18.sp,
-                color = Color(0xFF3D405B).copy(alpha = 0.7f)
+                color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f)
             )
 
             Spacer(Modifier.height(24.dp))
 
-            Button(
+            ToyButton(
                 onClick = { uriHandler.openUri("https://www.instagram.com/kourkoour/") },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(16.dp),
@@ -435,16 +452,16 @@ fun SupportCreatorContent(currentTheme: GameTheme, onDismiss: () -> Unit) {
 
             Spacer(Modifier.height(12.dp))
 
-            Button(
+            ToyButton(
                 onClick = { uriHandler.openUri("https://ko-fi.com/korkor0209") },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor)
             ) {
-                Text("INVÍTAME UN CAFÉ ☕", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text("INVÍTAME UN CAFÉ", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
 
-            TextButton(
+            ToyTextButton(
                 onClick = onDismiss,
                 modifier = Modifier.padding(top = 8.dp)
             ) {
@@ -475,7 +492,7 @@ fun SupportHeartButton(color: Color, onClick: () -> Unit) {
             onClick = onClick
         )
     ) {
-        Surface(
+        JellySurface(
             modifier = Modifier.size(44.dp).scale(scale),
             shape = CircleShape,
             color = color.copy(alpha = 0.1f),
@@ -574,11 +591,11 @@ fun DailyChallengeButton(
     modifier: Modifier = Modifier.fillMaxWidth(0.92f).height(74.dp),
     fontSize: androidx.compose.ui.unit.TextUnit = 15.sp
 ) {
-    Button(
+    ToyButton(
         onClick = onClick,
         modifier = modifier.shadow(12.dp, RoundedCornerShape(24.dp)),
         shape = RoundedCornerShape(24.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3D405B)),
+        colors = ButtonDefaults.buttonColors(containerColor = com.korkoor.pardos.ui.design.Navy),
         contentPadding = PaddingValues(horizontal = 8.dp)
     ) {
         Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFF2CC8F), modifier = Modifier.size(18.dp))
@@ -602,7 +619,7 @@ fun MiniMenuButton(
     onClick: () -> Unit,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
-    Surface(
+    JellySurface(
         onClick = onClick,
         modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(22.dp),
@@ -676,7 +693,7 @@ fun AnimatedTitle(
 fun PrivacyDisclaimerDialog(
     onAccept: () -> Unit
 ) {
-    AlertDialog(
+    ToyAlertDialog(
         onDismissRequest = { /* No se puede quitar sin aceptar */ },
         containerColor = Color(0xFFFDF8F1), // fondoBeige
         shape = RoundedCornerShape(24.dp),
@@ -720,7 +737,7 @@ fun PrivacyDisclaimerDialog(
             }
         },
         confirmButton = {
-            Button(
+            ToyButton(
                 onClick = onAccept,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81B29A))
             ) {
@@ -742,7 +759,7 @@ fun TutorialDialog(
         else -> listOf("USA TU PODER", "Si te quedas atascado, usa los Power-Ups en la parte inferior para despejar el tablero.", Icons.Rounded.Bolt, Color(0xFFF2CC8F))
     }
 
-    AlertDialog(
+    ToyAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color.White,
         shape = RoundedCornerShape(28.dp),
@@ -751,7 +768,7 @@ fun TutorialDialog(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Surface(
+                JellySurface(
                     shape = CircleShape,
                     color = (color as Color).copy(alpha = 0.15f),
                     modifier = Modifier.size(80.dp)
@@ -777,7 +794,7 @@ fun TutorialDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            ToyTextButton(
                 onClick = {
                     if (step < totalSteps) step++ else onDismiss()
                 }

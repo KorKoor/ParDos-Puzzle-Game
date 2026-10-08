@@ -31,7 +31,17 @@ data class ReminderInput(
     val eventSkinName: String = "",
     val eventDaysLeft: Int = Int.MAX_VALUE,
     val eventWinsLeft: Int = 0,
-    val upcomingEvents: List<UpcomingEvent> = emptyList()
+    val upcomingEvents: List<UpcomingEvent> = emptyList(),
+    /** Misiones diarias: completadas sin cobrar, y cuántas quedan sin cobrar (por si no las hizo). */
+    val missionsClaimable: Int = 0,
+    val missionsOpen: Int = 0,
+    /** Racha de días perfectos (las tres misiones cobradas) y si hoy ya se completó el día. */
+    val perfectDays: Int = 0,
+    val perfectToday: Boolean = false,
+    /** Cofres del álbum sin abrir. */
+    val unopenedChests: Int = 0,
+    /** ¿El reto diario de hoy sigue sin jugar? */
+    val dailyChallengeOpen: Boolean = false
 )
 
 /**
@@ -151,6 +161,39 @@ object ReminderPlanner {
                 "event_start_${e.id}", 20 + idx, "¡Llega ${e.name}!",
                 "Gana ${com.korkoor.pardos.domain.shop.EventSkins.WINS_REQUIRED} niveles y llévate la skin exclusiva ${e.skinName}.",
                 delayToHour(i.minuteOfDay, 10 * 60, dayOffset = e.daysUntil)
+            )
+        }
+
+        // Misiones diarias: premios por cobrar (en unas horas) y, si no, las de mañana (a media mañana)
+        if (i.missionsClaimable > 0) {
+            out += Reminder(
+                "missions_claim", 14, "Tienes ${i.missionsClaimable} " + (if (i.missionsClaimable == 1) "misión lista" else "misiones listas") + " para cobrar",
+                "Tus premios de hoy te esperan. Entra y reclámalos.", respectQuietHours(4 * HOUR, i.minuteOfDay)
+            )
+        }
+        // Racha de días perfectos en juego: si hoy ya cobró las tres, mañana hay otra oportunidad; si no, que no la pierda
+        if (i.perfectDays >= 2 && !i.perfectToday) {
+            out += Reminder(
+                "perfect_streak", 15, "Tu racha perfecta de ${i.perfectDays} días",
+                "Cobra las 3 misiones de hoy y no la rompas.", delayToHour(i.minuteOfDay, 19 * 60, dayOffset = 0)
+            )
+        }
+        out += Reminder(
+            "daily_missions", 16, "Misiones nuevas del día",
+            if (i.perfectDays >= 1) "Mantén tu racha perfecta: son 3 misiones." else "Tres misiones frescas y un cofre si cobras las tres.",
+            delayToHour(i.minuteOfDay, 10 * 60 + 30, dayOffset = 1)
+        )
+        if (i.dailyChallengeOpen) {
+            out += Reminder(
+                "daily_challenge", 17, "El reto diario te espera",
+                "Un tablero distinto cada día, igual para todos. ¿Cuántas estrellas sacas?",
+                delayToHour(i.minuteOfDay, 13 * 60, dayOffset = 1)
+            )
+        }
+        if (i.unopenedChests > 0) {
+            out += Reminder(
+                "chests_unopened", 18, if (i.unopenedChests == 1) "Tienes un cofre sin abrir" else "Tienes ${i.unopenedChests} cofres sin abrir",
+                "Dentro hay piezas para tu álbum. ¡Ábrelos!", respectQuietHours(DAY + 3 * HOUR, i.minuteOfDay)
             )
         }
 

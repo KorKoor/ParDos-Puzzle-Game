@@ -13,6 +13,7 @@ import com.korkoor.pardos.domain.achievements.gameAchievements
 import com.korkoor.pardos.domain.achievements.Achievement
 import com.korkoor.pardos.domain.logic.*
 import com.korkoor.pardos.domain.model.*
+import com.korkoor.pardos.domain.level.*
 import com.korkoor.pardos.ui.game.components.FloatingScoreModel
 import com.korkoor.pardos.ui.game.logic.*
 import kotlinx.coroutines.Job
@@ -68,7 +69,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var firstSelectedTileId by mutableStateOf<String?>(null)
         private set
     // --- DESHACER ---
-    private data class UndoSnapshot(val tiles: List<TileModel>, val score: Int, val moves: Int)
+    private data class UndoSnapshot(
+        val tiles: List<TileModel>, val score: Int, val moves: Int,
+        val stats: com.korkoor.pardos.domain.level.GoalStats = com.korkoor.pardos.domain.level.GoalStats(),
+        val stormStones: List<com.korkoor.pardos.domain.level.StormStone> = emptyList(),
+        val blocked: List<com.korkoor.pardos.domain.level.Cell> = emptyList()
+    )
     private var lastSnapshot: UndoSnapshot? = null
     var canUndo by mutableStateOf(false)
         private set
@@ -80,7 +86,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (currentMode == GameMode.DUELO || currentMode == GameMode.CARRERA) return false
         if (isMoving || _boardState.value.isGameOver || _boardState.value.isLevelCompleted) return false
         if (!economy.useUndo()) return false
-        _boardState.update { it.copy(tiles = snap.tiles, score = snap.score, moveCount = snap.moves) }
+        // En las tormentas se vuelve también a las piedras de esa jugada: así nunca queda una piedra sobre una ficha
+        if (snap.blocked != _boardState.value.blocked) {
+            gameEngine = GameEngine(boardSize = _boardState.value.boardSize, random = rng, blocked = snap.blocked.toSet())
+        }
+        _boardState.update {
+            it.copy(tiles = snap.tiles, score = snap.score, moveCount = snap.moves, goalStats = snap.stats, stormStones = snap.stormStones, blocked = snap.blocked)
+        }
         lastSnapshot = null
         canUndo = false
         return true
@@ -164,6 +176,49 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var isPityModeActive by mutableStateOf(false)
         private set
 
+    // --- FLOW: ímpetu del nivel, racha de victorias y ayuda adaptativa (ver domain/flow) ---
+    data class FlowCallout(val tier: com.korkoor.pardos.domain.flow.FlowTier, val id: Int)
+
+    /** Jugadas seguidas que fusionan en este nivel. */
+    var flowStreak by mutableIntStateOf(0)
+        private set
+    var flowCallout by mutableStateOf<FlowCallout?>(null)
+        private set
+    private var peakFlowTier = com.korkoor.pardos.domain.flow.FlowTier.CALM
+    private var calloutSeq = 0
+
+    /** Niveles de campaña ganados seguidos (persistente; perder la enfría a la mitad). */
+    var winStreak by mutableIntStateOf(0)
+        private set
+    var lastStreakBonusPct by mutableIntStateOf(0)
+        private set
+    var lastFlowBonusPct by mutableIntStateOf(0)
+        private set
+    var lastStreakMilestone by mutableStateOf<com.korkoor.pardos.domain.flow.WinStreak.Milestone?>(null)
+        private set
+
+    /** Ayuda a la vista cuando un nivel se atasca ("Te echamos una mano…") y el "casi" de la última derrota. */
+    var assistMessage by mutableStateOf<String?>(null)
+        private set
+    var nearMissMessage by mutableStateOf<String?>(null)
+        private set
+    private var activeAssist = com.korkoor.pardos.domain.flow.AssistPolicy.forAttempts(0)
+    private val KEY_WIN_STREAK = "campaign_win_streak"
+
+    private fun isCampaignRun() = currentMode == GameMode.CLASICO && dailyChallengeThemeIndex == null
+
+    /** Derrota: cuenta el intento (para la ayuda), enfría la racha y prepara la frase del "casi". */
+    private fun registerLoss() {
+        val s = _boardState.value
+        val level = s.currentLevel
+        prefs.edit().putInt("$KEY_ATTEMPTS$level", prefs.getInt("$KEY_ATTEMPTS$level", 0) + 1).apply()
+        if (isCampaignRun()) {
+            winStreak = com.korkoor.pardos.domain.flow.WinStreak.afterLoss(winStreak)
+            prefs.edit().putInt(KEY_WIN_STREAK, winStreak).apply()
+        }
+        nearMissMessage = com.korkoor.pardos.domain.flow.NearMiss.message(s.goal, s.levelLimit, s.goalCount, s.tiles, s.score, s.goalStats, s.outOfMoves)
+    }
+
     // 🔥 TIEMPO REAL: Variable para guardar la hora exacta de inicio del sistema
     private var realStartTime: Long = 0L
 
@@ -175,6 +230,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val KEY_SAVED_SCORE = "saved_score_level"
     // Nueva llave para contar intentos fallidos
     private val KEY_ATTEMPTS = "attempts_fail_level_"
+    init { winStreak = prefs.getInt("campaign_win_streak", 0) }
 
     // 3. ESTADOS DE FLUJO
     private val _currentTimeProvider = MutableStateFlow(System.currentTimeMillis())
@@ -207,6 +263,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // Azar de la partida: con semilla (reto diario, duelos) es reproducible; sin semilla, aleatorio
     private var rng: Random = Random.Default
+
+    /** Reglas del nivel de campaña en curso (`null` en los demás modos). Lo único que el juego lee de ellas es esto. */
+    private var activeSpec: LevelSpec? = null
     var currentSeed: Long? = null
         private set
     private var gameEngine = GameEngine(boardSize = 3)
@@ -316,19 +375,34 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun refreshCurrentLevelDifficulty() {
         if (currentMode == GameMode.CLASICO) {
             val currentState = _boardState.value
-            val currentLevel = currentState.currentLevel
-            val expectedTarget = ProgressionEngine.calculateTargetForLevel(currentLevel)
-
-            if (currentState.levelLimit != expectedTarget) {
-                Log.d("GAME_FIX", "Corrigiendo dificultad para Nivel $currentLevel")
-                setupCustomGame(
-                    size = ProgressionEngine.calculateBoardSize(expectedTarget),
-                    target = expectedTarget,
-                    level = currentLevel,
-                    initialScore = currentState.score
-                )
+            val spec = LevelCatalog.spec(currentState.currentLevel)
+            if (activeSpec != spec) {
+                Log.d("GAME_FIX", "Aplicando las reglas del nivel ${spec.id}")
+                startCampaignLevel(spec.id, currentState.score)
             }
         }
+    }
+
+    /** Solo para pruebas en depuración: fija un límite de movimientos en la partida actual. */
+    fun debugSetMoveLimit(limit: Int) = _boardState.update { it.copy(moveLimit = limit) }
+
+    /** Empieza (o reinicia) un nivel de la campaña con todas sus reglas: tablero, piedras, límites y meta. */
+    fun startCampaignLevel(level: Int, initialScore: Int = 0) {
+        currentMode = GameMode.CLASICO
+        dailyChallengeThemeIndex = null
+        currentMultiplierBase = 2
+        val spec = LevelCatalog.spec(level)
+        setupCustomGame(
+            size = spec.boardSize,
+            target = spec.goalValue,
+            allowPowerUps = true,
+            difficulty = "Zen",
+            level = spec.id,
+            // Una meta de puntos empieza siempre de cero (si no, el puntaje del nivel anterior la regalaría)
+            initialScore = if (spec.goal == LevelGoal.SCORE) 0 else initialScore,
+            isCustom = false,
+            spec = spec
+        )
     }
 
     // 🔥 FIX: Función pública para recargar datos en el menú
@@ -374,10 +448,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _boardState.update { it.copy(isGameOver = true) }
         prefs.edit().remove(KEY_SAVED_SCORE).apply()
 
-        // 💀 PIEDAD: Si pierdes, aumentamos el contador de intentos
-        val level = _boardState.value.currentLevel
-        val currentAttempts = prefs.getInt("$KEY_ATTEMPTS$level", 0)
-        prefs.edit().putInt("$KEY_ATTEMPTS$level", currentAttempts + 1).apply()
+        // 💀 PIEDAD: Si pierdes, aumentamos el contador de intentos (y se enfría la racha)
+        registerLoss()
 
         // 🔥 INTEGRACIÓN MISIONES DIARIAS: Partida jugada (incluso si se pierde) 🔥
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
@@ -572,9 +644,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             base,
             com.korkoor.pardos.domain.collection.AlbumBonus.combine(
                 com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today()),
-                collection.owned.value
+                collection.owned.value, collection.foil.value
             )
         )
+        lastCoinsEarned = economy.applyWinBonuses(lastCoinsEarned)
         economy.addCoins(lastCoinsEarned)
         if (stages > 0) {
             viewModelScope.launch {
@@ -631,6 +704,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             val savedScore = if (mode == GameMode.CLASICO) prefs.getInt(KEY_SAVED_SCORE, 0) else 0
 
+            if (mode == GameMode.CLASICO) {
+                startCampaignLevel(levelToStart, savedScore)
+                return
+            }
+
             val correctTarget = ProgressionEngine.calculateTargetForLevel(levelToStart)
             val correctSize = ProgressionEngine.calculateBoardSize(correctTarget)
 
@@ -658,7 +736,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         initialScore: Int = 0,
         isCustom: Boolean = false,
         seed: Long? = null,
-        timeLimitMs: Long? = null
+        timeLimitMs: Long? = null,
+        spec: LevelSpec? = null
     ) {
         // 1. LIMPIEZA TOTAL DE ESTADOS PREVIOS
         timerJob?.cancel()
@@ -676,7 +755,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         canUndo = false
         currentSeed = seed
         rng = seed?.let { Random(it) } ?: Random.Default
-        gameEngine = GameEngine(boardSize = size, random = rng)
+        activeSpec = spec
+        gameEngine = GameEngine(boardSize = size, random = rng, blocked = spec?.stoneSet ?: emptySet())
 
         // 3. DETERMINACIÓN DEL MODO (FIX: Evita que la campaña herede el modo Desafío)
         val determinedMode = if (isCustom) {
@@ -687,17 +767,36 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // 4. CÁLCULO DE TIEMPO (Solo se activa en Desafío o Custom con dificultad)
-        val timeLimitSeconds = timeLimitMs ?: if (determinedMode == GameMode.DESAFIO || (isCustom && difficulty != "Zen")) {
-            ProgressionEngine.calculateTimeLimitForTarget(target, isCampaign = false)
-        } else {
-            null // Campaña siempre es Zen/Sin tiempo
+        val timeLimitSeconds = timeLimitMs ?: when {
+            spec?.timeLimitMs != null -> spec.timeLimitMs   // niveles contrarreloj de la campaña
+            determinedMode == GameMode.DESAFIO || (isCustom && difficulty != "Zen") ->
+                ProgressionEngine.calculateTimeLimitForTarget(target, isCampaign = false)
+            else -> null   // la campaña no tiene reloj salvo en los niveles contrarreloj
         }
 
         this.currentMode = determinedMode
 
         // 5. SISTEMA DE PIEDAD (PITY MODE)
         val attempts = prefs.getInt("$KEY_ATTEMPTS$level", 0)
-        isPityModeActive = attempts >= 5
+        activeAssist = if (spec != null && !isCustom && isCampaignRun()) com.korkoor.pardos.domain.flow.AssistPolicy.forAttempts(attempts)
+        else com.korkoor.pardos.domain.flow.AssistPolicy.forAttempts(0)
+        isPityModeActive = activeAssist.tier > 0
+        val assistFactor = activeAssist.limitFactor
+        // Deshacer gratis: solo los que faltan por dar en este nivel (nunca dos veces)
+        val grantedKey = "assist_granted_$level"
+        val extraUndos = com.korkoor.pardos.domain.flow.AssistPolicy.newUndos(prefs.getInt(grantedKey, 0), activeAssist)
+        if (extraUndos > 0) {
+            economy.addUndos(extraUndos)
+            prefs.edit().putInt(grantedKey, activeAssist.totalFreeUndos).apply()
+        }
+        assistMessage = activeAssist.message
+        nearMissMessage = null
+        flowStreak = 0
+        flowCallout = null
+        peakFlowTier = com.korkoor.pardos.domain.flow.FlowTier.CALM
+        lastStreakMilestone = null
+        lastStreakBonusPct = 0
+        lastFlowBonusPct = 0
 
         // 6. ACTUALIZACIÓN DEL ESTADO DEL TABLERO
         _boardState.update {
@@ -712,17 +811,30 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isLevelCompleted = false,
                 starsEarned = 0,
                 tiles = emptyList(), // Se llenarán en spawnInitialTiles
-                maxTime = timeLimitSeconds,
+                maxTime = timeLimitSeconds?.let { if (spec?.timeLimitMs != null) (it * assistFactor).toLong() else it },
                 // Si no hay tiempo límite, el tiempo transcurrido debe ser 0 para no contar
-                elapsedTime = timeLimitSeconds ?: 0L,
+                elapsedTime = timeLimitSeconds?.let { if (spec?.timeLimitMs != null) (it * assistFactor).toLong() else it } ?: 0L,
                 showTutorialHand = (level == 1 && initialScore == 0),
                 secondChanceUsed = false,
-                moveCount = 0
+                moveCount = 0,
+                goal = spec?.goal ?: LevelGoal.REACH_TILE,
+                goalCount = spec?.goalCount ?: 1,
+                blocked = spec?.stones.orEmpty(),
+                goalStats = com.korkoor.pardos.domain.level.GoalStats(),
+                twist = spec?.twist ?: com.korkoor.pardos.domain.level.Twist.NONE,
+                storm = spec?.storm,
+                stormStones = emptyList(),
+                moveLimit = spec?.moveLimit?.let { (it * assistFactor).toInt() },
+                levelKind = spec?.kind,
+                levelTitle = spec?.title,
+                levelTip = spec?.tip,
+                outOfMoves = false,
+                merges = 0
             )
         }
 
         // 7. GENERACIÓN DE FICHAS INICIALES
-        spawnInitialTiles(level, target)
+        spawnInitialTiles(level, spec?.scaleTile ?: target)
     }
 
     fun onMove(direction: Direction, onHapticFeedback: (HapticFeedbackType) -> Unit) {
@@ -746,7 +858,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val currentTiles = currentState.tiles
 
             // 🛠️ ELIMINADO MULTIPLICADOR: Ahora la fusión es estándar (x1)
-            val (movedTiles, scoreGained) = gameEngine.move(currentTiles, direction, 1)
+            // Niveles "del revés": el deslizamiento del dedo se traduce a la dirección real del tablero
+            val (movedTiles, scoreGained) = gameEngine.move(currentTiles, currentState.twist.apply(direction), 1)
 
             if (hasBoardChanged(currentTiles, movedTiles)) {
                 isMoving = true
@@ -763,6 +876,19 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     retention.onMerges(mergesCount)
                 }
 
+                // FLOW: las jugadas seguidas que fusionan encienden el aura del tablero
+                val newFlow = com.korkoor.pardos.domain.flow.FlowMeter.next(flowStreak, mergesCount > 0)
+                com.korkoor.pardos.domain.flow.FlowMeter.tierUp(flowStreak, newFlow)?.let { tier ->
+                    flowCallout = FlowCallout(tier, ++calloutSeq)
+                    onHapticFeedback(HapticFeedbackType.LongPress)
+                    soundManager.playBetterPop(combo = 8 + tier.ordinal * 2)
+                    val id = calloutSeq
+                    viewModelScope.launch { delay(1300); if (flowCallout?.id == id) flowCallout = null }
+                }
+                flowStreak = newFlow
+                com.korkoor.pardos.domain.flow.FlowMeter.tierOf(newFlow).let { if (it.ordinal > peakFlowTier.ordinal) peakFlowTier = it }
+                if (assistMessage != null) assistMessage = null
+
                 delay(80)
 
                 // 🎲 GENERACIÓN INTELIGENTE (Aparición normal)
@@ -774,7 +900,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 // ✨ EVOLUCIÓN ESPONTÁNEA (Solo 4, 8, 16 de vez en cuando)
                 // Probabilidad del 15% para que ocurra
-                if (rng.nextInt(1, 101) <= 15) {
+                if (rng.nextInt(1, 101) <= 15 + activeAssist.luckyBoostPct) {
                     val luckyCandidates = finalTiles.filter { it.value == 4 || it.value == 8 || it.value == 16 }
                     if (luckyCandidates.isNotEmpty()) {
                         val luckyTile = luckyCandidates.random(rng)
@@ -798,14 +924,41 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     retention.onTileReached(maxTileValue)
                 }
 
-                val reachedTarget = maxTileValue >= currentState.levelLimit
                 val newScore = currentState.score + scoreGained
+                val newStats = currentState.goalStats.after(mergesCount, if (currentState.goal == LevelGoal.COMBO) currentState.levelLimit else 0)
+                val reachedTarget = LevelRules.isGoalReached(
+                    currentState.goal, currentState.levelLimit, currentState.goalCount, finalTiles, newScore, newStats
+                )
 
                 // Instantánea para "Deshacer" (solo guardamos la última jugada)
-                lastSnapshot = UndoSnapshot(currentState.tiles, currentState.score, currentState.moveCount)
+                lastSnapshot = UndoSnapshot(
+                    currentState.tiles, currentState.score, currentState.moveCount,
+                    currentState.goalStats, currentState.stormStones, currentState.blocked
+                )
                 canUndo = true
 
-                _boardState.update { it.copy(tiles = finalTiles, score = newScore, moveCount = it.moveCount + 1) }
+                // Tormenta: tras cada jugada pueden irse piedras temporales y caer otra nueva
+                var stormStones = currentState.stormStones
+                var blockedNow = currentState.blocked
+                currentState.storm?.let { storm ->
+                    if (!reachedTarget) {
+                        stormStones = com.korkoor.pardos.domain.level.StormRules.step(
+                            storm, currentState.moveCount + 1, stormStones, finalTiles,
+                            activeSpec?.stoneSet ?: emptySet(), currentState.boardSize, rng
+                        )
+                        blockedNow = (activeSpec?.stones.orEmpty() + stormStones.map { it.cell }).distinct()
+                        if (blockedNow != currentState.blocked) {
+                            gameEngine = GameEngine(boardSize = currentState.boardSize, random = rng, blocked = blockedNow.toSet())
+                        }
+                    }
+                }
+
+                _boardState.update {
+                    it.copy(
+                        tiles = finalTiles, score = newScore, moveCount = it.moveCount + 1, merges = it.merges + mergesCount,
+                        goalStats = newStats, stormStones = stormStones, blocked = blockedNow
+                    )
+                }
 
                 if (currentState.gameMode == GameMode.CLASICO) {
                     prefs.edit().putInt(KEY_SAVED_SCORE, newScore).apply()
@@ -817,6 +970,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     isGameStarted = false // Detener el hilo del tiempo
                     handleLevelVictory(maxTileValue)
                     return@launch
+                } else if (currentState.moveLimit?.let { currentState.moveCount + 1 >= it } == true) {
+                    // Se acabaron los movimientos sin llegar a la meta
+                    _boardState.update { it.copy(outOfMoves = true) }
+                    handleGameOver()
+                    isMoving = false
+                    return@launch
                 } else if (gameEngine.isGameOver(finalTiles)) {
                     handleGameOver()
                     isMoving = false
@@ -826,7 +985,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 isMoving = false
 
                 // ✨ AYUDA DIVINA (Mantenida exactamente igual)
-                if (ProgressionEngine.shouldTriggerDivineHelp(currentState.levelLimit, rng)) {
+                if (ProgressionEngine.shouldTriggerDivineHelp(activeSpec?.scaleTile ?: currentState.levelLimit, rng)) {
                     delay(150) // Pausa dramática
                     _boardState.update { current ->
                         val tiles = current.tiles.toMutableList()
@@ -957,7 +1116,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             if (maxTile >= currentState.levelLimit) handleRaceStageCleared()
             return
         }
-        val targetReached = maxTile >= currentState.levelLimit
+        val targetReached = LevelRules.isGoalReached(
+            currentState.goal, currentState.levelLimit, currentState.goalCount, currentState.tiles, currentState.score, currentState.goalStats
+        )
         if (!targetReached) return
 
         // 1. Detenemos los relojes inmediatamente
@@ -967,7 +1128,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // 🏆 VICTORIA: Limpiamos intentos fallidos
         val level = currentState.currentLevel
-        prefs.edit().remove("$KEY_ATTEMPTS$level").apply()
+        prefs.edit().remove("$KEY_ATTEMPTS$level").remove("assist_granted_$level").apply()
 
         var finalStars = 0
         var finalTimeUsed = 0L
@@ -979,13 +1140,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             if (totalLimit > 0) {
                 // MODO DESAFÍO: El tiempo usado es el límite total menos lo que sobró
                 finalTimeUsed = (totalLimit - state.elapsedTime).coerceAtLeast(0L)
-                finalStars = ProgressionEngine.calculateStars(finalTimeUsed, state.levelLimit)
+                finalStars = activeSpec?.let { LevelRules.stars(it, state.moveCount, finalTimeUsed) }
+                    ?: ProgressionEngine.calculateStars(finalTimeUsed, state.levelLimit)
             } else {
                 // 🔥 MODO CAMPAÑA CORREGIDO:
                 // Usamos directamente el elapsedTime del estado, que ya lleva
                 // la cuenta exacta de los milisegundos jugados.
                 finalTimeUsed = state.elapsedTime
-                finalStars = 3
+                // En la campaña las estrellas premian la eficiencia (menos movimientos); en el resto, 3 como siempre
+                finalStars = activeSpec?.let { LevelRules.stars(it, state.moveCount, finalTimeUsed) } ?: 3
             }
 
             val assuredStars = finalStars.coerceAtLeast(1)
@@ -1006,17 +1169,36 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             // 🪙 Monedas: se calculan ANTES de guardar el progreso (para saber si es primera vez)
             val firstClear = levelStore.starsFor(currentMode, currentLvl) == 0
-            val baseCoins = com.korkoor.pardos.domain.rewards.CoinRewards.forLevelWin(
+            val rawCoins = com.korkoor.pardos.domain.rewards.CoinRewards.forLevelWin(
                 _boardState.value.starsEarned, firstClear
-            )
+            ) + (activeSpec?.let { LevelRules.coinBonus(it) } ?: 0)
+            // FLOW: la racha de victorias y el mejor ímpetu del nivel suben las monedas (solo campaña)
+            var streakPct = 0
+            var flowPct = 0
+            lastStreakMilestone = null
+            if (isCampaignRun()) {
+                winStreak = com.korkoor.pardos.domain.flow.WinStreak.afterWin(winStreak)
+                prefs.edit().putInt(KEY_WIN_STREAK, winStreak).apply()
+                streakPct = com.korkoor.pardos.domain.flow.WinStreak.coinBonusPct(winStreak)
+                flowPct = com.korkoor.pardos.domain.flow.FlowMeter.coinBonusPct(peakFlowTier)
+                com.korkoor.pardos.domain.flow.WinStreak.milestoneAt(winStreak)?.let { m ->
+                    economy.addGems(m.gems)
+                    if (m.undos > 0) economy.addUndos(m.undos)
+                    lastStreakMilestone = m
+                }
+            }
+            lastStreakBonusPct = streakPct
+            lastFlowBonusPct = flowPct
+            val baseCoins = rawCoins * (100 + streakPct + flowPct) / 100
             // Eventos programados (fin de semana dorado, semana festival...)
             lastCoinsEarned = com.korkoor.pardos.domain.events.EventCalendar.apply(
                 baseCoins,
                 com.korkoor.pardos.domain.collection.AlbumBonus.combine(
                 com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today()),
-                collection.owned.value
+                collection.owned.value, collection.foil.value
             )
             )
+            lastCoinsEarned = economy.applyWinBonuses(lastCoinsEarned)
             economy.addCoins(lastCoinsEarned)
             coinsDoubled = false
 
@@ -1127,9 +1309,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             timerManager.stop()
             stopTimer()
             _boardState.update { it.copy(isGameOver = true) }
-            val level = _boardState.value.currentLevel
-            val currentAttempts = prefs.getInt("$KEY_ATTEMPTS$level", 0)
-            prefs.edit { putInt("$KEY_ATTEMPTS$level", currentAttempts + 1) }
+            registerLoss()
 
             soundManager.playGameOver()
         }
@@ -1169,6 +1349,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         val levelToRetry = _boardState.value.currentLevel
         val arePowerUpsAllowed = _boardState.value.allowPowerUps
+
+        if (currentMode == GameMode.CLASICO) {
+            showLevelSummary = false
+            isMoving = false
+            isGameStarted = false
+            timerJob?.cancel()
+            floatingScores.clear()
+            prefs.edit().remove(KEY_SAVED_SCORE).apply()
+            startCampaignLevel(levelToRetry)
+            playMenuMusic()
+            return
+        }
 
         val target = ProgressionEngine.calculateTargetForLevel(levelToRetry)
         val size = ProgressionEngine.calculateBoardSize(target)
@@ -1230,15 +1422,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
             if (currentMode == GameMode.CLASICO) {
                 prefs.edit().remove(KEY_SAVED_SCORE).apply()
-                val newTarget = ProgressionEngine.calculateTargetForLevel(nextLv)
-                val newSize = ProgressionEngine.calculateBoardSize(newTarget)
                 delay(300)
-                setupCustomGame(
-                    size = newSize,
-                    target = newTarget,
-                    level = nextLv,
-                    initialScore = currentState.score
-                )
+                startCampaignLevel(nextLv, currentState.score)
                 return@launch
             }
 
@@ -1280,6 +1465,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun spawnInitialTiles(level: Int, target: Int) {
         val currentTiles = mutableListOf<TileModel>()
         val boardSize = _boardState.value.boardSize
+
+        // Niveles con ventaja: salen con fichas altas ya colocadas
+        activeSpec?.takeIf { it.startTiles.isNotEmpty() }?.let { spec ->
+            val placed = spec.startTiles.map { TileModel(TileModel.generateId(), it.value, it.row, it.col, isNew = true) }
+            _boardState.update { it.copy(tiles = placed) }
+            return
+        }
 
         // 🚀 LÓGICA DE CANTIDAD: Más fichas para tableros más grandes
         // 3x3 -> 2 fichas | 4x4 -> 3 fichas | 5x5 y 6x6 -> 4 fichas
@@ -1412,8 +1604,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     val currentTiles = currentState.tiles
 
                     // 🧹 Limpieza: nos quedamos con la mitad de las mejores fichas
+                    // Si se acabaron los movimientos el tablero se queda como está y se regalan más movimientos
                     val tilesToKeepCount = (currentTiles.size / 2).coerceAtLeast(2)
-                    val cleanedTiles = currentTiles.sortedByDescending { it.value }.take(tilesToKeepCount)
+                    val cleanedTiles = if (currentState.outOfMoves) currentTiles
+                    else currentTiles.sortedByDescending { it.value }.take(tilesToKeepCount)
 
                     // 🔥 SÚPER BALANCE: Si el tablero estaba vacío, generamos fichas inteligentes
                     val finalTiles = cleanedTiles.ifEmpty {
@@ -1439,7 +1633,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                             isGameOver = false,
                             secondChanceUsed = true,
                             showTutorialHand = true,
-                            elapsedTime = newTime
+                            elapsedTime = newTime,
+                            moveLimit = if (state.outOfMoves) state.moveLimit?.plus(((state.moveLimit ?: 0) * 15 / 100).coerceAtLeast(8)) else state.moveLimit,
+                            outOfMoves = false
                         )
                     }
                     isGameStarted = true
@@ -1456,21 +1652,25 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         currentMode = GameMode.DESAFIO
         setupCustomGame(
             size = daily.boardSize,
-            target = daily.target,
+            target = daily.spec.goalValue,
             allowPowerUps = false,
             difficulty = "Normal",
             level = 1,
             isCustom = true,
-            seed = daily.seed
+            seed = daily.seed,
+            spec = daily.spec
         )
     }
 
     private fun pickNewTileValue(target: Int): Int {
-        if (!accessibilitySpawnAssist) return ProgressionEngine.getNewTileValue(target, rng)
+        val spec = activeSpec
+        // En los niveles de campaña la escala (y el reparto de 2/4/8) la da el nivel; si no, la meta
+        val scale = spec?.scaleTile ?: target
+        if (!accessibilitySpawnAssist) return SpawnRules.pick(spec?.spawn ?: SpawnStyle.NORMAL, scale, rng)
 
         val rand = rng.nextDouble()
         return when {
-            target >= 1024 && rand < 0.08 -> 8
+            scale >= 1024 && rand < 0.08 -> 8
             rand < 0.22 -> 4
             else -> 2
         }

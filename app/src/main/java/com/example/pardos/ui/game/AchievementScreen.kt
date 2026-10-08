@@ -102,8 +102,7 @@ fun AchievementsScreen(
             .sortedByDescending { it.id in unlockedIds }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
-        PicnicBackgroundOptimized(color = currentTheme.accentColor.copy(alpha = 0.04f))
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
 
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             PardosTopBar(
@@ -283,14 +282,14 @@ private fun AchievementRow(
     val shape = RoundedCornerShape(Radius.Large)
     val color = achievement.color
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(if (unlocked) 6.dp else 0.dp, shape, spotColor = color)
-            .clip(shape)
-            .background(if (unlocked) Color.White else Color.White.copy(alpha = 0.55f))
-            .then(if (unlocked) Modifier.border(1.5.dp, color.copy(alpha = 0.35f), shape) else Modifier)
-            .padding(14.dp),
+    JellyRow(
+        modifier = Modifier.fillMaxWidth(),
+        shape = shape,
+        fill = if (unlocked) Color.White else Color(0xFFF1ECE0),
+        lip = if (unlocked) color.copy(alpha = 0.50f) else Color(0xFFDCD1BB),
+        lipHeight = if (unlocked) 5.dp else 3.dp,
+        borderColor = if (unlocked) color.copy(alpha = 0.35f) else null,
+        padding = PaddingValues(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Medalla

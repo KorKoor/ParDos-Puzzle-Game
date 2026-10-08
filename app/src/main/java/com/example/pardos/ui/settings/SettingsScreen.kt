@@ -32,12 +32,13 @@ fun SettingsScreen(onBack: () -> Unit) {
     val music by settings.musicEnabled.collectAsState()
     val haptics by settings.hapticsEnabled.collectAsState()
     val notifications by settings.notificationsEnabled.collectAsState()
+    val autoNext by settings.autoNextEnabled.collectAsState()
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(ScreenBackground).statusBarsPadding().navigationBarsPadding()
+        modifier = Modifier.fillMaxSize().pardosBackdrop().statusBarsPadding().navigationBarsPadding()
     ) {
         PardosTopBar(title = "Ajustes", eyebrow = "Tu experiencia", onBack = onBack)
 
@@ -51,6 +52,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                     SettingRow(Icons.Rounded.VolumeUp, Sage, "Efectos de sonido", "Fusiones, victoria y derrota", sound) { settings.setSound(it) }
                     SettingRow(Icons.Rounded.MusicNote, Violet, "Música", "La melodía del menú", music) { settings.setMusic(it) }
                     SettingRow(Icons.Rounded.Vibration, Terracotta, "Vibración", "Un toque suave al mover y fusionar", haptics) { settings.setHaptics(it) }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            SectionLabel("Ritmo de juego")
+            PardosCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    SettingRow(
+                        Icons.Rounded.PlayArrow, Sage, "Siguiente nivel automático",
+                        "Tras ganar pasas solo al siguiente. Un toque en la pantalla lo pausa.", autoNext
+                    ) { settings.setAutoNext(it) }
                 }
             }
 
@@ -90,14 +102,7 @@ private fun SettingRow(icon: ImageVector, color: Color, title: String, subtitle:
             Text(subtitle, fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp)
         }
         Spacer(Modifier.width(10.dp))
-        Switch(
-            checked = checked, onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White, checkedTrackColor = Sage,
-                uncheckedThumbColor = Color.White, uncheckedTrackColor = Navy.copy(alpha = 0.2f),
-                uncheckedBorderColor = Color.Transparent
-            )
-        )
+        ToySwitch(checked = checked, onCheckedChange = onChange)
     }
 }
 
@@ -113,7 +118,7 @@ private fun TestNotificationRow() {
     fun send() {
         val ok = com.korkoor.pardos.notifications.PardosNotifier.show(
             context,
-            if (halloween) "🎃 ¡Los avisos funcionan!" else "¡Los avisos funcionan!",
+            if (halloween) "¡Los avisos funcionan!" else "¡Los avisos funcionan!",
             if (halloween) "Así te avisaremos cuando tu cofre embrujado esté listo." else "Así te avisaremos cuando tu cofre esté listo.",
             id = 99, key = "free_chest"
         )

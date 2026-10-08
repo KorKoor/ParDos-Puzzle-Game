@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -50,7 +51,7 @@ fun GameTopBar(
         Spacer(modifier = Modifier.width(6.dp))
 
         // Botón de Salir
-        Surface(
+        JellySurface(
             color = Color(0xFFE07A5F).copy(alpha = 0.15f),
             shape = CircleShape,
             modifier = Modifier
@@ -88,12 +89,12 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
     val shapes = ShapeType.entries
 
     Box {
-        Surface(
+        JellySurface(
             onClick = { expanded = true },
             color = Color.White.copy(alpha = 0.85f),
             shape = RoundedCornerShape(20.dp),
             shadowElevation = 4.dp,
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3D405B).copy(alpha = 0.05f))
+            border = androidx.compose.foundation.BorderStroke(1.dp, com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.05f))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -111,7 +112,7 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
                 Text(
                     text = current.uppercase(),
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF3D405B),
+                    color = com.korkoor.pardos.ui.design.Navy,
                     fontSize = 12.sp,
                     letterSpacing = 1.sp
                 )
@@ -121,7 +122,7 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = Color(0xFF3D405B).copy(alpha = 0.4f)
+                    tint = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.4f)
                 )
             }
         }
@@ -140,7 +141,7 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
                     text = {
                         Text(
                             text = shapeName,
-                            color = if (current == shapeName) Color(0xFF81B29A) else Color(0xFF3D405B),
+                            color = if (current == shapeName) Color(0xFF81B29A) else com.korkoor.pardos.ui.design.Navy,
                             fontWeight = if (current == shapeName) FontWeight.Black else FontWeight.Medium
                         )
                     },

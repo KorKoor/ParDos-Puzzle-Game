@@ -14,9 +14,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class CollectionTest {
-    @Test fun catalogHasSixSeriesOfEightWithFixedRarityShape() {
-        assertEquals(48, CollectibleCatalog.all.size)
-        assertEquals(48, CollectibleCatalog.all.map { it.id }.toSet().size)
+    @Test fun catalogHasNineSeriesOfEightWithFixedRarityShape() {
+        assertEquals(9, Series.entries.size)
+        assertEquals(72, CollectibleCatalog.all.size)
+        assertEquals(72, CollectibleCatalog.all.map { it.id }.toSet().size)
         Series.entries.forEach { s ->
             val items = CollectibleCatalog.inSeries(s)
             assertEquals(8, items.size, s.id)

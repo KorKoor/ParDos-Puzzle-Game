@@ -23,7 +23,7 @@
 
     <string name="mode_classic">Campaign</string>
     <string name="mode_campaign_title">CAMPAIGN MODE</string>
-    <string name="mode_campaign_desc">Beat 2,400 handcrafted levels. Earn stars and unlock new challenges.</string>
+    <string name="mode_campaign_desc">Beat 2,400 levels with different rules: stones, sprints, clocks and bosses. Earn stars and unlock challenges.</string>
 
     <string name="mode_tables">Math Mania</string>
     <string name="mode_tables_title">MATH MANIA</string>
@@ -111,7 +111,7 @@
     <string name="records_empty">No records yet. Start playing!</string>
     <string name="score_format">Score: %1$d</string>
     <string name="date_format">Date: %1$s</string>
-    <string name="mode_classic_desc">Beat handcrafted levels and progress through the map.</string>
+    <string name="mode_classic_desc">Beat levels with different rules and progress through the map.</string>
 
     <string name="ach_first_steps_title">First Steps</string>
     <string name="ach_first_steps_desc">Reach the 64 tile for the first time.</string>

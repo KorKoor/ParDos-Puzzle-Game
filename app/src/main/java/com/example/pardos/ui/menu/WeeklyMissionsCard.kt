@@ -51,8 +51,8 @@ fun WeeklyMissionsCard(retention: RetentionManager, modifier: Modifier = Modifie
     val daysLeft = remember { WeekCalendar.daysLeft(today) }
     var toast by remember { mutableStateOf<String?>(null) }
 
-    Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    JellySurface(
+        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
         shape = RoundedCornerShape(32.dp),
         color = Color.White,
         shadowElevation = 12.dp

@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -35,7 +37,7 @@ fun GameStatusOverlays(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF3D405B).copy(alpha = 0.8f)), // Fondo semi-transparente
+                .background(com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.8f)), // Fondo semi-transparente
             contentAlignment = Alignment.Center
         ) {
             // --- MODAL DE VICTORIA ---
@@ -104,7 +106,7 @@ private fun ModalContent(
                     text = title,
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color(0xFF3D405B),
+                    color = com.korkoor.pardos.ui.design.Navy,
                     letterSpacing = 1.sp
                 )
 
@@ -112,13 +114,13 @@ private fun ModalContent(
                     text = subtitle,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(vertical = 16.dp),
-                    color = Color(0xFF3D405B).copy(alpha = 0.7f),
+                    color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f),
                     fontSize = 17.sp,
                     lineHeight = 24.sp,
                     fontWeight = FontWeight.Medium
                 )
 
-                Button(
+                ToyButton(
                     onClick = onAction,
                     colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                     shape = RoundedCornerShape(16.dp),

@@ -2,6 +2,8 @@
 
 package com.korkoor.pardos.ui.game
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
 import FloatingScore
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -88,6 +90,7 @@ fun GameScreen(
 ) {
     val state by viewModel.boardState.collectAsStateWithLifecycle()
     val currentTheme = themeViewModel.currentTheme
+    com.korkoor.pardos.ui.design.DarkSystemBars(remember(currentTheme) { com.korkoor.pardos.ui.design.isDarkBackground(currentTheme.colors) })
     val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
     val context = LocalContext.current
     val activity = context as? Activity
@@ -111,6 +114,60 @@ fun GameScreen(
         viewModel.refreshCurrentLevelDifficulty()
     }
 
+    // Tarjeta de "nueva regla": la primera vez que aparece cada tipo de nivel (y en cada jefe), antes del primer movimiento
+    val ruleSeen = remember { context.getSharedPreferences("pardos_levels", android.content.Context.MODE_PRIVATE) }
+    val ruleKey = state.levelKind?.let {
+        when {
+            it == com.korkoor.pardos.domain.level.LevelKind.BOSS -> "boss_${state.currentLevel}"
+            it == com.korkoor.pardos.domain.level.LevelKind.TWIST -> "twist_${state.twist.name}"
+            else -> "kind_${it.name}"
+        }
+    }
+    var ruleDismissed by remember(ruleKey) { mutableStateOf(false) }
+    val showRuleCard = ruleKey != null && !ruleDismissed && state.moveCount == 0 && !state.isLevelCompleted && !state.isGameOver &&
+        state.levelKind != com.korkoor.pardos.domain.level.LevelKind.ZEN && !ruleSeen.getBoolean(ruleKey, false)
+
+    // Tutorial del primer nivel (solo la primera vez) y pista con la mano cuando te quedas parado en los primeros niveles
+    val tutorialPrefs = remember { context.getSharedPreferences("pardos_levels", android.content.Context.MODE_PRIVATE) }
+    var tutorialDone by remember {
+        mutableStateOf(
+            tutorialPrefs.getBoolean("tutorial_v2_done", false) ||
+                context.getSharedPreferences("pardos_storage", android.content.Context.MODE_PRIVATE).getInt("stars_level_1", 0) > 0
+        )
+    }
+    val inCampaign = state.gameMode == GameMode.CLASICO && viewModel.dailyChallengeThemeIndex == null
+    val tutorialOn = !tutorialDone && inCampaign && state.currentLevel == 1 && !state.isGameOver && !state.isLevelCompleted && !viewModel.showLevelSummary
+    val goalLine = com.korkoor.pardos.domain.level.goalText(state.goal, state.levelLimit, state.goalCount)
+    val coachStep = if (tutorialOn) remember(state.tiles, state.moveCount, state.merges) {
+        com.korkoor.pardos.domain.logic.TutorialCoach.step(
+            state.boardSize, state.blocked.toSet(), state.tiles, state.moveCount, state.merges, goalLine
+        )
+    } else null
+    LaunchedEffect(state.moveCount, state.merges, tutorialOn) {
+        if (tutorialOn && com.korkoor.pardos.domain.logic.TutorialCoach.isFinished(state.moveCount, state.merges)) {
+            tutorialPrefs.edit().putBoolean("tutorial_v2_done", true).apply()
+            tutorialDone = true
+        }
+    }
+    // Pista: si pasan 7 s sin mover en los primeros niveles, la mano enseña una jugada útil
+    var idleHint by remember { mutableStateOf(false) }
+    val hintEligible = inCampaign && state.currentLevel <= 15 && !tutorialOn && !state.isGameOver && !state.isLevelCompleted &&
+        !viewModel.showLevelSummary && !viewModel.isSelectModeActive && !showRuleCard
+    LaunchedEffect(state.moveCount, state.currentLevel, hintEligible) {
+        idleHint = false
+        if (hintEligible) {
+            delay(7000)
+            idleHint = true
+        }
+    }
+    val guide: BoardGuide? = when {
+        tutorialOn && !showRuleCard -> coachStep?.direction?.let { BoardGuide(it, coachStep.cells) }
+        idleHint && state.tiles.isNotEmpty() -> com.korkoor.pardos.domain.logic.MoveAdvisor
+            .suggest(state.boardSize, state.blocked.toSet(), state.tiles)?.let { BoardGuide(it.direction, it.mergeCells) }
+        else -> null
+    }
+
+
     // 🔥 OPTIMIZACIÓN: Audio ultra rápido sin lag ni consumir mucha RAM
     val audioManager = remember { GameAudioManager(context) }
 
@@ -119,10 +176,11 @@ fun GameScreen(
 
     val isTimeLow = state.maxTime != null && state.elapsedTime <= 10_000L
     val extraTimes by viewModel.extraTimeCount.collectAsState()
+    val autoNextOn by remember { com.korkoor.pardos.data.local.SettingsManager(context).autoNextEnabled }.collectAsState()
     val remoteTitle = when (viewModel.remoteRole) {
         RemoteRole.CREATOR -> "TU RETO"
         RemoteRole.CHALLENGED -> "EL RETO"
-        RemoteRole.NONE -> null
+        RemoteRole.NONE -> if (viewModel.dailyChallengeThemeIndex != null) "RETO DIARIO" else null
     }
 
     val shouldBlur = viewModel.showLevelSummary || state.isGameOver || showExitDialog || showThemeMenu
@@ -209,7 +267,8 @@ fun GameScreen(
                                             currentTheme = currentTheme,
                                             extraTimes = extraTimes,
                                             onExtraTime = { viewModel.useExtraTime() },
-                                            titleOverride = remoteTitle
+                                            titleOverride = remoteTitle,
+                                            winStreak = if (inCampaign) viewModel.winStreak else 0
                                         )
                                     }
                                 }
@@ -236,7 +295,8 @@ fun GameScreen(
                                         haptic = haptic,
                                         currentTheme = currentTheme,
                                         onMoveSound = { audioManager.playMoveSound() },
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        guide = guide
                                     )
 
                                     ComboIndicator(
@@ -244,9 +304,6 @@ fun GameScreen(
                                         accentColor = currentTheme.accentColor
                                     )
 
-                                    if (state.showTutorialHand) {
-                                        TutorialHand(direction = Direction.RIGHT)
-                                    }
                                 }
                             }
 
@@ -284,7 +341,9 @@ fun GameScreen(
 
                                 Spacer(Modifier.height(24.dp))
 
-                                if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
+                                if (coachStep != null) {
+                                    CoachCard(coachStep, Modifier.padding(horizontal = 0.dp))
+                                } else if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
                                     PowerUpSection(viewModel, haptic, activity, labelColor = currentTheme.inkColor)
                                 }
                             }
@@ -338,7 +397,8 @@ fun GameScreen(
                                             currentTheme = currentTheme,
                                             extraTimes = extraTimes,
                                             onExtraTime = { viewModel.useExtraTime() },
-                                            titleOverride = remoteTitle
+                                            titleOverride = remoteTitle,
+                                            winStreak = if (inCampaign) viewModel.winStreak else 0
                                         )
                                     }
 
@@ -365,7 +425,8 @@ fun GameScreen(
                                         haptic = haptic,
                                         currentTheme = currentTheme,
                                         onMoveSound = { audioManager.playMoveSound() },
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        guide = guide
                                     )
 
                                     ComboIndicator(
@@ -373,9 +434,6 @@ fun GameScreen(
                                         accentColor = currentTheme.accentColor
                                     )
 
-                                    if (state.showTutorialHand) {
-                                        TutorialHand(direction = Direction.RIGHT)
-                                    }
                                 }
                             }
 
@@ -388,7 +446,10 @@ fun GameScreen(
                                 ) {
                                     GameFooter(state = state)
 
-                                    if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
+                                    if (coachStep != null) {
+                                        Spacer(Modifier.height(14.dp))
+                                        CoachCard(coachStep)
+                                    } else if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
                                         PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth(), labelColor = currentTheme.inkColor)
                                     }
                                 }
@@ -428,6 +489,17 @@ fun GameScreen(
                     onRetry = { viewModel.retryLevel() },
                     onDismiss = { viewModel.nextLevel() },
                     nextGoal = remember { com.korkoor.pardos.data.local.RetentionManager(context).nextGoal() },
+                    starHint = if (state.gameMode == GameMode.CLASICO && state.starsEarned in 1..2)
+                        com.korkoor.pardos.domain.level.LevelRules.threeStarHint(com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel))
+                    else null,
+                    streak = if (inCampaign) viewModel.winStreak else 0,
+                    streakBonusPct = viewModel.lastStreakBonusPct,
+                    flowBonusPct = viewModel.lastFlowBonusPct,
+                    milestone = viewModel.lastStreakMilestone,
+                    teaser = if (inCampaign) remember(state.currentLevel) { com.korkoor.pardos.domain.flow.NextLevelTeaser.after(state.currentLevel) } else null,
+                    nextKindSeen = if (inCampaign) ruleSeen.getBoolean("kind_${com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel + 1).kind.name}", false) else true,
+                    autoNextMs = if (inCampaign && autoNextOn && viewModel.lastStreakMilestone == null &&
+                        com.korkoor.pardos.domain.flow.NextLevelTeaser.after(state.currentLevel).levelsToChest > 0) 4500 else null,
                     onShare = {
                         val text = com.korkoor.pardos.domain.social.ShareText.victory(
                             modeName = context.getString(state.gameMode.nameResId),
@@ -487,7 +559,8 @@ fun GameScreen(
                             }
                         },
                         onCancel = { viewModel.declineSecondChance() },
-                        currentTheme = currentTheme
+                        currentTheme = currentTheme,
+                        reason = state.gameOverReason()
                     )
                 }
                 else {
@@ -496,12 +569,24 @@ fun GameScreen(
                         currentTheme = currentTheme,
                         isRace = state.gameMode == GameMode.CARRERA,
                         stagesCleared = viewModel.raceStagesCleared,
-                        coinsEarned = viewModel.lastCoinsEarned
+                        coinsEarned = viewModel.lastCoinsEarned,
+                        nearMiss = viewModel.nearMissMessage,
+                        reason = state.gameOverReason()
                     )
                 }
             }
 
             AchievementManagerPopup(viewModel = viewModel)
+
+            // Ayuda adaptativa a la vista: "Te echamos una mano…" al empezar un nivel que se atascó
+            AssistBanner(viewModel.assistMessage, Modifier.align(Alignment.TopCenter).padding(top = 92.dp))
+
+            if (showRuleCard) {
+                NewRuleDialog(state) {
+                    ruleKey?.let { ruleSeen.edit().putBoolean(it, true).apply() }
+                    ruleDismissed = true
+                }
+            }
 
             // Modo Carrera: aviso de tiempo ganado al superar una etapa
             androidx.compose.animation.AnimatedVisibility(
@@ -568,7 +653,7 @@ fun GameScreen(
                                 text = stringResource(R.string.visual_style),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color(0xFF3D405B),
+                                color = com.korkoor.pardos.ui.design.Navy,
                                 letterSpacing = 2.sp
                             )
 
@@ -578,14 +663,14 @@ fun GameScreen(
                                 text = "COLORES",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF3D405B).copy(alpha = 0.6f)
+                                color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             ThemeSelector(viewModel = themeViewModel)
 
                             Spacer(modifier = Modifier.height(32.dp))
 
-                            Button(
+                            ToyButton(
                                 onClick = { showThemeMenu = false },
                                 colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
                                 shape = RoundedCornerShape(32.dp),
@@ -659,7 +744,7 @@ fun FloatingScore(
 
     Text(
         text = "+${score.value}",
-        color = Color(0xFF3D405B).copy(alpha = currentAlpha),
+        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = currentAlpha),
         fontSize = 24.sp,
         fontWeight = FontWeight.ExtraBold,
         modifier = Modifier
@@ -691,7 +776,7 @@ internal val GameMode.color: Color
         GameMode.DESAFIO -> Color(0xFFE07A5F)
         GameMode.ZEN -> Color(0xFF6C63FF)
         GameMode.TABLAS -> Color(0xFF6C63FF)
-        else -> Color(0xFF3D405B)
+        else -> com.korkoor.pardos.ui.design.Navy
     }
 
 internal fun HapticFeedback.performHapticFeedback() {

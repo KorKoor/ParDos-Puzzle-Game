@@ -35,6 +35,9 @@ class EconomyManager(context: Context) {
             _gems.value = prefs.getInt(KEY_GEMS, 0)
             _freezes.value = prefs.getInt(KEY_FREEZES, 0)
             _vip.value = prefs.getBoolean(KEY_VIP, false)
+            _boostWins.value = prefs.getInt(KEY_BOOST_WINS, 0)
+            _ownedFx.value = prefs.getStringSet(KEY_OWNED_FX, null)?.toSet() ?: setOf(com.korkoor.pardos.domain.shop.MergeFx.DEFAULT.id)
+            _equippedFx.value = com.korkoor.pardos.domain.shop.MergeFx.fromId(prefs.getString(KEY_EQUIPPED_FX, null))
             _undosFlow.value = prefs.getInt(KEY_UNDOS, 0)
             _ownedAvatars.value = (prefs.getStringSet(KEY_OWNED_AVATARS, null) ?: emptySet()).mapNotNull { it.toIntOrNull() }.toSet()
             _ownedBanners.value = (prefs.getStringSet(KEY_OWNED_BANNERS, null) ?: emptySet()).mapNotNull { it.toIntOrNull() }.toSet()
@@ -210,6 +213,7 @@ class EconomyManager(context: Context) {
         prefs.edit().putBoolean("starter_claimed", true).apply()
         addGems(com.korkoor.pardos.domain.economy.Economy.STARTER_GEMS)
         grantSkin(TileSkin.SAKURA)
+        grantFx(com.korkoor.pardos.domain.shop.MergeFx.HEARTS)
         com.korkoor.pardos.data.local.CollectionManager(appContext).addChests(
             com.korkoor.pardos.domain.collection.ChestType.RARE,
             com.korkoor.pardos.domain.economy.Economy.STARTER_RARE_CHESTS
@@ -222,6 +226,77 @@ class EconomyManager(context: Context) {
         _ownedSkins.value = inv.owned
         prefs.edit().putStringSet(KEY_OWNED_SKINS, inv.owned).apply()
     }
+
+    // --- Efectos de fusión (cosméticos) ---
+    val ownedFx: StateFlow<Set<String>> get() = _ownedFx
+    val equippedFx: StateFlow<com.korkoor.pardos.domain.shop.MergeFx> get() = _equippedFx
+
+    private fun fxInventory() = com.korkoor.pardos.domain.shop.MergeFxInventory(_ownedFx.value, _equippedFx.value.id)
+
+    fun buyFx(fx: com.korkoor.pardos.domain.shop.MergeFx, discountPercent: Int = 0): com.korkoor.pardos.domain.shop.MergeFxInventory.Purchase {
+        val result = fxInventory().buy(fx, _coins.value, _gems.value, discountPercent)
+        if (result is com.korkoor.pardos.domain.shop.MergeFxInventory.Purchase.Ok) {
+            _coins.value = result.coinsLeft
+            _gems.value = result.gemsLeft
+            _ownedFx.value = result.inventory.owned
+            prefs.edit().putInt(KEY_COINS, _coins.value).putInt(KEY_GEMS, _gems.value).putStringSet(KEY_OWNED_FX, _ownedFx.value).apply()
+        }
+        return result
+    }
+
+    fun grantFx(fx: com.korkoor.pardos.domain.shop.MergeFx) {
+        _ownedFx.value = fxInventory().grant(fx).owned
+        prefs.edit().putStringSet(KEY_OWNED_FX, _ownedFx.value).apply()
+    }
+
+    fun equipFx(fx: com.korkoor.pardos.domain.shop.MergeFx) {
+        val inv = fxInventory().equip(fx)
+        _equippedFx.value = com.korkoor.pardos.domain.shop.MergeFx.fromId(inv.equipped)
+        prefs.edit().putString(KEY_EQUIPPED_FX, inv.equipped).apply()
+    }
+
+    // --- Impulso de monedas (se compra con gemas) ---
+    val coinBoostWins: StateFlow<Int> get() = _boostWins
+
+    fun buyCoinBoost(): Boolean {
+        val left = _boostWins.value
+        if (!com.korkoor.pardos.domain.shop.CoinBoost.canBuy(_gems.value, left)) return false
+        if (!spendGems(com.korkoor.pardos.domain.shop.CoinBoost.PRICE_GEMS)) return false
+        _boostWins.value = com.korkoor.pardos.domain.shop.CoinBoost.addWins(left)
+        prefs.edit().putInt(KEY_BOOST_WINS, _boostWins.value).apply()
+        return true
+    }
+
+    /**
+     * Monedas finales de una victoria: aplica el extra del VIP y, si hay impulso activo, lo aplica y gasta una victoria.
+     * Se llama una sola vez por victoria.
+     */
+    fun applyWinBonuses(coins: Int): Int {
+        var total = com.korkoor.pardos.domain.shop.VipPerks.coinsWithBonus(coins, _vip.value)
+        val wins = _boostWins.value
+        if (wins > 0 && coins > 0) {
+            total = com.korkoor.pardos.domain.shop.CoinBoost.apply(total, wins)
+            _boostWins.value = wins - 1
+            prefs.edit().putInt(KEY_BOOST_WINS, _boostWins.value).apply()
+        }
+        return total
+    }
+
+    // --- VIP: gemas diarias ---
+    fun canClaimVipDaily(today: Int = LocalDay.today()): Boolean =
+        com.korkoor.pardos.domain.shop.VipPerks.canClaimDaily(_vip.value, prefs.getInt(KEY_VIP_DAY, Int.MIN_VALUE), today)
+
+    /** Entrega las gemas diarias del VIP (una vez por día local). Devuelve cuántas, o 0 si no tocaba. */
+    fun claimVipDaily(today: Int = LocalDay.today()): Int {
+        if (!canClaimVipDaily(today)) return 0
+        prefs.edit().putInt(KEY_VIP_DAY, today).apply()
+        addGems(com.korkoor.pardos.domain.shop.VipPerks.DAILY_GEMS)
+        return com.korkoor.pardos.domain.shop.VipPerks.DAILY_GEMS
+    }
+
+    // --- Primera compra de cada pack de gemas: doble ---
+    fun isFirstPurchase(productId: String): Boolean = !prefs.getBoolean("purchased_$productId", false)
+    fun markPurchased(productId: String) { prefs.edit().putBoolean("purchased_$productId", true).apply() }
 
     /** Cambia gemas por monedas. */
     fun exchangeGems(gems: Int): Boolean {
@@ -273,6 +348,10 @@ class EconomyManager(context: Context) {
         const val KEY_GEMS = "gems"
         const val KEY_FREEZES = "streak_freezes"
         const val KEY_VIP = "vip"
+        const val KEY_OWNED_FX = "owned_fx"
+        const val KEY_EQUIPPED_FX = "equipped_fx"
+        const val KEY_BOOST_WINS = "boost_wins"
+        const val KEY_VIP_DAY = "vip_daily_day"
         const val KEY_UNDOS = "undos"
         const val KEY_OWNED_AVATARS = "owned_avatars"
         const val KEY_OWNED_BANNERS = "owned_banners"
@@ -284,6 +363,9 @@ class EconomyManager(context: Context) {
         val _gems = MutableStateFlow(0)
         val _freezes = MutableStateFlow(0)
         val _vip = MutableStateFlow(false)
+        val _ownedFx = MutableStateFlow(setOf(com.korkoor.pardos.domain.shop.MergeFx.DEFAULT.id))
+        val _equippedFx = MutableStateFlow(com.korkoor.pardos.domain.shop.MergeFx.DEFAULT)
+        val _boostWins = MutableStateFlow(0)
         val _undosFlow = MutableStateFlow(0)
         val _ownedAvatars = MutableStateFlow<Set<Int>>(emptySet())
         val _ownedBanners = MutableStateFlow<Set<Int>>(emptySet())

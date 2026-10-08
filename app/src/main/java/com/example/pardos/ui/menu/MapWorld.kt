@@ -35,6 +35,7 @@ import com.korkoor.pardos.ui.design.Paper
 import com.korkoor.pardos.ui.design.darker
 import com.korkoor.pardos.ui.game.components.AmbientParticles
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.sin
 
 // =====================================================================================
@@ -50,9 +51,15 @@ private fun particlesFor(kind: SceneryKind): ParticleKind = when (kind) {
     SceneryKind.LANTERNS -> ParticleKind.EMBERS
     SceneryKind.CHERRY -> ParticleKind.PETALS
     SceneryKind.MOON -> ParticleKind.STARS
+    SceneryKind.GRAVEYARD, SceneryKind.HAUNTED -> ParticleKind.BATS
+    SceneryKind.DEAD_FOREST -> ParticleKind.FIREFLIES
+    SceneryKind.PUMPKINS -> ParticleKind.EMBERS
 }
 
-private fun isNight(kind: SceneryKind) = kind == SceneryKind.MOON || kind == SceneryKind.LANTERNS
+/** En Noche de brujas todos los mundos son de noche (menos el faro, que es de niebla). */
+private fun isNight(kind: SceneryKind) =
+    kind == SceneryKind.MOON || kind == SceneryKind.LANTERNS || kind == SceneryKind.GRAVEYARD || kind == SceneryKind.HAUNTED ||
+        kind == SceneryKind.DEAD_FOREST || (com.korkoor.pardos.ui.design.Season.halloween && kind != SceneryKind.CLOUDS)
 
 /** ¿El capítulo es de noche? (la cabecera cambia a texto claro). */
 internal fun chapterIsNight(chapter: Int) = isNight(chapterTheme(chapter).scenery)
@@ -72,11 +79,12 @@ fun MapBackdrop(chapter: Int, scrollPx: () -> Float, modifier: Modifier = Modifi
     val theme = chapterTheme(chapter)
     val night = isNight(theme.scenery)
 
+    val spooky = com.korkoor.pardos.ui.design.Season.halloween
     val top by animateColorAsState(
-        if (night) lerp(theme.color, Color(0xFF0E1230), 0.78f) else lerp(theme.color, Color.White, 0.80f), tween(900), label = "skyTop"
+        if (night) lerp(theme.color, if (spooky) Color(0xFF14082E) else Color(0xFF0E1230), 0.80f) else lerp(theme.color, Color.White, 0.80f), tween(900), label = "skyTop"
     )
     val bottom by animateColorAsState(
-        if (night) lerp(theme.color, Color(0xFF1B2250), 0.55f) else lerp(theme.color, Paper, 0.72f), tween(900), label = "skyBottom"
+        if (night) lerp(theme.color, if (spooky) Color(0xFF3A1450) else Color(0xFF1B2250), 0.58f) else lerp(theme.color, Paper, 0.72f), tween(900), label = "skyBottom"
     )
     val tint by animateColorAsState(theme.color, tween(900), label = "skyTint")
 
@@ -93,8 +101,10 @@ fun MapBackdrop(chapter: Int, scrollPx: () -> Float, modifier: Modifier = Modifi
             // sol o luna
             val sc = Offset(w * 0.80f, h * 0.13f + sin(sunBob * PI.toFloat()) * 6.dp.toPx())
             if (night) {
-                drawCircle(Color(0xFFFFF4C2).copy(alpha = 0.16f), 62.dp.toPx(), sc)
-                drawCircle(Color(0xFFFFF4C2).copy(alpha = 0.92f), 24.dp.toPx(), sc)
+                val moonTint = if (spooky) Color(0xFFFFD28A) else Color(0xFFFFF4C2)
+                val moonR = if (spooky) 32.dp.toPx() else 24.dp.toPx()
+                drawCircle(moonTint.copy(alpha = if (spooky) 0.22f else 0.16f), (if (spooky) 84.dp else 62.dp).toPx(), sc)
+                drawCircle(moonTint.copy(alpha = 0.95f), moonR, sc)
                 drawCircle(Color(0xFFE6D58F).copy(alpha = 0.5f), 5.dp.toPx(), Offset(sc.x - 7.dp.toPx(), sc.y - 4.dp.toPx()))
                 drawCircle(Color(0xFFE6D58F).copy(alpha = 0.5f), 3.5f.dp.toPx(), Offset(sc.x + 8.dp.toPx(), sc.y + 7.dp.toPx()))
             } else {
@@ -140,6 +150,8 @@ fun MapBackdrop(chapter: Int, scrollPx: () -> Float, modifier: Modifier = Modifi
         }
         // partículas del mundo (fijas en pantalla)
         AmbientParticles(kind = particlesFor(theme.scenery), tint = lerp(tint, Color.White, if (night) 0.4f else 0.1f), density = 0.55f)
+        // Noche de brujas: murciélagos que cruzan el cielo en todos los mundos
+        if (spooky && particlesFor(theme.scenery) != ParticleKind.BATS) AmbientParticles(kind = ParticleKind.BATS, tint = Color(0xFF120726), density = 0.45f)
     }
 }
 
@@ -194,6 +206,142 @@ private fun DrawScope.landmark(kind: SceneryKind, tone: Color, cx: Float, base: 
         SceneryKind.GOLD_DUNES -> pyramids(cx, base, s, tone)
         SceneryKind.MOON -> sailboat(cx, base, s, tone, t)
         SceneryKind.BAMBOO -> pagoda(cx, base, s, tone)
+        SceneryKind.GRAVEYARD -> graveyardGate(cx, base, s, tone, t)
+        SceneryKind.DEAD_FOREST -> hauntedForest(cx, base, s, tone, t)
+        SceneryKind.PUMPKINS -> bigPumpkin(cx, base, s, t)
+        SceneryKind.HAUNTED -> manorLandmark(cx, base, s, tone, t)
+    }
+}
+
+// ---- Monumentos de Noche de brujas ----
+
+private fun DrawScope.ghostShape(cx: Float, cy: Float, s: Float, alpha: Float, t: Float) {
+    val body = Color.White.copy(alpha = alpha)
+    drawCircle(Color(0xFFB9A2FF).copy(alpha = 0.25f * alpha), s * 0.75f, Offset(cx, cy))
+    val p = Path().apply {
+        moveTo(cx - s * 0.32f, cy + s * 0.36f)
+        lineTo(cx - s * 0.32f, cy - s * 0.05f)
+        arcTo(androidx.compose.ui.geometry.Rect(cx - s * 0.32f, cy - s * 0.42f, cx + s * 0.32f, cy + s * 0.22f), 180f, 180f, false)
+        lineTo(cx + s * 0.32f, cy + s * 0.36f)
+        for (k in 0..3) {
+            val x1 = cx + s * (0.32f - (k + 0.5f) * 0.16f)
+            val x2 = cx + s * (0.32f - (k + 1f) * 0.16f)
+            quadraticTo(x1, cy + s * (0.5f + 0.05f * sin(t * 6.283f + k)), x2, cy + s * 0.36f)
+        }
+        close()
+    }
+    drawPath(p, body)
+    drawCircle(Color(0xFF2A1450), s * 0.045f, Offset(cx - s * 0.1f, cy - s * 0.08f))
+    drawCircle(Color(0xFF2A1450), s * 0.045f, Offset(cx + s * 0.1f, cy - s * 0.08f))
+    drawOval(Color(0xFF2A1450), Offset(cx - s * 0.05f, cy + s * 0.04f), Size(s * 0.1f, s * 0.13f))
+}
+
+private fun DrawScope.graveyardGate(cx: Float, base: Float, s: Float, tone: Color, t: Float) {
+    val ink = Color(0xFF241046)
+    // lápidas
+    fun tomb(x: Float, w: Float, h: Float, c: Color) {
+        val p = Path().apply {
+            moveTo(x - w / 2, base); lineTo(x - w / 2, base - h + w / 2)
+            arcTo(androidx.compose.ui.geometry.Rect(x - w / 2, base - h, x + w / 2, base - h + w), 180f, 180f, false)
+            lineTo(x + w / 2, base); close()
+        }
+        drawPath(p, c)
+        drawLine(Color.White.copy(alpha = 0.3f), Offset(x - w * 0.22f, base - h * 0.55f), Offset(x + w * 0.22f, base - h * 0.55f), strokeWidth = w * 0.08f, cap = StrokeCap.Round)
+    }
+    tomb(cx - s * 0.5f, s * 0.26f, s * 0.42f, Color(0xFF6C5A9A))
+    tomb(cx + s * 0.5f, s * 0.24f, s * 0.36f, Color(0xFF5E4D8C))
+    tomb(cx + s * 0.18f, s * 0.2f, s * 0.28f, Color(0xFF7A68AA))
+    // verja y arco
+    for (i in -2..2) drawLine(ink, Offset(cx + i * s * 0.1f, base), Offset(cx + i * s * 0.1f, base - s * 0.34f), strokeWidth = s * 0.025f, cap = StrokeCap.Round)
+    drawLine(ink, Offset(cx - s * 0.22f, base - s * 0.2f), Offset(cx + s * 0.22f, base - s * 0.2f), strokeWidth = s * 0.025f)
+    drawArc(ink, 180f, 180f, false, Offset(cx - s * 0.24f, base - s * 0.58f), Size(s * 0.48f, s * 0.48f), style = Stroke(s * 0.03f))
+    // fantasma que sube y baja
+    ghostShape(cx - s * 0.05f, base - s * (0.62f + 0.06f * sin(t * 6.283f)), s * 0.55f, 0.9f, t)
+}
+
+private fun DrawScope.hauntedForest(cx: Float, base: Float, s: Float, tone: Color, t: Float) {
+    val ink = Color(0xFF1B1030)
+    fun tree(x: Float, h: Float, lean: Float) {
+        drawLine(ink, Offset(x, base), Offset(x + lean * h * 0.1f, base - h * 0.75f), strokeWidth = h * 0.09f, cap = StrokeCap.Round)
+        listOf(Triple(-0.3f, 0.7f, 0.42f), Triple(0.32f, 0.82f, 0.55f), Triple(-0.22f, 0.95f, 0.66f), Triple(0.24f, 1.0f, 0.74f)).forEach { (dx, ty, fy) ->
+            drawLine(ink, Offset(x + lean * h * 0.05f, base - h * fy), Offset(x + dx * h, base - h * ty), strokeWidth = h * 0.04f, cap = StrokeCap.Round)
+        }
+        drawCircle(Color(0xFFFFE08A).copy(alpha = 0.55f + 0.4f * sin(t * 6.283f * 2f)), h * 0.022f, Offset(x - h * 0.02f, base - h * 0.45f))
+        drawCircle(Color(0xFFFFE08A).copy(alpha = 0.55f + 0.4f * sin(t * 6.283f * 2f)), h * 0.022f, Offset(x + h * 0.05f, base - h * 0.45f))
+    }
+    tree(cx - s * 0.42f, s * 0.95f, -0.4f)
+    tree(cx + s * 0.38f, s * 0.78f, 0.5f)
+    // búho en una rama
+    val ox = cx - s * 0.08f
+    val oy = base - s * 0.5f
+    drawOval(Color(0xFF3A2A58), Offset(ox - s * 0.09f, oy - s * 0.12f), Size(s * 0.18f, s * 0.22f))
+    drawCircle(Color(0xFFFFE08A), s * 0.035f, Offset(ox - s * 0.04f, oy - s * 0.05f))
+    drawCircle(Color(0xFFFFE08A), s * 0.035f, Offset(ox + s * 0.04f, oy - s * 0.05f))
+    drawLine(ink, Offset(ox - s * 0.2f, oy + s * 0.1f), Offset(ox + s * 0.2f, oy + s * 0.1f), strokeWidth = s * 0.03f, cap = StrokeCap.Round)
+    // luciérnagas
+    for (k in 0..4) {
+        val a = (t + k * 0.2f) % 1f
+        drawCircle(Color(0xFFB8FFD0).copy(alpha = 0.7f * sin(a * 3.1416f)), s * 0.018f, Offset(cx + s * (-0.6f + k * 0.3f), base - s * (0.2f + 0.5f * a)))
+    }
+}
+
+private fun DrawScope.bigPumpkin(cx: Float, base: Float, s: Float, t: Float) {
+    val flick = 0.85f + 0.15f * sin(t * 6.283f * 3f)
+    drawCircle(Color(0xFFFFA03A).copy(alpha = 0.28f * flick), s * 0.85f, Offset(cx, base - s * 0.34f))
+    // calabazas pequeñas
+    fun small(x: Float, r: Float) {
+        drawOval(Color(0xFFC85F1B), Offset(x - r, base - r * 1.5f), Size(r * 2f, r * 1.6f))
+        drawOval(Color(0xFFE8772E), Offset(x - r * 0.62f, base - r * 1.55f), Size(r * 1.24f, r * 1.65f))
+        drawLine(Color(0xFF4F7A3A), Offset(x, base - r * 1.5f), Offset(x + r * 0.2f, base - r * 1.9f), strokeWidth = r * 0.2f, cap = StrokeCap.Round)
+    }
+    small(cx - s * 0.62f, s * 0.2f)
+    small(cx + s * 0.64f, s * 0.17f)
+    // la grande, con su cara encendida
+    val r = s * 0.46f
+    val c = Offset(cx, base - r * 0.8f)
+    drawOval(Color(0xFFC85F1B), Offset(c.x - r, c.y - r * 0.78f), Size(r * 2f, r * 1.62f))
+    drawOval(Color(0xFFE8772E), Offset(c.x - r * 0.62f, c.y - r * 0.82f), Size(r * 1.24f, r * 1.7f))
+    drawOval(Color(0xFFC85F1B), Offset(c.x - r * 0.2f, c.y - r * 0.84f), Size(r * 0.4f, r * 1.74f))
+    drawLine(Color(0xFF4F7A3A), Offset(c.x, c.y - r * 0.8f), Offset(c.x + r * 0.2f, c.y - r * 1.12f), strokeWidth = r * 0.16f, cap = StrokeCap.Round)
+    val face = Color(0xFFFFE08A).copy(alpha = flick)
+    drawPath(Path().apply { moveTo(c.x - r * 0.55f, c.y - r * 0.05f); lineTo(c.x - r * 0.2f, c.y - r * 0.05f); lineTo(c.x - r * 0.38f, c.y - r * 0.42f); close() }, face)
+    drawPath(Path().apply { moveTo(c.x + r * 0.55f, c.y - r * 0.05f); lineTo(c.x + r * 0.2f, c.y - r * 0.05f); lineTo(c.x + r * 0.38f, c.y - r * 0.42f); close() }, face)
+    drawPath(Path().apply {
+        moveTo(c.x - r * 0.6f, c.y + r * 0.22f); lineTo(c.x - r * 0.32f, c.y + r * 0.5f); lineTo(c.x - r * 0.12f, c.y + r * 0.28f)
+        lineTo(c.x + r * 0.12f, c.y + r * 0.5f); lineTo(c.x + r * 0.32f, c.y + r * 0.28f); lineTo(c.x + r * 0.6f, c.y + r * 0.22f)
+        lineTo(c.x + r * 0.34f, c.y + r * 0.66f); lineTo(c.x - r * 0.34f, c.y + r * 0.66f); close()
+    }, face)
+}
+
+private fun DrawScope.manorLandmark(cx: Float, base: Float, s: Float, tone: Color, t: Float) {
+    val ink = Color(0xFF1B1030)
+    val flick = 0.7f + 0.3f * sin(t * 6.283f * 3f)
+    val w = s * 1.1f
+    val bodyH = s * 0.4f
+    drawRect(ink, Offset(cx - w / 2, base - bodyH), Size(w, bodyH))
+    drawPath(Path().apply { moveTo(cx - w / 2 - s * 0.05f, base - bodyH); lineTo(cx, base - bodyH - s * 0.3f); lineTo(cx + w / 2 + s * 0.05f, base - bodyH); close() }, ink)
+    listOf(-0.42f to 0.7f, 0.42f to 0.85f).forEach { (fx, th) ->
+        val tx = cx + w * fx
+        val top = base - bodyH - s * th * 0.35f
+        drawRect(ink, Offset(tx - s * 0.09f, top), Size(s * 0.18f, base - top))
+        drawPath(Path().apply { moveTo(tx - s * 0.13f, top); lineTo(tx, top - s * 0.24f); lineTo(tx + s * 0.13f, top); close() }, ink)
+        drawRoundRect(Color(0xFFFFB347).copy(alpha = flick), Offset(tx - s * 0.03f, top + s * 0.07f), Size(s * 0.06f, s * 0.1f), CornerRadius(s * 0.03f))
+    }
+    listOf(-0.2f, 0f, 0.2f).forEachIndexed { i, fx ->
+        drawRoundRect(Color(0xFFFFB347).copy(alpha = if (i == 1) 0.4f else flick), Offset(cx + w * fx - s * 0.035f, base - bodyH * 0.8f), Size(s * 0.07f, s * 0.12f), CornerRadius(s * 0.035f))
+    }
+    drawRoundRect(Color(0xFF3A2268), Offset(cx - s * 0.05f, base - s * 0.2f), Size(s * 0.1f, s * 0.2f), CornerRadius(s * 0.05f))
+    // murciélagos alrededor
+    for (k in 0..1) {
+        val a = (t * 2f + k * 0.5f) % 1f
+        val bx = cx + s * (-0.7f + 1.4f * a)
+        val by = base - s * (0.95f + 0.12f * sin(a * 6.283f + k))
+        drawPath(Path().apply {
+            moveTo(bx, by); quadraticTo(bx - s * 0.06f, by - s * 0.08f * (0.4f + 0.6f * abs(sin(t * 6.283f * 4f))), bx - s * 0.14f, by)
+            quadraticTo(bx - s * 0.07f, by + s * 0.02f, bx, by + s * 0.04f)
+            quadraticTo(bx + s * 0.07f, by + s * 0.02f, bx + s * 0.14f, by)
+            quadraticTo(bx + s * 0.06f, by - s * 0.08f * (0.4f + 0.6f * abs(sin(t * 6.283f * 4f))), bx, by); close()
+        }, ink)
     }
 }
 

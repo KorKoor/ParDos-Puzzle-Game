@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -16,8 +17,8 @@ import com.korkoor.pardos.domain.model.BoardState
 @Composable
 fun HeaderSection(state: BoardState) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("PARDOS", fontSize = 58.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B), letterSpacing = 12.sp)
-        Surface(color = Color(0xFF81B29A).copy(alpha = 0.12f), shape = RoundedCornerShape(50), modifier = Modifier.padding(top = 8.dp)) {
+        Text("PARDOS", fontSize = 58.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy, letterSpacing = 12.sp)
+        JellySurface(color = Color(0xFF81B29A).copy(alpha = 0.12f), shape = RoundedCornerShape(50), modifier = Modifier.padding(top = 8.dp)) {
             Text("NIVEL ${state.currentLevel}", modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp), color = Color(0xFF81B29A), fontWeight = FontWeight.Bold, fontSize = 12.sp)
         }
     }
@@ -34,10 +35,10 @@ fun FooterSection(state: BoardState, formattedTime: String) {
 */
 @Composable
 private fun InfoCard(label: String, value: String, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(24.dp), color = Color.White, shadowElevation = 2.dp) {
+    JellySurface(modifier = modifier, shape = RoundedCornerShape(24.dp), color = Color.White, shadowElevation = 2.dp) {
         Column(Modifier.padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, fontSize = 10.sp, color = Color(0xFF3D405B).copy(0.4f), fontWeight = FontWeight.Bold)
-            Text(value, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF3D405B))
+            Text(label, fontSize = 10.sp, color = com.korkoor.pardos.ui.design.Navy.copy(0.4f), fontWeight = FontWeight.Bold)
+            Text(value, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = com.korkoor.pardos.ui.design.Navy)
         }
     }
 }

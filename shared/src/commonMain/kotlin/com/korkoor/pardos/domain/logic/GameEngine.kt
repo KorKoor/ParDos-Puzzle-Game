@@ -8,8 +8,18 @@ enum class Direction { UP, DOWN, LEFT, RIGHT }
 /**
  * Motor del tablero. Con una [random] con semilla, dos partidas con los mismos movimientos
  * generan exactamente las mismas fichas (retos diarios iguales para todos, duelos, repeticiones).
+ *
+ * [blocked] son las piedras del nivel, como pares (fila, columna): no se mueven, no reciben fichas nuevas y parten cada
+ * fila o columna en tramos independientes (una ficha no puede saltar una piedra ni fusionarse al otro lado).
  */
-class GameEngine(val boardSize: Int, private val random: Random = Random.Default) {
+class GameEngine(
+    val boardSize: Int,
+    private val random: Random = Random.Default,
+    val blocked: Set<Pair<Int, Int>> = emptySet()
+) {
+
+    /** Casillas que pueden ocupar fichas. */
+    val freeCells: Int get() = boardSize * boardSize - blocked.count { (r, c) -> r in 0 until boardSize && c in 0 until boardSize }
 
     /**
      * Mueve y combina las fichas.
@@ -19,77 +29,64 @@ class GameEngine(val boardSize: Int, private val random: Random = Random.Default
         direction: Direction,
         multiplier: Int = 2
     ): Pair<List<TileModel>, Int> {
-        val grouped = when (direction) {
-            Direction.LEFT, Direction.RIGHT -> tiles.groupBy { it.row }
-            Direction.UP, Direction.DOWN -> tiles.groupBy { it.col }
-        }
+        val byCell = HashMap<Pair<Int, Int>, TileModel>(tiles.size * 2)
+        tiles.forEach { byCell[it.row to it.col] = it }
 
         val resultTiles = mutableListOf<TileModel>()
         var totalScoreGained = 0
 
-        for (i in 0 until boardSize) {
-            val line = grouped[i] ?: emptyList()
-            val (mergedLine, score) = processLine(line, direction, multiplier)
-
-            val finalLine = mergedLine.map { tile ->
-                when (direction) {
-                    Direction.LEFT, Direction.RIGHT -> tile.copy(row = i)
-                    Direction.UP, Direction.DOWN -> tile.copy(col = i)
+        for (lineIndex in 0 until boardSize) {
+            // Casillas de la línea, ordenadas desde el lado hacia el que se empuja (donde se apilan las fichas)
+            val cells = lineCells(lineIndex, direction)
+            var segment = ArrayList<Pair<Int, Int>>(boardSize)
+            for (cell in cells) {
+                if (cell in blocked) {
+                    totalScoreGained += slideSegment(segment, byCell, resultTiles)
+                    segment = ArrayList(boardSize)
+                } else {
+                    segment.add(cell)
                 }
             }
-
-            resultTiles.addAll(finalLine)
-            totalScoreGained += score
+            totalScoreGained += slideSegment(segment, byCell, resultTiles)
         }
 
         return Pair(resultTiles, totalScoreGained)
     }
 
-    private fun processLine(
-        line: List<TileModel>,
-        direction: Direction,
-        multiplier: Int
-    ): Pair<List<TileModel>, Int> {
-        val sorted = when (direction) {
-            Direction.LEFT, Direction.UP -> line.sortedBy { if (direction == Direction.LEFT) it.col else it.row }
-            Direction.RIGHT, Direction.DOWN -> line.sortedByDescending { if (direction == Direction.RIGHT) it.col else it.row }
-        }
-
-        val result = mutableListOf<TileModel>()
-        var scoreGained = 0
-        val skipIndexes = mutableSetOf<Int>()
-
-        for (i in sorted.indices) {
-            if (i in skipIndexes) continue
-
-            val current = sorted[i]
-            val next = sorted.getOrNull(i + 1)
-
-            if (next != null && current.value == next.value) {
-                val newValue = current.value * 2
-                scoreGained += newValue
-                result.add(current.copy(value = newValue, isMerged = true, isNew = false))
-                skipIndexes.add(i + 1)
-            } else {
-                result.add(current.copy(isMerged = false, isNew = false))
-            }
-        }
-
-        return Pair(repositionLine(result, direction), scoreGained)
+    /** Casillas de la fila/columna [index], con la primera siendo la del borde hacia el que se empuja. */
+    private fun lineCells(index: Int, direction: Direction): List<Pair<Int, Int>> = when (direction) {
+        Direction.LEFT -> (0 until boardSize).map { index to it }
+        Direction.RIGHT -> (boardSize - 1 downTo 0).map { index to it }
+        Direction.UP -> (0 until boardSize).map { it to index }
+        Direction.DOWN -> (boardSize - 1 downTo 0).map { it to index }
     }
 
-    private fun repositionLine(line: List<TileModel>, direction: Direction): List<TileModel> {
-        return line.mapIndexed { index, tile ->
-            val newPos = when (direction) {
-                Direction.LEFT, Direction.UP -> index
-                Direction.RIGHT, Direction.DOWN -> boardSize - 1 - index
-            }
-            if (direction == Direction.LEFT || direction == Direction.RIGHT) {
-                tile.copy(col = newPos)
+    /** Desliza y fusiona un tramo sin piedras. Devuelve los puntos ganados y añade las fichas resultantes a [out]. */
+    private fun slideSegment(
+        segment: List<Pair<Int, Int>>,
+        byCell: Map<Pair<Int, Int>, TileModel>,
+        out: MutableList<TileModel>
+    ): Int {
+        if (segment.isEmpty()) return 0
+        val line = segment.mapNotNull { byCell[it] }
+        var score = 0
+        var slot = 0
+        var i = 0
+        while (i < line.size) {
+            val current = line[i]
+            val next = line.getOrNull(i + 1)
+            val (row, col) = segment[slot++]
+            if (next != null && current.value == next.value) {
+                val newValue = current.value * 2
+                score += newValue
+                out.add(current.copy(value = newValue, row = row, col = col, isMerged = true, isNew = false))
+                i += 2
             } else {
-                tile.copy(row = newPos)
+                out.add(current.copy(row = row, col = col, isMerged = false, isNew = false))
+                i += 1
             }
         }
+        return score
     }
 
     /**
@@ -106,8 +103,9 @@ class GameEngine(val boardSize: Int, private val random: Random = Random.Default
 
         for (r in 0 until boardSize) {
             for (c in 0 until boardSize) {
-                if (!occupiedPositions.contains(r to c)) {
-                    emptyPositions.add(r to c)
+                val cell = r to c
+                if (cell !in occupiedPositions && cell !in blocked) {
+                    emptyPositions.add(cell)
                 }
             }
         }
@@ -136,8 +134,9 @@ class GameEngine(val boardSize: Int, private val random: Random = Random.Default
     }
 
     fun isGameOver(tiles: List<TileModel>): Boolean {
-        if (tiles.size < boardSize * boardSize) return false
+        if (tiles.size < freeCells) return false
 
+        // Las piedras valen 0 (las fichas siempre son > 0): nunca se emparejan con nada
         val grid = Array(boardSize) { IntArray(boardSize) { 0 } }
         tiles.forEach {
             if (it.row < boardSize && it.col < boardSize) {
@@ -148,6 +147,7 @@ class GameEngine(val boardSize: Int, private val random: Random = Random.Default
         for (r in 0 until boardSize) {
             for (c in 0 until boardSize) {
                 val current = grid[r][c]
+                if (current == 0) continue
                 if (c + 1 < boardSize && grid[r][c + 1] == current) return false
                 if (r + 1 < boardSize && grid[r + 1][c] == current) return false
             }

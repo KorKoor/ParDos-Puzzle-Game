@@ -92,7 +92,7 @@ fun FriendsScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFFF3EFE6), Cream)))
+            .pardosBackdrop()
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -101,7 +101,7 @@ fun FriendsScreen(onBack: () -> Unit) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
+            JellySurface(onClick = onBack, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Atrás", tint = Navy)
                 }
@@ -121,7 +121,7 @@ fun FriendsScreen(onBack: () -> Unit) {
 
             // --- Mi código + invitar ---
             item {
-                Surface(shape = RoundedCornerShape(28.dp), color = Color.White, shadowElevation = 8.dp, modifier = Modifier.fillMaxWidth()) {
+                JellySurface(shape = RoundedCornerShape(28.dp), color = Color.White, shadowElevation = 8.dp, modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(20.dp)) {
                         Text("TU CÓDIGO", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.45f), letterSpacing = 3.sp)
                         Spacer(Modifier.height(6.dp))
@@ -165,7 +165,7 @@ fun FriendsScreen(onBack: () -> Unit) {
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
-                            Surface(
+                            JellySurface(
                                 onClick = {
                                     val code = codeInput.trim()
                                     if (code.isNotBlank() && !adding) {
@@ -249,7 +249,7 @@ fun FriendsScreen(onBack: () -> Unit) {
 
 @Composable
 private fun SmallRoundButton(icon: androidx.compose.ui.graphics.vector.ImageVector, bg: Color, tint: Color, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = CircleShape, color = bg, modifier = Modifier.size(44.dp)) {
+    JellySurface(onClick = onClick, shape = CircleShape, color = bg, modifier = Modifier.size(44.dp)) {
         Box(contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         }
@@ -321,7 +321,7 @@ private fun RankRow(player: RankedPlayer, profile: UserProfile?) {
 
 @Composable
 private fun EmptyFriends(onInvite: () -> Unit) {
-    Surface(shape = RoundedCornerShape(28.dp), color = Color.White.copy(alpha = 0.7f), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    JellySurface(shape = RoundedCornerShape(28.dp), color = Color.White.copy(alpha = 0.7f), modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Column(
             modifier = Modifier.padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -342,7 +342,7 @@ private fun EmptyFriends(onInvite: () -> Unit) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(18.dp))
-                    .background(Brush.linearGradient(listOf(Color(0xFF7FB69C), Color(0xFF5A8C74))))
+                    .background(Brush.linearGradient(listOf(SageLight, SageDark)))
                     .clickable(onClick = onInvite)
                     .padding(horizontal = 26.dp, vertical = 13.dp)
             ) {

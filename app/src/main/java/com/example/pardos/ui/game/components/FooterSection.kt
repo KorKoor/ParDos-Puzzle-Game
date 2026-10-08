@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,7 +55,7 @@ private fun InfoCard(
     value: String,
     containerColor: Color
 ) {
-    Surface(
+    JellySurface(
         color = containerColor,
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.width(80.dp)
@@ -67,14 +68,14 @@ private fun InfoCard(
                 text = label,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF3D405B).copy(alpha = 0.5f),
+                color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f),
                 letterSpacing = 1.sp
             )
             Text(
                 text = value,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Black,
-                color = Color(0xFF3D405B)
+                color = com.korkoor.pardos.ui.design.Navy
             )
         }
     }

@@ -63,7 +63,7 @@ fun MultiplayerHub(
         RemoteDuel.decode(clip)?.let { if (!manager.isPlayed(it)) detected = it }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
+    Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             PardosTopBar(eyebrow = "Juega con otros", title = "Multijugador", onBack = onBack)
 
@@ -119,19 +119,12 @@ fun MultiplayerHub(
                         }
                         Spacer(Modifier.height(12.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(14.dp)).background(Navy.copy(alpha = 0.05f))
-                                    .border(1.dp, if (typed != null) Sage else Navy.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
-                                    .padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                if (input.isEmpty()) Text("PD1-…", fontSize = 14.sp, color = InkTertiary, fontWeight = FontWeight.Bold)
-                                BasicTextField(
-                                    value = input, onValueChange = { input = it.take(400) }, singleLine = true,
-                                    textStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Navy),
-                                    cursorBrush = SolidColor(Violet), modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                            ToyTextField(
+                                value = input, onValueChange = { input = it.take(400) }, placeholder = "PD1-…",
+                                accent = if (typed != null) Sage else Violet,
+                                textStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Navy),
+                                modifier = Modifier.weight(1f)
+                            )
                             Spacer(Modifier.width(8.dp))
                             Box(
                                 Modifier.size(48.dp).clip(RoundedCornerShape(14.dp)).background(Violet.copy(alpha = 0.14f))

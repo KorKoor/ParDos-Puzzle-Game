@@ -62,7 +62,7 @@ fun EpicFusionFlash(active: Boolean) {
 
 @Composable
 fun VictoryConfetti() {
-    val colors = listOf(Color(0xFF81B29A), Color(0xFFF2CC8F), Color(0xFFE07A5F), Color(0xFF3D405B))
+    val colors = listOf(Color(0xFF81B29A), Color(0xFFF2CC8F), Color(0xFFE07A5F), com.korkoor.pardos.ui.design.Navy)
     val particles = remember { List(50) { ImprovedConfettiState() } }
     val startTime = remember { System.currentTimeMillis() }
 

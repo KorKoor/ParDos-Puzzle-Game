@@ -98,6 +98,7 @@ class RetentionManager(context: Context) {
         r.skin?.let { economy.grantSkin(it) }
         if (r.avatar != 0) economy.grantAvatar(r.avatar)
         if (r.banner != 0) economy.grantBanner(r.banner)
+        r.fx?.let { economy.grantFx(it) }
     }
 
     // ============================ Al entrar / regresar ============================
@@ -405,10 +406,26 @@ class RetentionManager(context: Context) {
             collection.addChests(ChestType.COMMON, 1)
             economy.addGems(Economy.DAILY_MISSIONS_BONUS_GEMS)
             addSeasonPoints(SeasonPoints.ALL_DAILY_MISSIONS)
+            // Racha de días perfectos: encadenar días con las tres misiones cobradas da premios por hitos
+            val last = prefs.getInt(K_PERFECT_DAY, Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }
+            val streak = com.korkoor.pardos.domain.model.PerfectDays.next(last, prefs.getInt(K_PERFECT_STREAK, 0), today())
+            prefs.edit().putInt(K_PERFECT_DAY, today()).putInt(K_PERFECT_STREAK, streak).apply()
+            lastPerfectMilestone = com.korkoor.pardos.domain.model.PerfectDays.milestoneFor(streak)?.also { economy.addGems(it.gems) }
             return true
         }
         return false
     }
+
+    /** Días perfectos seguidos (0 si la racha ya se rompió). */
+    fun perfectDays(): Int = com.korkoor.pardos.domain.model.PerfectDays.alive(
+        prefs.getInt(K_PERFECT_DAY, Int.MIN_VALUE).takeIf { it != Int.MIN_VALUE }, prefs.getInt(K_PERFECT_STREAK, 0), today()
+    )
+
+    /** ¿Hoy ya se cobraron las tres misiones? */
+    fun perfectToday(): Boolean = prefs.getInt(K_PERFECT_DAY, Int.MIN_VALUE) == today()
+
+    /** Premio de hito que cayó en el último cobro (la UI lo lee una vez para felicitar). */
+    @Volatile var lastPerfectMilestone: com.korkoor.pardos.domain.model.PerfectDays.Milestone? = null
 
     // ============================ Liga semanal ============================
 
@@ -644,6 +661,8 @@ class RetentionManager(context: Context) {
         const val K_FIRST_WIN_DAY = "first_win_day"
         const val K_DAILY_CH_DAY = "daily_ch_day"
         const val K_ALL_MISSIONS_DAY = "all_missions_day"
+        const val K_PERFECT_DAY = "perfect_day"
+        const val K_PERFECT_STREAK = "perfect_streak"
         const val K_PIGGY = "piggy"
         const val K_LAST_OPEN = "last_open_day"
         const val K_REWARDED_LEVEL = "rewarded_level"

@@ -9,14 +9,17 @@ enum class Rarity(val dropWeightOrder: Int, val shardValue: Int, val craftCost: 
     LEGENDARY(3, 150, 600)
 }
 
-/** Series coleccionables. Cada una tiene 8 piezas: 4 comunes, 2 raras, 1 épica y 1 legendaria. */
+/** Series coleccionables (9). Cada una tiene 8 piezas: 4 comunes, 2 raras, 1 épica y 1 legendaria. */
 enum class Series(val id: String, val nameEs: String, val nameEn: String, val rewardCoins: Int, val rewardGems: Int) {
     GARDEN("garden", "Jardín Zen", "Zen Garden", 400, 5),
     SKY("sky", "Cielo", "Sky", 400, 5),
     TEA("tea", "Mesa de Té", "Tea Table", 400, 5),
     ADVENTURE("adventure", "Aventura", "Adventure", 600, 8),
     STUDIO("studio", "Estudio", "Studio", 600, 8),
-    TREASURE("treasure", "Tesoros", "Treasures", 900, 15)
+    TREASURE("treasure", "Tesoros", "Treasures", 900, 15),
+    OCEAN("ocean", "Mar Profundo", "Deep Sea", 700, 10),
+    FESTIVAL("festival", "Fiesta", "Festival", 700, 10),
+    MAGIC("magic", "Noche Mágica", "Magic Night", 1_000, 18)
 }
 
 /** Una pieza del álbum. [iconKey] se traduce a un icono en la app. */
@@ -73,6 +76,21 @@ object CollectibleCatalog {
             Triple("key", "Llave", "Key"), Triple("shield", "Escudo", "Shield"),
             Triple("trophy", "Trofeo", "Trophy"), Triple("premium", "Medalla", "Medal"),
             Triple("star", "Estrella fugaz", "Shooting star"), Triple("diamond", "Diamante", "Diamond")))
+        addAll(series(Series.OCEAN,
+            Triple("set_meal", "Pez payaso", "Clownfish"), Triple("water_drop", "Gota", "Droplet"),
+            Triple("bubble_chart", "Burbujas", "Bubbles"), Triple("beach_access", "Sombrilla", "Parasol"),
+            Triple("pool", "Poza", "Tide pool"), Triple("surfing", "Surfista", "Surfer"),
+            Triple("scuba_diving", "Buzo", "Diver"), Triple("water", "Ballena azul", "Blue whale")))
+        addAll(series(Series.FESTIVAL,
+            Triple("celebration", "Gorro", "Party hat"), Triple("confirmation_number", "Entrada", "Ticket"),
+            Triple("card_giftcard", "Regalo", "Gift"), Triple("fireplace", "Fogata", "Bonfire"),
+            Triple("theater_comedy", "Máscara", "Mask"), Triple("attractions", "Rueda de feria", "Ferris wheel"),
+            Triple("festival", "Carpa", "Big top"), Triple("flare", "Fuegos artificiales", "Fireworks")))
+        addAll(series(Series.MAGIC,
+            Triple("nightlight", "Farol", "Lantern"), Triple("emoji_objects", "Lámpara", "Lamp"),
+            Triple("local_fire_department", "Vela", "Candle"), Triple("scatter_plot", "Constelación", "Constellation"),
+            Triple("auto_stories", "Libro de hechizos", "Spellbook"), Triple("science", "Poción", "Potion"),
+            Triple("blur_circular", "Bola de cristal", "Crystal ball"), Triple("auto_fix_high", "Varita estelar", "Star wand")))
     }
 
     private val byId = all.associateBy { it.id }
@@ -180,4 +198,33 @@ object CraftRules {
     /** Se puede crear una pieza que aún no tienes y para la que alcanza la esencia. */
     fun canCraft(c: Collectible, owned: Set<String>, shards: Int): Boolean =
         c.id !in owned && shards >= cost(c)
+}
+
+
+// ============================== BRILLANTES ==============================
+
+/**
+ * Una pieza que ya tienes se puede convertir en **Brillante** gastando esencia. Es el destino de las repetidas
+ * y da un bono permanente de monedas (ver [AlbumBonus]). Nunca hace falta para completar el álbum.
+ */
+object FoilRules {
+    /** Esencia necesaria: el doble de lo que cuesta crear la pieza. */
+    fun cost(c: Collectible): Int = c.rarity.craftCost * 2
+
+    fun canUpgrade(c: Collectible, owned: Set<String>, foil: Set<String>, shards: Int): Boolean =
+        c.id in owned && c.id !in foil && shards >= cost(c)
+
+    /** Cada tantas piezas brillantes se suma 1 % de monedas. */
+    const val PER_PERCENT = 6
+    fun coinPercent(foil: Set<String>): Int = foil.count { CollectibleCatalog.byId(it) != null } / PER_PERCENT
+}
+
+/** Esencia a cambio de gemas: un atajo para quien no quiere esperar a las repetidas (sumidero de gemas). */
+object ShardShop {
+    const val SHARDS_PER_PACK = 100
+    const val GEMS_PER_PACK = 25
+    /** Packs que se pueden comprar al día (evita vaciar el álbum de golpe). */
+    const val MAX_PACKS_PER_DAY = 4
+
+    fun canBuy(gems: Int, boughtToday: Int): Boolean = gems >= GEMS_PER_PACK && boughtToday < MAX_PACKS_PER_DAY
 }

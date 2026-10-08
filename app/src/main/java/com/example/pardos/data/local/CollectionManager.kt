@@ -8,6 +8,8 @@ import com.korkoor.pardos.domain.collection.ChestType
 import com.korkoor.pardos.domain.collection.Collectible
 import com.korkoor.pardos.domain.collection.CollectibleCatalog
 import com.korkoor.pardos.domain.collection.CraftRules
+import com.korkoor.pardos.domain.collection.FoilRules
+import com.korkoor.pardos.domain.collection.ShardShop
 import com.korkoor.pardos.domain.collection.PityState
 import com.korkoor.pardos.domain.collection.Series
 import com.korkoor.pardos.domain.shop.Price
@@ -32,6 +34,7 @@ class CollectionManager(context: Context) {
             _chests.value = ChestType.entries.associateWith { prefs.getInt("chest_${it.name}", 0) }
             _claimedSeries.value = prefs.getStringSet(KEY_CLAIMED_SERIES, emptySet())?.toSet() ?: emptySet()
             _albumClaimed.value = prefs.getBoolean(KEY_ALBUM_CLAIMED, false)
+            _foil.value = prefs.getStringSet(KEY_FOIL, emptySet())?.toSet() ?: emptySet()
             loaded = true
         }
     }
@@ -41,6 +44,8 @@ class CollectionManager(context: Context) {
     val chests: StateFlow<Map<ChestType, Int>> = _chests.asStateFlow()
     val claimedSeries: StateFlow<Set<String>> = _claimedSeries.asStateFlow()
     val albumClaimed: StateFlow<Boolean> = _albumClaimed.asStateFlow()
+    /** Piezas convertidas en Brillantes. */
+    val foil: StateFlow<Set<String>> = _foil.asStateFlow()
 
     private fun pity() = PityState(prefs.getInt(KEY_PITY_EPIC, 0), prefs.getInt(KEY_PITY_LEGENDARY, 0))
 
@@ -99,6 +104,32 @@ class CollectionManager(context: Context) {
         return true
     }
 
+    /** Convierte una pieza en Brillante gastando esencia. */
+    fun upgradeFoil(c: Collectible): Boolean {
+        if (!FoilRules.canUpgrade(c, _owned.value, _foil.value, _shards.value)) return false
+        val newFoil = _foil.value + c.id
+        val newShards = _shards.value - FoilRules.cost(c)
+        _foil.value = newFoil
+        _shards.value = newShards
+        prefs.edit().putStringSet(KEY_FOIL, newFoil).putInt(KEY_SHARDS, newShards).apply()
+        return true
+    }
+
+    /** Packs de esencia comprados hoy (tope diario). */
+    fun shardPacksToday(today: Int = LocalDay.today()): Int =
+        if (prefs.getInt(KEY_SHARD_DAY, -1) == today) prefs.getInt(KEY_SHARD_COUNT, 0) else 0
+
+    /** Cambia gemas por un pack de esencia. Devuelve false si no alcanza o se llegó al tope del día. */
+    fun buyShardPack(today: Int = LocalDay.today()): Boolean {
+        val bought = shardPacksToday(today)
+        if (!ShardShop.canBuy(economy.gems.value, bought)) return false
+        if (!economy.spendGems(ShardShop.GEMS_PER_PACK)) return false
+        val newShards = _shards.value + ShardShop.SHARDS_PER_PACK
+        _shards.value = newShards
+        prefs.edit().putInt(KEY_SHARDS, newShards).putInt(KEY_SHARD_DAY, today).putInt(KEY_SHARD_COUNT, bought + 1).apply()
+        return true
+    }
+
     fun isSeriesClaimable(s: Series): Boolean =
         s.id !in _claimedSeries.value && CollectibleCatalog.isSeriesComplete(s, _owned.value)
 
@@ -133,6 +164,9 @@ class CollectionManager(context: Context) {
         const val KEY_PITY_LEGENDARY = "pity_legendary"
         const val KEY_CLAIMED_SERIES = "claimed_series"
         const val KEY_ALBUM_CLAIMED = "album_claimed"
+        const val KEY_FOIL = "foil"
+        const val KEY_SHARD_DAY = "shard_buy_day"
+        const val KEY_SHARD_COUNT = "shard_buy_count"
         const val ALBUM_GEMS = 50
 
         val _owned = MutableStateFlow<Set<String>>(emptySet())
@@ -140,6 +174,7 @@ class CollectionManager(context: Context) {
         val _chests = MutableStateFlow<Map<ChestType, Int>>(ChestType.entries.associateWith { 0 })
         val _claimedSeries = MutableStateFlow<Set<String>>(emptySet())
         val _albumClaimed = MutableStateFlow(false)
+        val _foil = MutableStateFlow<Set<String>>(emptySet())
         var loaded = false
     }
 }

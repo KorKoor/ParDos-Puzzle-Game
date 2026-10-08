@@ -35,7 +35,7 @@ val GameMode.color: Color
         GameMode.DESAFIO -> Color(0xFFE07A5F)
         GameMode.ZEN -> Color(0xFF6C63FF)
         GameMode.RAPIDO -> Color(0xFFF4A261)
-        GameMode.TABLAS -> Color(0xFF3D405B)
+        GameMode.TABLAS -> com.korkoor.pardos.ui.design.Navy
         GameMode.CARRERA -> Color(0xFFE0A93B)
         GameMode.DUELO -> Color(0xFFE07A5F)
         GameMode.CUSTOM -> Color(0xFF2A9D8F)

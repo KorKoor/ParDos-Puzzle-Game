@@ -1,5 +1,10 @@
 package com.korkoor.pardos.ui.profile
 
+import com.korkoor.pardos.ui.design.ToyTextField
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.JellySurface
+import androidx.compose.material.icons.rounded.Edit
 import com.korkoor.pardos.ui.design.CozyText
 
 import androidx.compose.foundation.background
@@ -29,7 +34,7 @@ fun ProfileSetupDialog(
     onProfileSaved: (String, Int) -> Unit
 ) {
     // --- NUEVA PALETA DE COLORES ---
-    val cafeOscuro = Color(0xFF3D405B)
+    val cafeOscuro = com.korkoor.pardos.ui.design.Navy
     val cafeSuave = Color(0xFF8D6E63)
     val cremaFondo = Color(0xFFFDF8F1)
     val terracota = Color(0xFFE07A5F)
@@ -42,7 +47,7 @@ fun ProfileSetupDialog(
         onDismissRequest = { },
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
     ) {
-        Surface(
+        JellySurface(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -87,7 +92,7 @@ fun ProfileSetupDialog(
 
                 // --- AVATAR CON SOMBRA Y BORDE ---
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    Surface(
+                    JellySurface(
                         modifier = Modifier.size(110.dp),
                         shape = CircleShape,
                         color = Color.White,
@@ -102,7 +107,7 @@ fun ProfileSetupDialog(
                     }
 
                     // Botón flotante estilizado
-                    Surface(
+                    JellySurface(
                         onClick = { mostrarSelectorAvatar = true },
                         color = cafeOscuro,
                         shape = CircleShape,
@@ -110,7 +115,7 @@ fun ProfileSetupDialog(
                         shadowElevation = 4.dp
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text("✏️", fontSize = 14.sp)
+                            com.korkoor.pardos.ui.design.Icon(androidx.compose.material.icons.Icons.Rounded.Edit, contentDescription = null, tint = com.korkoor.pardos.ui.design.Navy, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -126,26 +131,17 @@ fun ProfileSetupDialog(
                     modifier = Modifier.align(Alignment.Start).padding(start = 8.dp, bottom = 8.dp)
                 )
 
-                OutlinedTextField(
+                ToyTextField(
                     value = nombreUsuario,
                     onValueChange = { if (it.length <= 15) nombreUsuario = it },
-                    placeholder = { Text("Nombre de jugador...", color = cafeSuave.copy(alpha = 0.5f)) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = cafeOscuro,
-                        unfocusedBorderColor = cafeSuave.copy(alpha = 0.2f),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        cursorColor = cafeOscuro
-                    ),
+                    placeholder = "Nombre de jugador...",
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // --- BOTÓN PRINCIPAL ---
-                Button(
+                ToyButton(
                     onClick = { onProfileSaved(nombreUsuario, avatarSeleccionado) },
                     enabled = nombreUsuario.isNotBlank(),
                     colors = ButtonDefaults.buttonColors(

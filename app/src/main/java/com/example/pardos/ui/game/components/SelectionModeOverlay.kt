@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -131,7 +132,7 @@ fun SelectionModeOverlay(
 
             Spacer(modifier = Modifier.height(60.dp))
 
-            Surface(
+            JellySurface(
                 shape = CircleShape,
                 color = Color.White.copy(alpha = 0.9f),
                 modifier = Modifier
@@ -153,7 +154,7 @@ fun SelectionModeOverlay(
 
             // 🚀 BOTÓN DE CANCELAR REAL
             // Este es el único que llama a onCancel() para apagar el modo en el ViewModel
-            Surface(
+            JellySurface(
                 onClick = onCancel,
                 color = Color.White.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(20.dp),

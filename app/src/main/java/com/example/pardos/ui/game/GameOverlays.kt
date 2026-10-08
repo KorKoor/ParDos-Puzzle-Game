@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.game
 
+import com.korkoor.pardos.ui.design.JellySurface
 import FloatingScore
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -108,7 +109,7 @@ fun PowerUpSection(
     haptic: HapticFeedback,
     activity: Activity?,
     modifier: Modifier = Modifier,
-    labelColor: Color = Color(0xFF3D405B)
+    labelColor: Color = com.korkoor.pardos.ui.design.Navy
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
 
@@ -170,7 +171,10 @@ fun GameOverOverlay(
     currentTheme: GameTheme,
     isRace: Boolean = false,
     stagesCleared: Int = 0,
-    coinsEarned: Int = 0
+    coinsEarned: Int = 0,
+    reason: GameOverReason = GameOverReason.BOARD_FULL,
+    /** "¡Te faltó una fusión!": lo cerca que estuviste (null = nada que decir). */
+    nearMiss: String? = null
 ) {
     Box(
         modifier = Modifier
@@ -178,7 +182,7 @@ fun GameOverOverlay(
             .background(Color.Black.copy(alpha = 0.55f)),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
+        JellySurface(
             modifier = Modifier
                 .fillMaxWidth(0.86f)
                 .padding(16.dp),
@@ -191,7 +195,8 @@ fun GameOverOverlay(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (isRace) stringResource(R.string.race_over_title) else stringResource(R.string.board_full),
+                    text = if (isRace) stringResource(R.string.race_over_title)
+                    else if (reason == GameOverReason.BOARD_FULL && !com.korkoor.pardos.ui.design.Season.halloween) stringResource(R.string.board_full) else reason.headline,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Black,
                     color = com.korkoor.pardos.ui.design.Navy,
@@ -235,13 +240,27 @@ fun GameOverOverlay(
                 } else {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = stringResource(R.string.no_moves),
+                        text = if (reason == GameOverReason.BOARD_FULL) stringResource(R.string.no_moves) else reason.body,
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
                         color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f)
                     )
                 }
 
+                if (nearMiss != null && !isRace) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = nearMiss,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Black,
+                        color = com.korkoor.pardos.ui.design.Terracotta,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(com.korkoor.pardos.ui.design.Terracotta.copy(alpha = 0.12f))
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    )
+                }
                 Spacer(Modifier.height(24.dp))
                 com.korkoor.pardos.ui.design.PrimaryButton(
                     text = stringResource(R.string.retry),
@@ -317,7 +336,7 @@ fun DuelOverlay(
         modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
+        JellySurface(
             modifier = Modifier.fillMaxWidth(0.86f).padding(16.dp),
             color = com.korkoor.pardos.ui.design.Cream,
             shape = RoundedCornerShape(32.dp),

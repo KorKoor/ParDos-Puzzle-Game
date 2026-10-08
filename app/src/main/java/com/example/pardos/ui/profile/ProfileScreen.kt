@@ -1,5 +1,17 @@
 package com.korkoor.pardos.ui.profile
 
+import com.korkoor.pardos.ui.design.ToyTextField
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.pardosBackdrop
+import com.korkoor.pardos.ui.design.SectionLabel
+import com.korkoor.pardos.ui.design.Navy
+import androidx.compose.foundation.border
+import com.korkoor.pardos.ui.design.wobble
+import com.korkoor.pardos.ui.design.lighten
+import com.korkoor.pardos.ui.design.JellyCard
+import com.korkoor.pardos.ui.design.ToyAlertDialog
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -81,7 +93,7 @@ fun ProfileScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(fondoBeige)
+            .pardosBackdrop()
     ) {
         Box(
             modifier = Modifier
@@ -105,7 +117,7 @@ fun ProfileScreen(
                 onBack = onBack,
                 horizontalPadding = 0.dp,
                 trailing = {
-                    Surface(onClick = onSettings, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
+                    JellySurface(onClick = onSettings, shape = CircleShape, color = Color.White, shadowElevation = 6.dp, modifier = Modifier.size(46.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Settings, contentDescription = "Ajustes", tint = cafeProfundo)
                         }
@@ -118,7 +130,7 @@ fun ProfileScreen(
             Spacer(Modifier.height(16.dp))
 
             // --- PERFIL CARD PRINCIPAL ---
-            Surface(
+            JellySurface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(36.dp),
                 color = cremaPuro,
@@ -135,7 +147,7 @@ fun ProfileScreen(
                                 Modifier.align(Alignment.TopEnd).padding(12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Surface(
+                                JellySurface(
                                     onClick = { showBannerDialog = true }, shape = RoundedCornerShape(14.dp),
                                     color = Color.White.copy(alpha = 0.88f), shadowElevation = 4.dp
                                 ) {
@@ -145,7 +157,7 @@ fun ProfileScreen(
                                         Text("BANNER", fontSize = 10.sp, fontWeight = FontWeight.Black, color = cafeProfundo, letterSpacing = 1.sp)
                                     }
                                 }
-                                Surface(
+                                JellySurface(
                                     onClick = { showAvatarDialog = true }, shape = RoundedCornerShape(14.dp),
                                     color = Color.White.copy(alpha = 0.88f), shadowElevation = 4.dp
                                 ) {
@@ -165,7 +177,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Nombre
-                    Surface(
+                    JellySurface(
                         onClick = { showNameDialog = true },
                         color = cafeSuave.copy(alpha = 0.08f),
                         shape = RoundedCornerShape(16.dp)
@@ -234,7 +246,7 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             // Acceso a los récords (antes estaba en la barra inferior del menú)
-            Surface(
+            JellySurface(
                 onClick = onRecords,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
@@ -251,14 +263,7 @@ fun ProfileScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // 🔥 SECCIÓN: VITRINA DE GLORIA 🔥
-            Text(
-                text = "VITRINA DE GLORIA",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Black,
-                color = cafeSuave,
-                letterSpacing = 2.sp,
-                modifier = Modifier.align(Alignment.Start).padding(start = 8.dp)
-            )
+            SectionLabel("Vitrina de gloria", Modifier.align(Alignment.Start).padding(start = 4.dp))
             Spacer(modifier = Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -289,34 +294,31 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "PODIO DE AMIGOS",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    color = cafeSuave,
-                    letterSpacing = 2.sp,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
+                SectionLabel("Podio de amigos", Modifier.padding(start = 4.dp))
                 Icon(Icons.Rounded.Leaderboard, null, tint = terracota)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             if (fullRanking.size <= 1) {
-                Surface(
+                JellySurface(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 40.dp),
                     shape = RoundedCornerShape(28.dp),
                     color = cremaPuro,
                     shadowElevation = 8.dp
                 ) {
                     Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🥇 Estás en 1er lugar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = cafeProfundo)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            com.korkoor.pardos.ui.design.CozyIcon(com.korkoor.pardos.ui.design.CozyKind.CROWN, Modifier.size(24.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Estás en 1er lugar", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = cafeProfundo)
+                        }
                         Spacer(Modifier.height(8.dp))
                         Text("¡Invita amigos con tu código para que empiece la competencia!", textAlign = TextAlign.Center, fontSize = 12.sp, color = cafeSuave)
                     }
                 }
             } else {
-                Surface(
+                JellySurface(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 40.dp),
                     shape = RoundedCornerShape(28.dp),
                     color = cremaPuro,
@@ -368,20 +370,20 @@ fun ProfileScreen(
 
     if (showNameDialog) {
         var tempName by remember { mutableStateOf(profile.name) }
-        AlertDialog(
+        ToyAlertDialog(
             onDismissRequest = { showNameDialog = false },
             containerColor = Color.White,
-            title = { Text("Tu Identidad Zen", fontWeight = FontWeight.Black, color = Color(0xFF3D405B)) },
+            title = { Text("Tu Identidad Zen", fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy) },
             text = {
-                OutlinedTextField(
+                ToyTextField(
                     value = tempName,
                     onValueChange = { if (it.length <= 15) tempName = it },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
+                    placeholder = "Tu nombre...",
+                    modifier = Modifier.fillMaxWidth()
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
+                ToyTextButton(onClick = {
                     val profileConId = profileManager.getProfile().copy(name = tempName)
                     profileManager.saveProfile(profileConId)
                     profile = profileConId
@@ -393,7 +395,7 @@ fun ProfileScreen(
 
     // DIÁLOGO SELECTOR DE RÉCORDS PARA VITRINA
     if (showRecordSelector) {
-        AlertDialog(
+        ToyAlertDialog(
             onDismissRequest = { showRecordSelector = false },
             containerColor = Color.White,
             title = { Text("Elegir para Vitrina", fontWeight = FontWeight.Black) },
@@ -422,7 +424,7 @@ fun ProfileScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showRecordSelector = false }) {
+                ToyTextButton(onClick = { showRecordSelector = false }) {
                     Text("CANCELAR", fontWeight = FontWeight.Bold)
                 }
             }
@@ -433,7 +435,7 @@ fun ProfileScreen(
 // 🔥 COMPONENTE DE ESTADÍSTICAS (RACHA)
 @Composable
 fun StatCard(modifier: Modifier, icon: ImageVector, title: String, value: String, color: Color) {
-    Surface(
+    JellySurface(
         modifier = modifier,
         shape = RoundedCornerShape(24.dp),
         color = Color.White,
@@ -446,7 +448,7 @@ fun StatCard(modifier: Modifier, icon: ImageVector, title: String, value: String
         ) {
             Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(28.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B))
+            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
             Spacer(modifier = Modifier.height(2.dp))
             Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black, color = Color.Gray, letterSpacing = 1.sp)
         }
@@ -466,7 +468,7 @@ fun RankingRow(rank: Int, user: UserProfile, isMe: Boolean, cafeProfundo: Color,
         else -> Icons.Rounded.StarBorder to cafeSuave.copy(alpha = 0.5f)
     }
 
-    Surface(
+    JellySurface(
         shape = RoundedCornerShape(16.dp),
         color = bgColor,
         border = BorderStroke(1.dp, borderColor),
@@ -499,7 +501,7 @@ fun RankingRow(rank: Int, user: UserProfile, isMe: Boolean, cafeProfundo: Color,
                     Text(user.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = cafeProfundo, maxLines = 1)
                     if (isMe) {
                         Spacer(Modifier.width(6.dp))
-                        Surface(color = Color(0xFF81B29A), shape = RoundedCornerShape(8.dp)) {
+                        JellySurface(color = Color(0xFF81B29A), shape = RoundedCornerShape(8.dp)) {
                             Text("TÚ", fontSize = 8.sp, fontWeight = FontWeight.Black, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                         }
                     }
@@ -519,26 +521,41 @@ fun RankingRow(rank: Int, user: UserProfile, isMe: Boolean, cafeProfundo: Color,
 @Composable
 fun BadgeItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, unlocked: Boolean, activeColor: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            modifier = Modifier.size(64.dp),
-            shape = CircleShape,
-            color = if (unlocked) activeColor.copy(alpha = 0.15f) else Color.LightGray.copy(alpha = 0.1f),
-            border = BorderStroke(2.dp, if (unlocked) activeColor else Color.LightGray.copy(alpha = 0.3f))
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (unlocked) activeColor else Color.LightGray,
-                modifier = Modifier.padding(16.dp)
-            )
+        Box(contentAlignment = Alignment.TopEnd) {
+            JellyCard(
+                modifier = Modifier.size(70.dp).then(if (unlocked) Modifier.wobble(2.5f, 2600) else Modifier),
+                shape = CircleShape,
+                fill = if (unlocked) activeColor.lighten(0.80f) else Color(0xFFEFE9DD),
+                lip = if (unlocked) activeColor.copy(alpha = 0.55f) else Color(0xFFD6CCB8),
+                lipHeight = 5.dp
+            ) {
+                Box(
+                    Modifier.fillMaxSize().padding(5.dp)
+                        .border(2.dp, if (unlocked) activeColor.copy(alpha = 0.7f) else Color(0xFFCBBFA8), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (unlocked) activeColor else Navy.copy(alpha = 0.22f),
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
+            }
+            if (!unlocked) {
+                Box(
+                    Modifier.size(22.dp).background(Navy.copy(alpha = 0.55f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp)) }
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = label.uppercase(),
-            fontSize = 9.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.Black,
-            color = if (unlocked) Color.DarkGray else Color.LightGray,
-            letterSpacing = 1.sp
+            color = if (unlocked) Navy else Navy.copy(alpha = 0.35f),
+            letterSpacing = 1.2.sp
         )
     }
 }
@@ -550,7 +567,7 @@ fun RecordSlot(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
-    Surface(
+    JellySurface(
         onClick = onClick,
         modifier = modifier.height(90.dp),
         shape = RoundedCornerShape(20.dp),

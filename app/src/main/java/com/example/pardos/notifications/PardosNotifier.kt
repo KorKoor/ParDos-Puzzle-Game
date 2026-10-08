@@ -20,6 +20,7 @@ object NotificationChannels {
     const val STREAK = "pardos_streak"
     const val EVENTS = "pardos_events"
     const val GAME = "pardos_game"
+    const val DAILY = "pardos_daily"
 
     fun ensure(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -33,6 +34,7 @@ object NotificationChannels {
         make(STREAK, "Racha y regresos", "Tu racha en riesgo y recordatorios para volver", NotificationManager.IMPORTANCE_DEFAULT)
         make(EVENTS, "Fiestas y ligas", "Fiestas con skin, ligas y misiones semanales", NotificationManager.IMPORTANCE_DEFAULT)
         make(GAME, "Partida", "Tus poderes recargados", NotificationManager.IMPORTANCE_LOW)
+        make(DAILY, "Misiones y reto diario", "Misiones nuevas, premios por cobrar y tu racha perfecta", NotificationManager.IMPORTANCE_DEFAULT)
     }
 
     /** Canal al que pertenece cada aviso (la clave la define `ReminderPlanner`). */
@@ -40,6 +42,7 @@ object NotificationChannels {
         key == "powerup_ready" -> GAME
         key == "racha_riesgo" || key.startsWith("regreso") -> STREAK
         key == "season_end" || key == "weekly_end" || key == "league_end" || key.startsWith("event_") -> EVENTS
+        key == "daily_missions" || key == "missions_claim" || key == "perfect_streak" || key == "daily_challenge" -> DAILY
         else -> REWARDS
     }
 }
@@ -55,6 +58,8 @@ object NotificationRoute {
         key == "free_chest" -> "chest"
         key == "piggy_full" -> "piggy"
         key == "wheel" -> "wheel"
+        key == "chests_unopened" -> "album"
+        key == "daily_challenge" -> "menu"
         key == "season_claim" || key == "season_end" -> "season"
         key == "league_end" -> "friends"
         key.startsWith("event_") -> "shop"
@@ -88,6 +93,7 @@ object PardosNotifier {
         val notification = NotificationCompat.Builder(context, NotificationChannels.forKey(key))
             .setSmallIcon(R.drawable.ic_stat_pardos)
             .setColor(0xFFE8892B.toInt())
+            .apply { largeIconFor(context, key, halloween = false)?.let { setLargeIcon(it) } }
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
@@ -106,4 +112,24 @@ object PardosNotifier {
             false
         }
     }
+}
+
+
+/** Icono 3D grande de cada aviso (en lugar de emojis en el texto). En noche de brujas, versión embrujada. */
+private fun largeIconFor(context: Context, key: String, @Suppress("UNUSED_PARAMETER") halloween: Boolean): android.graphics.Bitmap? {
+    val spooky = com.korkoor.pardos.domain.retention.SeasonalCopy.isHalloweenWindow(com.korkoor.pardos.data.local.LocalDay.today())
+    val res = when {
+        key == "free_chest" || key == "chests_unopened" -> if (spooky) R.drawable.ico_pumpkin else R.drawable.ico_gift
+        key == "wheel" -> R.drawable.ico_party
+        key == "racha_riesgo" || key == "perfect_streak" -> if (spooky) R.drawable.ico_ghost else R.drawable.ico_fire
+        key == "regalo_diario" -> if (spooky) R.drawable.ico_candy else R.drawable.ico_gift
+        key.startsWith("regreso") -> if (spooky) R.drawable.ico_bat else R.drawable.ico_sparkles
+        key == "season_claim" || key == "season_end" -> if (spooky) R.drawable.ico_web else R.drawable.ico_crown
+        key == "missions_claim" || key == "daily_missions" || key == "daily_challenge" -> R.drawable.ico_star
+        key == "league_end" -> R.drawable.ico_crown
+        key.startsWith("event_") -> R.drawable.ico_party
+        key == "piggy_full" -> R.drawable.ico_sparkles
+        else -> return null
+    }
+    return android.graphics.BitmapFactory.decodeResource(context.resources, res)
 }

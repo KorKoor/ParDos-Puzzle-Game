@@ -1,5 +1,8 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -25,7 +28,8 @@ import com.korkoor.pardos.ui.theme.GameTheme
 fun SecondChanceOverlay(
     onUseSecondChance: () -> Unit,
     onCancel: () -> Unit,
-    currentTheme: GameTheme
+    currentTheme: GameTheme,
+    reason: GameOverReason = GameOverReason.BOARD_FULL
 ) {
     Box(
         modifier = Modifier
@@ -33,7 +37,7 @@ fun SecondChanceOverlay(
             .background(Color.Black.copy(alpha = 0.6f)),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
+        JellySurface(
             modifier = Modifier.fillMaxWidth(0.85f),
             shape = RoundedCornerShape(32.dp),
             color = Color.White.copy(alpha = 0.95f),
@@ -53,7 +57,7 @@ fun SecondChanceOverlay(
                 Spacer(Modifier.height(16.dp))
 
                 Text(
-                    text = stringResource(R.string.board_full).uppercase(), // ✅ "¡TABLERO LLENO!"
+                    text = (if (reason == GameOverReason.BOARD_FULL && !com.korkoor.pardos.ui.design.Season.halloween) stringResource(R.string.board_full) else reason.headline).uppercase(),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = currentTheme.accentColor,
@@ -61,15 +65,16 @@ fun SecondChanceOverlay(
                 )
 
                 Text(
-                    text = stringResource(R.string.second_chance_title), // ✅ "¿Quieres una segunda oportunidad?"
+                    text = if (reason == GameOverReason.OUT_OF_MOVES) "¿Quieres movimientos extra?" else stringResource(R.string.second_chance_title),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
-                    color = Color(0xFF3D405B)
+                    color = com.korkoor.pardos.ui.design.Navy
                 )
 
                 Text(
-                    text = stringResource(R.string.second_chance_desc), // ✅ "Limpiarás las fichas pequeñas..."
+                    text = if (reason == GameOverReason.OUT_OF_MOVES) "Sigues con el mismo tablero y unos movimientos más para llegar a la meta."
+                    else stringResource(R.string.second_chance_desc),
                     fontSize = 13.sp,
                     color = Color.Gray,
                     textAlign = TextAlign.Center,
@@ -78,7 +83,7 @@ fun SecondChanceOverlay(
 
                 Spacer(Modifier.height(24.dp))
 
-                Button(
+                ToyButton(
                     onClick = onUseSecondChance,
                     modifier = Modifier.fillMaxWidth().height(60.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81B29A)),
@@ -94,7 +99,7 @@ fun SecondChanceOverlay(
                     }
                 }
 
-                TextButton(
+                ToyTextButton(
                     onClick = onCancel,
                     modifier = Modifier.padding(top = 12.dp)
                 ) {

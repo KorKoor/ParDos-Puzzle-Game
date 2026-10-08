@@ -84,7 +84,7 @@ fun AvatarSelectorDialog(
     val isOwned = Avatars.isOwned(preview, owned)
 
     Dialog(onDismissRequest = onDismissRequest) {
-        Surface(
+        JellySurface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
             shape = RoundedCornerShape(32.dp),
             color = Cream,

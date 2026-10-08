@@ -19,3 +19,19 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# ---- ParDos: reglas para la versión de lanzamiento (R8) ----
+# Conserva números de línea para poder leer los errores que reporte Play Console / Crashlytics
+-keepattributes SourceFile,LineNumberTable,*Annotation*,Signature,InnerClasses,EnclosingMethod
+-renamesourcefileattribute SourceFile
+
+# Modelos que Firebase/Firestore lee y escribe por reflexión
+-keep class com.korkoor.pardos.domain.model.** { *; }
+-keepclassmembers class com.korkoor.pardos.domain.model.** { *; }
+
+# Enumeraciones del módulo compartido: se guardan por nombre/id en SharedPreferences
+-keepclassmembers enum com.korkoor.pardos.** { *; }
+
+# Play Billing y AdMob traen sus propias reglas; solo evitamos avisos de clases opcionales
+-dontwarn com.google.android.gms.**
+-dontwarn com.android.billingclient.**

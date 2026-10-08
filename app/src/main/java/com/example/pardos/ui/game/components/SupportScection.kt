@@ -1,5 +1,8 @@
 package com.example.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.ToyButton
+import com.korkoor.pardos.ui.design.ToyTextButton
+import com.korkoor.pardos.ui.design.JellySurface
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,7 +18,7 @@ import com.korkoor.pardos.ui.theme.GameTheme
 
 @Composable
 fun SupportCreatorDialog(onDismiss: () -> Unit, currentTheme: GameTheme) {
-    Surface(
+    JellySurface(
         modifier = Modifier
             .fillMaxWidth(0.9f)
             .padding(16.dp),
@@ -38,7 +41,7 @@ fun SupportCreatorDialog(onDismiss: () -> Unit, currentTheme: GameTheme) {
                 "ParDos es un proyecto independiente. Si te relaja jugar, considera apoyarme para seguir creando contenido sin anuncios intrusivos.",
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp,
-                color = Color(0xFF3D405B).copy(alpha = 0.7f)
+                color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f)
             )
 
             Spacer(Modifier.height(24.dp))
@@ -55,7 +58,7 @@ fun SupportCreatorDialog(onDismiss: () -> Unit, currentTheme: GameTheme) {
             Spacer(Modifier.height(12.dp))
 
             // Botón de "Café" (Vía Google Play IAP)
-            Button(
+            ToyButton(
                 onClick = { /* Trigger IAP */ },
                 colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
                 modifier = Modifier.fillMaxWidth(),
