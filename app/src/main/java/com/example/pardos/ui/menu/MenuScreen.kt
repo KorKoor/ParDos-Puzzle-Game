@@ -25,6 +25,8 @@ import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.MonetizationOn
 import androidx.compose.material.icons.rounded.Diamond
+import androidx.compose.material.icons.rounded.CollectionsBookmark
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudSync
@@ -68,7 +70,9 @@ fun MenuScreen(
     onProfileClick: () -> Unit,
     onFriendsClick: () -> Unit,
     themeViewModel: ThemeViewModel,
-    onShopClick: () -> Unit = {}
+    onShopClick: () -> Unit = {},
+    onCollectionClick: () -> Unit = {},
+    onMultiplayerClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -157,8 +161,8 @@ fun MenuScreen(
             val profileL = remember { profileManager.getProfile() }
             val dockItemsL = listOf(
                 DockItem(stringResource(R.string.menu_profile), Icons.Rounded.Person, Color(0xFF457B9D), onProfileClick),
-                DockItem(stringResource(R.string.menu_friends), Icons.Rounded.Group, Color(0xFF2A9D8F), onFriendsClick),
-                DockItem(stringResource(R.string.menu_records), Icons.Rounded.Leaderboard, Color(0xFFE07A5F), onRecordsClick),
+                DockItem("Multi", Icons.Rounded.Groups, Color(0xFF2A9D8F), onMultiplayerClick),
+                DockItem("Álbum", Icons.Rounded.CollectionsBookmark, Color(0xFFE0A93B), onCollectionClick),
                 DockItem(stringResource(R.string.menu_achievements), Icons.Rounded.EmojiEvents, Color(0xFF6C63FF), onAchievementsClick)
             )
             Row(
@@ -240,8 +244,8 @@ fun MenuScreen(
             val profile = remember { profileManager.getProfile() }
             val dockItems = listOf(
                 DockItem(stringResource(R.string.menu_profile), Icons.Rounded.Person, Color(0xFF457B9D), onProfileClick),
-                DockItem(stringResource(R.string.menu_friends), Icons.Rounded.Group, Color(0xFF2A9D8F), onFriendsClick),
-                DockItem(stringResource(R.string.menu_records), Icons.Rounded.Leaderboard, Color(0xFFE07A5F), onRecordsClick),
+                DockItem("Multi", Icons.Rounded.Groups, Color(0xFF2A9D8F), onMultiplayerClick),
+                DockItem("Álbum", Icons.Rounded.CollectionsBookmark, Color(0xFFE0A93B), onCollectionClick),
                 DockItem(stringResource(R.string.menu_achievements), Icons.Rounded.EmojiEvents, Color(0xFF6C63FF), onAchievementsClick)
             )
 

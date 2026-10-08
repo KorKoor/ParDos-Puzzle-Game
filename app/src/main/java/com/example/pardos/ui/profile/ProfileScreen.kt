@@ -38,6 +38,7 @@ import com.korkoor.pardos.ui.game.GameViewModel
 @Composable
 fun ProfileScreen(
     onBack: () -> Unit = {},
+    onRecords: () -> Unit = {},
     gameViewModel: GameViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -208,6 +209,23 @@ fun ProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(32.dp))
+
+            // Acceso a los récords (antes estaba en la barra inferior del menú)
+            Surface(
+                onClick = onRecords,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = Color.White,
+                shadowElevation = 4.dp
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Leaderboard, null, tint = terracota)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Ver todos mis récords", fontWeight = FontWeight.Black, color = cafeProfundo, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Icon(Icons.Rounded.ChevronRight, null, tint = cafeSuave)
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
 
             // 🔥 SECCIÓN: VITRINA DE GLORIA 🔥
             Text(

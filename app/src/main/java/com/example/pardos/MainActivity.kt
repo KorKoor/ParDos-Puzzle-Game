@@ -63,6 +63,8 @@ sealed class Screen {
     data object Profile : Screen()
     data object Friends : Screen()
     data object Shop : Screen()
+    data object Collection : Screen()
+    data object Multiplayer : Screen()
 }
 
 /** Nivel de profundidad de cada pantalla, para animar entrar/volver. */
@@ -70,7 +72,7 @@ private fun Screen.navDepth(): Int = when (this) {
     Screen.Splash -> 0
     Screen.Menu -> 1
     Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements,
-    Screen.Profile, Screen.Friends, Screen.Shop, Screen.AccessibilityGame -> 2
+    Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.AccessibilityGame -> 2
     Screen.LevelSelector -> 3
     Screen.Game -> 4
 }
@@ -268,7 +270,9 @@ class MainActivity : ComponentActivity() {
                                         onProfileClick = onProfileAction,
                                         onFriendsClick = onFriendsAction,
                                         themeViewModel = themeViewModel,
-                                        onShopClick = { currentScreen = Screen.Shop }
+                                        onShopClick = { currentScreen = Screen.Shop },
+                                        onCollectionClick = { currentScreen = Screen.Collection },
+                                        onMultiplayerClick = { currentScreen = Screen.Multiplayer }
                                     )
                                 }
                             }
@@ -318,10 +322,10 @@ class MainActivity : ComponentActivity() {
                                 onBackToMenu = {
                                     gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.resetGameSession()
-                                    currentScreen = if (gameViewModel.currentMode == GameMode.CLASICO) {
-                                        Screen.LevelSelector
-                                    } else {
-                                        Screen.Menu
+                                    currentScreen = when (gameViewModel.currentMode) {
+                                        GameMode.CLASICO -> Screen.LevelSelector
+                                        GameMode.DUELO -> Screen.Multiplayer
+                                        else -> Screen.Menu
                                     }
                                 }
                             )
@@ -348,8 +352,24 @@ class MainActivity : ComponentActivity() {
                                 onBack = { currentScreen = Screen.Menu }
                             )
 
-                            Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(onBack = { currentScreen = Screen.Menu })
+                            Screen.Profile -> com.korkoor.pardos.ui.profile.ProfileScreen(onBack = { currentScreen = Screen.Menu }, onRecords = { currentScreen = Screen.Records })
                             Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
+                            Screen.Collection -> com.korkoor.pardos.ui.collection.CollectionScreen(onBack = { currentScreen = Screen.Menu })
+
+                            Screen.Multiplayer -> com.korkoor.pardos.ui.social.MultiplayerHub(
+                                onBack = { currentScreen = Screen.Menu },
+                                onLocalDuel = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.startNewGame(GameMode.DUELO)
+                                    currentScreen = Screen.Game
+                                },
+                                onFriends = { currentScreen = Screen.Friends },
+                                onDailyChallenge = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.setupDailyChallenge()
+                                    currentScreen = Screen.Game
+                                }
+                            )
                             Screen.Shop -> com.korkoor.pardos.ui.shop.ShopScreen(
                                 activity = this@MainActivity,
                                 billing = billingManager,

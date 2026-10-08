@@ -111,13 +111,6 @@ fun ModeSelectionScreen(
                     onClick = { onModeSelected(GameMode.CARRERA) }
                 )
                 ModeRow(
-                    title = stringResource(R.string.mode_duel_title),
-                    description = stringResource(R.string.mode_duel_desc),
-                    icon = Icons.Rounded.Groups,
-                    color = Color(0xFF2A9D8F),
-                    onClick = { onModeSelected(GameMode.DUELO) }
-                )
-                ModeRow(
                     title = stringResource(R.string.mode_challenge_title),
                     description = stringResource(R.string.mode_challenge_desc),
                     icon = Icons.Rounded.Timer,
