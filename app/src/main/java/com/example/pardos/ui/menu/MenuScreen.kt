@@ -141,69 +141,84 @@ fun MenuScreen(
 
         if (isLandscape) {
             // --- DISEÑO HORIZONTAL (LANDSCAPE) ---
+            val profileL = remember { profileManager.getProfile() }
+            val dockItemsL = listOf(
+                DockItem(stringResource(R.string.menu_profile), Icons.Rounded.Person, Color(0xFF457B9D), onProfileClick),
+                DockItem(stringResource(R.string.menu_friends), Icons.Rounded.Group, Color(0xFF2A9D8F), onFriendsClick),
+                DockItem(stringResource(R.string.menu_records), Icons.Rounded.Leaderboard, Color(0xFFE07A5F), onRecordsClick),
+                DockItem(stringResource(R.string.menu_achievements), Icons.Rounded.EmojiEvents, Color(0xFF6C63FF), onAchievementsClick)
+            )
             Row(
                 modifier = Modifier
                     .fillMaxSize()
                     .systemBarsPadding()
-                    .padding(horizontal = 40.dp, vertical = 20.dp),
+                    .padding(horizontal = 28.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Lado Izquierdo: Branding y Soporte
+                // Izquierda: jugador, monedas y marca
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    AnimatedTitle("PARDOS", textColor, fontSize = 48.sp)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    PlayerHeader(profile = profileL, onClick = onProfileClick)
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (rewardClaimable) ClaimGiftChip(onClick = { showDailyReward = true })
+                        CurrencyPill(Icons.Rounded.MonetizationOn, coins, Color(0xFFE0A93B), onClick = onShopClick)
+                        CurrencyPill(Icons.Rounded.Diamond, gems, Color(0xFF4E8FA6), onClick = onShopClick)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    AnimatedTitle("PARDOS", textColor, fontSize = 40.sp)
                     Text(
                         text = stringResource(R.string.menu_slogan),
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                         color = textColor.copy(alpha = 0.4f),
-                        letterSpacing = 4.sp
+                        letterSpacing = 5.sp,
+                        modifier = Modifier.padding(top = 6.dp)
                     )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    SupportHeartButton(currentTheme.accentColor) { showSupportDialog = true }
                 }
 
-                // Lado Derecho: Panel de botones con Scroll
+                // Derecha: acciones y misiones con scroll
                 Column(
                     modifier = Modifier
-                        .weight(1.5f)
-                        .verticalScroll(rememberScrollState())
-                        .padding(end = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                        .weight(1.4f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    DailyChallengeButton(onDailyChallengeClick, modifier = Modifier.fillMaxWidth().height(60.dp))
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        AestheticMenuButton(
-                            text = stringResource(R.string.menu_play),
-                            color = currentTheme.accentColor,
-                            onClick = onPlayClick,
-                            modifier = Modifier.weight(1f).height(60.dp)
+                    HeroPlayCard(
+                        title = stringResource(R.string.menu_play),
+                        subtitle = stringResource(R.string.menu_play_subtitle, profileL.currentCampaignLevel),
+                        onClick = onPlayClick
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        QuickActionCard(
+                            label = stringResource(R.string.menu_daily_challenge),
+                            icon = Icons.Rounded.Star,
+                            color = Color(0xFFF2CC8F),
+                            onClick = onDailyChallengeClick,
+                            modifier = Modifier.weight(1f),
+                            dark = true
                         )
-                        AestheticMenuButton(
-                            text = stringResource(R.string.menu_customize),
+                        QuickActionCard(
+                            label = stringResource(R.string.menu_customize),
+                            icon = Icons.Rounded.Tune,
                             color = Color(0xFF81B29A),
                             onClick = onCustomClick,
-                            modifier = Modifier.weight(1f).height(60.dp)
+                            modifier = Modifier.weight(1f)
                         )
                     }
-
-                    // Tarjeta de Misiones
-                    DailyMissionsCard(missionManager, profileManager)
-
-                    // Cuadrícula Social y Progreso
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MiniMenuButton("PERFIL", Color(0xFF457B9D), Modifier.weight(1f), onProfileClick)
-                        MiniMenuButton("AMIGOS", Color(0xFF2A9D8F), Modifier.weight(1f), onFriendsClick)
-                        MiniMenuButton(stringResource(R.string.menu_records), Color(0xFFE07A5F), Modifier.weight(1f), onRecordsClick)
-                        MiniMenuButton(stringResource(R.string.menu_achievements), Color(0xFF6C63FF), Modifier.weight(1f), onAchievementsClick)
-                    }
+                    BottomDock(items = dockItemsL, modifier = Modifier.padding(horizontal = 0.dp))
+                    DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         } else {
