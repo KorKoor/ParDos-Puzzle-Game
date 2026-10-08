@@ -30,6 +30,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
@@ -162,53 +164,87 @@ fun AdLoadingOverlay(currentTheme: GameTheme) {
 @Composable
 fun GameOverOverlay(
     onRestart: () -> Unit,
-    currentTheme: GameTheme
+    currentTheme: GameTheme,
+    isRace: Boolean = false,
+    stagesCleared: Int = 0,
+    coinsEarned: Int = 0
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f)),
+            .background(Color.Black.copy(alpha = 0.55f)),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth(0.8f)
+                .fillMaxWidth(0.86f)
                 .padding(16.dp),
-            color = Color(0xFFF5F0E6),
-            shape = RoundedCornerShape(24.dp),
-            shadowElevation = 8.dp
+            color = com.korkoor.pardos.ui.design.Cream,
+            shape = RoundedCornerShape(32.dp),
+            shadowElevation = 16.dp
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = stringResource(R.string.board_full),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color(0xFF5D4037)
+                    text = if (isRace) stringResource(R.string.race_over_title) else stringResource(R.string.board_full),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    color = com.korkoor.pardos.ui.design.Navy,
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = stringResource(R.string.no_moves),
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFF5D4037).copy(alpha = 0.8f)
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onRestart,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF8D6E63)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(R.string.retry), color = Color.White)
+                if (isRace) {
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        text = "$stagesCleared",
+                        fontSize = 64.sp,
+                        fontWeight = FontWeight.Black,
+                        color = com.korkoor.pardos.ui.design.Gold
+                    )
+                    Text(
+                        text = stringResource(R.string.race_stages_cleared).uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.5f),
+                        letterSpacing = 3.sp
+                    )
+                    if (coinsEarned > 0) {
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(com.korkoor.pardos.ui.design.Gold.copy(alpha = 0.16f))
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.Icon(
+                                androidx.compose.material.icons.Icons.Default.MonetizationOn,
+                                contentDescription = null,
+                                tint = com.korkoor.pardos.ui.design.Gold,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("+$coinsEarned", fontSize = 16.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
+                        }
+                    }
+                } else {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.no_moves),
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f)
+                    )
                 }
+
+                Spacer(Modifier.height(24.dp))
+                com.korkoor.pardos.ui.design.PrimaryButton(
+                    text = stringResource(R.string.retry),
+                    onClick = onRestart,
+                    icon = androidx.compose.material.icons.Icons.Default.Refresh
+                )
             }
         }
     }
@@ -216,13 +252,16 @@ fun GameOverOverlay(
 
 @Composable
 fun ComboIndicator(count: Int, accentColor: Color) {
+    // Durante la animación de salida `count` ya vale 0: mostramos el último combo real para que no aparezca "×0"
+    var shown by remember { mutableIntStateOf(2) }
+    if (count > 1) shown = count
     androidx.compose.animation.AnimatedVisibility(
         visible = count > 1,
         enter = scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy)) + fadeIn() + expandIn(),
         exit = scaleOut() + fadeOut()
     ) {
         Text(
-            text = stringResource(R.string.combo_multiplier, count),
+            text = stringResource(R.string.combo_multiplier, shown),
             style = androidx.compose.ui.text.TextStyle(
                 fontSize = 58.sp,
                 fontWeight = FontWeight.Black,

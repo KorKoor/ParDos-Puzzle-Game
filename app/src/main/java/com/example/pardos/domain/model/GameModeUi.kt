@@ -12,6 +12,7 @@ val GameMode.nameResId: Int
         GameMode.ZEN -> R.string.mode_zen
         GameMode.RAPIDO -> R.string.mode_fast
         GameMode.TABLAS -> R.string.mode_tables
+        GameMode.CARRERA -> R.string.mode_race
         GameMode.CUSTOM -> R.string.mode_custom
     }
 
@@ -22,6 +23,7 @@ val GameMode.descriptionResId: Int
         GameMode.ZEN -> R.string.mode_zen_desc
         GameMode.RAPIDO -> R.string.mode_fast_desc
         GameMode.TABLAS -> R.string.mode_tables_desc
+        GameMode.CARRERA -> R.string.mode_race_desc
         GameMode.CUSTOM -> R.string.mode_custom_desc
     }
 
@@ -32,5 +34,6 @@ val GameMode.color: Color
         GameMode.ZEN -> Color(0xFF6C63FF)
         GameMode.RAPIDO -> Color(0xFFF4A261)
         GameMode.TABLAS -> Color(0xFF3D405B)
+        GameMode.CARRERA -> Color(0xFFE0A93B)
         GameMode.CUSTOM -> Color(0xFF2A9D8F)
     }

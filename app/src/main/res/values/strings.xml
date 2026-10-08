@@ -372,4 +372,11 @@
     <string name="event_festival_week_desc">Monedas x1.5 y estrellas dobles en el ranking</string>
     <string name="event_ends_today">Termina hoy</string>
     <string name="event_ends_in">Termina en %1$d días</string>
+    <string name="mode_race">Carrera</string>
+    <string name="mode_race_title">CARRERA</string>
+    <string name="mode_race_desc">Etapas seguidas contra el reloj. Cada una que superes te regala tiempo. ¿Hasta dónde llegas?</string>
+    <string name="stage_label">ETAPA %1$d</string>
+    <string name="race_over_title">¡Fin de la carrera!</string>
+    <string name="race_stages_cleared">Etapas superadas</string>
+    <string name="race_time_bonus">+%1$d s</string>
 </resources>

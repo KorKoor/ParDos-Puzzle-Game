@@ -47,6 +47,7 @@ fun RecordsScreen(
             when {
                 record.mode.contains("Tablas") || record.mode.contains("Tables") -> "TABLES"
                 record.mode.uppercase().contains("DESAFIO") || record.mode.uppercase().contains("CHALLENGE") -> "CHALLENGE"
+                record.mode.uppercase().contains("CARRERA") || record.mode.uppercase().contains("RACE") -> "RACE"
                 record.mode.uppercase().contains("ZEN") -> "ZEN"
                 else -> "CAMPAIGN"
             }
@@ -241,6 +242,7 @@ private fun SectionHeader(modeKey: String, themeAccent: Color) {
     val (title, color, icon) = when (modeKey) {
         "TABLES" -> Triple(stringResource(R.string.mode_tables), Color(0xFF6C63FF), Icons.Default.Calculate)
         "CHALLENGE" -> Triple(stringResource(R.string.mode_challenge), Color(0xFFE07A5F), Icons.Default.Bolt)
+        "RACE" -> Triple(stringResource(R.string.mode_race), Color(0xFFE0A93B), Icons.Default.Flag)
         "ZEN" -> Triple(stringResource(R.string.mode_zen), Color(0xFF6C63FF), Icons.Default.Spa)
         else -> Triple(stringResource(R.string.mode_campaign_title), themeAccent, Icons.Default.EmojiEvents)
     }
@@ -278,7 +280,7 @@ private fun RecordCard(record: Record) {
                     Icon(Icons.Filled.EmojiEvents, null, tint = Color(0xFFFFD700), modifier = Modifier.size(22.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = String.format("%,d", record.score),
+                        text = if (record.mode.uppercase().contains("CARRERA")) "${record.score} " + stringResource(R.string.race_stages_cleared).lowercase() else String.format("%,d", record.score),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Black,
                         color = Color(0xFF3D405B)

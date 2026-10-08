@@ -67,6 +67,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     var firstSelectedTileId by mutableStateOf<String?>(null)
         private set
+    // --- MODO CARRERA ---
+    var raceStage by mutableIntStateOf(1)
+        private set
+    var raceStagesCleared by mutableIntStateOf(0)
+        private set
+    /** Segundos ganados al superar una etapa; la UI lo muestra un instante. */
+    var raceBonusFlash by mutableStateOf<Int?>(null)
+        private set
     // Monedas ganadas en la última victoria (para mostrarlas en el resumen)
     var lastCoinsEarned by mutableIntStateOf(0)
         private set
@@ -303,10 +311,113 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // 🔥 INTEGRACIÓN MISIONES DIARIAS: Partida jugada (incluso si se pierde) 🔥
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
 
+        if (currentMode == GameMode.CARRERA) finishRace()
+
         soundManager.playGameOver()
     }
 
+    // =========================== MODO CARRERA ===========================
+
+    /** El jugador rechaza la segunda oportunidad: en Carrera muestra el resultado; en niveles, reinicia. */
+    fun declineSecondChance() {
+        if (currentMode == GameMode.CARRERA) {
+            _boardState.update { it.copy(secondChanceUsed = true) }
+        } else {
+            retryLevel()
+        }
+    }
+
+    /** Empieza una carrera desde la etapa 1 con el tiempo inicial. */
+    fun startRace() {
+        currentMode = GameMode.CARRERA
+        dailyChallengeThemeIndex = null
+        currentMultiplierBase = 2
+        raceStage = 1
+        raceStagesCleared = 0
+        raceBonusFlash = null
+        lastCoinsEarned = 0
+        val first = com.korkoor.pardos.domain.logic.RaceRules.stage(1)
+        setupCustomGame(
+            size = first.boardSize,
+            target = first.target,
+            allowPowerUps = true,
+            difficulty = "Normal",
+            level = 1,
+            initialScore = 0,
+            isCustom = false,
+            // El tope (maxTime) es el máximo acumulable; se arranca con el tiempo inicial
+            timeLimitMs = com.korkoor.pardos.domain.logic.RaceRules.MAX_TIME_MS
+        )
+        _boardState.update { it.copy(elapsedTime = com.korkoor.pardos.domain.logic.RaceRules.START_TIME_MS, currentLevel = 1) }
+    }
+
+    /** Etapa superada: suma tiempo y pasa a la siguiente SIN detener el reloj. */
+    private fun handleRaceStageCleared() {
+        val rules = com.korkoor.pardos.domain.logic.RaceRules
+        val cleared = raceStage
+        raceStagesCleared = cleared
+        raceStage = cleared + 1
+        val next = rules.stage(raceStage)
+
+        val remaining = _boardState.value.elapsedTime
+        val newTime = rules.timeAfterStage(remaining, cleared)
+        val gainedSec = ((newTime - remaining) / 1000L).toInt()
+
+        soundManager.playWin()
+        missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
+
+        isMoving = false
+        floatingScores.clear()
+        gameEngine = GameEngine(boardSize = next.boardSize, random = rng)
+        _boardState.update {
+            it.copy(
+                currentLevel = raceStage,
+                levelLimit = next.target,
+                boardSize = next.boardSize,
+                tiles = emptyList(),
+                moveCount = 0,
+                elapsedTime = newTime,
+                isLevelCompleted = false,
+                isGameOver = false,
+                combo = 0
+            )
+        }
+        spawnInitialTiles(raceStage, next.target)
+
+        raceBonusFlash = gainedSec
+        viewModelScope.launch {
+            delay(1600)
+            raceBonusFlash = null
+        }
+    }
+
+    /** Fin de la carrera: guarda el récord y entrega monedas según las etapas superadas. */
+    private fun finishRace() {
+        val stages = raceStagesCleared
+        val base = com.korkoor.pardos.domain.logic.RaceRules.coinsFor(stages)
+        lastCoinsEarned = com.korkoor.pardos.domain.events.EventCalendar.apply(
+            base,
+            com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today())
+        )
+        economy.addCoins(lastCoinsEarned)
+        if (stages > 0) {
+            viewModelScope.launch {
+                try {
+                    recordDao.insertRecord(
+                        Record(score = stages, level = stages, mode = "CARRERA", date = System.currentTimeMillis())
+                    )
+                } catch (e: Exception) {
+                    Log.e("DATABASE_ERROR", "Error al guardar récord de carrera", e)
+                }
+            }
+        }
+    }
+
     fun startNewGame(mode: GameMode) {
+        if (mode == GameMode.CARRERA) {
+            startRace()
+            return
+        }
         currentMode = mode
 
         if (mode != GameMode.DESAFIO) {
@@ -366,7 +477,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         level: Int = 1,
         initialScore: Int = 0,
         isCustom: Boolean = false,
-        seed: Long? = null
+        seed: Long? = null,
+        timeLimitMs: Long? = null
     ) {
         // 1. LIMPIEZA TOTAL DE ESTADOS PREVIOS
         timerJob?.cancel()
@@ -393,7 +505,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         // 4. CÁLCULO DE TIEMPO (Solo se activa en Desafío o Custom con dificultad)
-        val timeLimitSeconds = if (determinedMode == GameMode.DESAFIO || (isCustom && difficulty != "Zen")) {
+        val timeLimitSeconds = timeLimitMs ?: if (determinedMode == GameMode.DESAFIO || (isCustom && difficulty != "Zen")) {
             ProgressionEngine.calculateTimeLimitForTarget(target, isCampaign = false)
         } else {
             null // Campaña siempre es Zen/Sin tiempo
@@ -653,6 +765,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun handleLevelVictory(maxTile: Int) {
         val currentState = _boardState.value
+        if (currentMode == GameMode.CARRERA) {
+            if (maxTile >= currentState.levelLimit) handleRaceStageCleared()
+            return
+        }
         val targetReached = maxTile >= currentState.levelLimit
         if (!targetReached) return
 
@@ -829,6 +945,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun getBestStats(level: Int): Pair<Int, Long> = levelStore.bestStats(currentMode, level)
 
     fun retryLevel() {
+        if (currentMode == GameMode.CARRERA) {
+            showLevelSummary = false
+            isMoving = false
+            isGameStarted = false
+            timerJob?.cancel()
+            startRace()
+            playMenuMusic()
+            return
+        }
         val levelToRetry = _boardState.value.currentLevel
         val arePowerUpsAllowed = _boardState.value.allowPowerUps
 

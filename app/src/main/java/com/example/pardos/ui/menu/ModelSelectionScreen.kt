@@ -104,6 +104,13 @@ fun ModeSelectionScreen(
                     onClick = { onModeSelected(GameMode.TABLAS) }
                 )
                 ModeRow(
+                    title = stringResource(R.string.mode_race_title),
+                    description = stringResource(R.string.mode_race_desc),
+                    icon = Icons.Rounded.Flag,
+                    color = Color(0xFF6C63FF),
+                    onClick = { onModeSelected(GameMode.CARRERA) }
+                )
+                ModeRow(
                     title = stringResource(R.string.mode_challenge_title),
                     description = stringResource(R.string.mode_challenge_desc),
                     icon = Icons.Rounded.Timer,

@@ -423,16 +423,49 @@ fun GameScreen(
                                 }
                             }
                         },
-                        onCancel = { viewModel.retryLevel() },
+                        onCancel = { viewModel.declineSecondChance() },
                         currentTheme = currentTheme
                     )
                 }
                 else {
-                    GameOverOverlay(onRestart = { viewModel.retryLevel() }, currentTheme = currentTheme)
+                    GameOverOverlay(
+                        onRestart = { viewModel.retryLevel() },
+                        currentTheme = currentTheme,
+                        isRace = state.gameMode == GameMode.CARRERA,
+                        stagesCleared = viewModel.raceStagesCleared,
+                        coinsEarned = viewModel.lastCoinsEarned
+                    )
                 }
             }
 
             AchievementManagerPopup(viewModel = viewModel)
+
+            // Modo Carrera: aviso de tiempo ganado al superar una etapa
+            androidx.compose.animation.AnimatedVisibility(
+                visible = viewModel.raceBonusFlash != null,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 150.dp),
+                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                exit = fadeOut() + slideOutVertically { -it / 2 }
+            ) {
+                val sec = viewModel.raceBonusFlash ?: 0
+                Row(
+                    modifier = Modifier
+                        .shadow(10.dp, RoundedCornerShape(20.dp), spotColor = com.korkoor.pardos.ui.design.Gold)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Brush.horizontalGradient(listOf(com.korkoor.pardos.ui.design.Sand, com.korkoor.pardos.ui.design.Gold)))
+                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.race_time_bonus, sec),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
+                    )
+                }
+            }
 
             if (showExitDialog) {
                 ExitGameDialog(

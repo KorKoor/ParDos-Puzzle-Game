@@ -101,7 +101,8 @@ internal fun GameHeader(
 
         AnimatedLevelDisplay(
             level = state.currentLevel,
-            textColor = currentTheme.mainTextColor
+            textColor = currentTheme.mainTextColor,
+            isRace = state.gameMode == GameMode.CARRERA
         )
 
         Spacer(Modifier.height(6.dp))
@@ -360,7 +361,8 @@ internal fun GameFooter(
 internal fun AnimatedLevelDisplay(
     level: Int,
     modifier: Modifier = Modifier,
-    textColor: Color
+    textColor: Color,
+    isRace: Boolean = false
 ) {
     AnimatedContent(
         targetState = level,
@@ -371,7 +373,7 @@ internal fun AnimatedLevelDisplay(
         label = "LevelSlotAnimation"
     ) { targetLevel ->
         Text(
-            text = stringResource(R.string.level_label, targetLevel),
+            text = stringResource(if (isRace) R.string.stage_label else R.string.level_label, targetLevel),
             modifier = modifier,
             fontSize = 34.sp,
             fontWeight = FontWeight.Black,
