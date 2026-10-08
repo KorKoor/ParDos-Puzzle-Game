@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// ParDos — reglas de Firestore (propuesta v3)
+//
+// ESTADO: este archivo está PREPARADO pero NO publicado. Las reglas activas hoy son
+// `allow read, write: if true` en `users` y `user_progression` (cualquiera con la clave pública
+// del proyecto puede leer, modificar o BORRAR todos los perfiles).
+//
+// Cómo publicarlo (desde la carpeta del proyecto, con el CLI de Firebase iniciado en tu cuenta):
+//   firebase deploy --only firestore:rules --project pardos-b9b21
+// Para volver atrás: Firebase Console > Firestore > Reglas > Historial > restaurar la versión anterior.
+//
+// Qué cambia:
+//  - `players/{uid}` (cuentas de Google, app v3): solo el dueño escribe; cualquier jugador con sesión
+//    puede leer el perfil público (necesario para amigos y ranking).
+//  - `users` y `user_progression` (app publicada SIN cuenta): se mantienen abiertas para no romper a
+//    quienes aún no actualizan, pero se PROHÍBE BORRAR. Cuando casi todos estén en la v3, se cierran.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Validación básica del perfil para frenar datos basura o abusivos
+    function validProfile() {
+      let d = request.resource.data;
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 30
+        && d.playerLevel is int && d.playerLevel >= 1 && d.playerLevel <= 100000
+        && (!('friendCode' in d) || (d.friendCode is string && d.friendCode.size() <= 8))
+        && (!('friendsUids' in d) || (d.friendsUids is list && d.friendsUids.size() <= 300));
+    }
+
+    // ---- v3: perfiles con cuenta de Google ----
+    match /players/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid) && validProfile();
+      allow delete: if isOwner(uid);
+    }
+
+    // ---- Legacy (app sin cuenta): abiertas, pero sin borrados ----
+    match /users/{userId} {
+      allow read, create, update: if true;
+      allow delete: if false;
+    }
+
+    match /user_progression/{userId} {
+      allow read, create, update: if true;
+      allow delete: if false;
+    }
+  }
+}

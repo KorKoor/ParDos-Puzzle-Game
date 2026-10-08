@@ -103,6 +103,9 @@ fun ProfileScreen(
             )
             Spacer(Modifier.height(4.dp))
 
+            AccountCard(onChanged = { profile = profileManager.getProfile() })
+            Spacer(Modifier.height(16.dp))
+
             // --- PERFIL CARD PRINCIPAL ---
             Surface(
                 modifier = Modifier.fillMaxWidth(),

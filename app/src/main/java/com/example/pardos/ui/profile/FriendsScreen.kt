@@ -77,7 +77,8 @@ fun FriendsScreen(onBack: () -> Unit) {
     // La semana termina el domingo: días que faltan para el próximo lunes
     val daysLeft = ((week + 1) * 7 - 3) - today
 
-    val myCode = if (me.uid.length > 8) me.uid.take(8).uppercase() else me.uid.uppercase()
+    // Cuenta con sesión: código propio de 8 caracteres. Invitado: el código legacy (prefijo del id del dispositivo)
+    val myCode = if (me.friendCode.isNotBlank()) me.friendCode else if (me.uid.length > 8) me.uid.take(8).uppercase() else me.uid.uppercase()
 
     val ranking: List<RankedPlayer> = remember(me, friends, week) {
         val entries = buildList {
@@ -114,6 +115,10 @@ fun FriendsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
+            if (me.friendCode.isBlank()) {
+                item { AccountCard(onChanged = { reload() }) }
+            }
+
             // --- Mi código + invitar ---
             item {
                 Surface(shape = RoundedCornerShape(28.dp), color = Color.White, shadowElevation = 8.dp, modifier = Modifier.fillMaxWidth()) {

@@ -37,6 +37,27 @@ class ProfileManager(private val context: Context) {
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "dispositivo_desconocido"
     }
 
+    // ---- Identidad en la nube ----
+    // Con sesión de Google: perfil seguro en `players/{uid}`. Sin sesión: el perfil legacy `users/{ANDROID_ID}`.
+    private val signedUid: String?
+        get() = try {
+            if (FirebaseApp.getApps(context).isEmpty()) null else com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        } catch (e: Exception) { null }
+
+    /** ¿La cuenta actual usa el almacenamiento seguro v2? */
+    val isCloudAccount: Boolean get() = signedUid != null
+    private val cloudId: String get() = signedUid ?: deviceId
+    private val profilesCollection: String get() = if (signedUid != null) "players" else "users"
+
+    /** Código de amigo propio; se genera una vez por instalación y viaja con el perfil. */
+    private fun ensureFriendCode(): String {
+        val existing = prefs.getString("friend_code", null)
+        if (!existing.isNullOrBlank()) return existing
+        val code = com.korkoor.pardos.domain.social.FriendCode.generate()
+        prefs.edit().putString("friend_code", code).apply()
+        return code
+    }
+
     private fun currentWeekId(): Int =
         com.korkoor.pardos.domain.social.WeekCalendar.weekId(LocalDay.today())
 
@@ -53,7 +74,7 @@ class ProfileManager(private val context: Context) {
         val pinnedList = pinnedCsv.split("|||", limit = 3).map { it.trim() }
 
         return UserProfile(
-            uid = deviceId,
+            uid = cloudId,
             name = prefs.getString("user_name", "Jugador Zen") ?: "Jugador Zen",
             avatarId = prefs.getInt("avatar_id", 1),
             playerLevel = prefs.getInt("player_level", 1),
@@ -69,7 +90,8 @@ class ProfileManager(private val context: Context) {
             // 🔥 LA NUEVA PIEZA:
             pinnedRecords = pinnedList,
             weeklyStars = currentWeeklyStars(),
-            weekId = currentWeekId()
+            weekId = currentWeekId(),
+            friendCode = if (signedUid != null) ensureFriendCode() else ""
         )
     }
 
@@ -200,13 +222,19 @@ class ProfileManager(private val context: Context) {
             return
         }
 
-        firestore.collection("users").document(profile.uid)
+        val collection = profilesCollection
+        firestore.collection(collection).document(profile.uid)
             .set(profile)
             .addOnSuccessListener {
-                Log.d(TAG, "Sincronizado en Firebase correctamente.")
+                Log.d(TAG, "Sincronizado en Firebase correctamente ($collection).")
             }
             .addOnFailureListener { e ->
-                Log.e(TAG, "Fallo sincronizando en Firebase: ${e.message}")
+                Log.e(TAG, "Fallo sincronizando en Firebase ($collection): ${e.message}")
+                // Mientras las reglas v2 no estén publicadas, `players` rechaza la escritura:
+                // seguimos guardando en el perfil legacy para no perder la copia en la nube.
+                if (collection == "players") {
+                    firestore.collection("users").document(deviceId).set(profile.copy(uid = deviceId))
+                }
             }
     }
 
@@ -215,6 +243,11 @@ class ProfileManager(private val context: Context) {
      * que se muestra en pantalla (antes solo funcionaba el ID completo, y era confuso).
      */
     fun addFriendByCode(friendUid: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        // Cuenta con sesión: se busca por el código corto de amigo en `players`
+        if (signedUid != null) {
+            addFriendByFriendCode(friendUid, onSuccess, onError)
+            return
+        }
         val code = friendUid.trim().lowercase()
         if (code.length < 6) {
             onError("El código es demasiado corto.")
@@ -273,6 +306,32 @@ class ProfileManager(private val context: Context) {
         }
     }
 
+    private fun addFriendByFriendCode(input: String, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
+        val code = com.korkoor.pardos.domain.social.FriendCode.normalize(input)
+        if (!com.korkoor.pardos.domain.social.FriendCode.isValid(code)) {
+            onError("El código debe tener ${com.korkoor.pardos.domain.social.FriendCode.LENGTH} caracteres.")
+            return
+        }
+        val firestore = db ?: run { onError("Funciones sociales no disponibles."); return }
+        firestore.collection("players").whereEqualTo("friendCode", code).limit(1).get()
+            .addOnSuccessListener { snap ->
+                val doc = snap.documents.firstOrNull()
+                if (doc == null) { onError("Código no encontrado."); return@addOnSuccessListener }
+                if (doc.id == cloudId) { onError("¡No puedes agregarte a ti mismo!"); return@addOnSuccessListener }
+                val friends = prefs.getStringSet("friends_list", emptySet())?.toMutableSet() ?: mutableSetOf()
+                if (!friends.add(doc.id)) { onError("Ya lo tienes en tu lista."); return@addOnSuccessListener }
+                prefs.edit().putStringSet("friends_list", friends).apply()
+                saveProfile(getProfile().copy(friendsUids = friends.toList()))
+                unlockSocialBadge()
+                if (friends.size >= 3 && !prefs.getBoolean("badge_influencer_unlocked", false)) {
+                    prefs.edit().putBoolean("badge_influencer_unlocked", true).apply()
+                    saveProfile(getProfile())
+                }
+                onSuccess(doc.getString("name") ?: "Jugador")
+            }
+            .addOnFailureListener { e -> onError("Error de red: ${e.localizedMessage}") }
+    }
+
     fun updateCampaignLevel(newLevel: Int) {
         val currentProfile = getProfile()
         // Solo actualizamos si el nuevo nivel es mayor al que ya teníamos (para no retroceder)
@@ -299,50 +358,93 @@ class ProfileManager(private val context: Context) {
             return
         }
 
-        val chunks = currentFriends.chunked(10)
-        val allFriends = mutableListOf<UserProfile>()
-        var completedChunks = 0
+        fun parse(doc: com.google.firebase.firestore.DocumentSnapshot): UserProfile? = try {
+            UserProfile(
+                uid = doc.id,
+                name = doc.getString("name") ?: "Jugador Zen",
+                avatarId = doc.getLong("avatarId")?.toInt() ?: 1,
+                playerLevel = doc.getLong("playerLevel")?.toInt() ?: 1,
+                currentCampaignLevel = doc.getLong("currentCampaignLevel")?.toInt() ?: 1,
+                currentXp = doc.getLong("currentXp")?.toInt() ?: 0,
+                xpToNextLevel = doc.getLong("xpToNextLevel")?.toInt() ?: 100,
+                currentStreak = doc.getLong("currentStreak")?.toInt() ?: 0,
+                bestStreak = doc.getLong("bestStreak")?.toInt() ?: 0,
+                lastPlayDate = doc.getLong("lastPlayDate") ?: 0L,
+                friendsUids = (doc.get("friendsUids") as? List<String>) ?: emptyList(),
+                unlockedBadges = (doc.get("unlockedBadges") as? List<String>) ?: emptyList(),
+                pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", ""),
+                weeklyStars = doc.getLong("weeklyStars")?.toInt() ?: 0,
+                weekId = doc.getLong("weekId")?.toInt() ?: 0,
+                friendCode = doc.getString("friendCode") ?: ""
+            )
+        } catch (e: Exception) { null }
 
-        for (chunk in chunks) {
-            firestore.collection("users").whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
-                .addOnSuccessListener { snapshot ->
-                    val friendsInChunk = snapshot.documents.mapNotNull { doc ->
-                        try {
-                            UserProfile(
-                                uid = doc.id,
-                                name = doc.getString("name") ?: "Jugador Zen",
-                                avatarId = doc.getLong("avatarId")?.toInt() ?: 1,
-                                playerLevel = doc.getLong("playerLevel")?.toInt() ?: 1,
-                                currentCampaignLevel = doc.getLong("currentCampaignLevel")?.toInt() ?: 1,
-                                currentXp = doc.getLong("currentXp")?.toInt() ?: 0,
-                                xpToNextLevel = doc.getLong("xpToNextLevel")?.toInt() ?: 100,
-                                currentStreak = doc.getLong("currentStreak")?.toInt() ?: 0,
-                                bestStreak = doc.getLong("bestStreak")?.toInt() ?: 0,
-                                lastPlayDate = doc.getLong("lastPlayDate") ?: 0L,
-                                friendsUids = (doc.get("friendsUids") as? List<String>) ?: emptyList(),
-                                unlockedBadges = (doc.get("unlockedBadges") as? List<String>) ?: emptyList(),
-                                pinnedRecords = (doc.get("pinnedRecords") as? List<String>) ?: listOf("", "", ""),
-                                weeklyStars = doc.getLong("weeklyStars")?.toInt() ?: 0,
-                                weekId = doc.getLong("weekId")?.toInt() ?: 0
-                            )
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }
-
-                    allFriends.addAll(friendsInChunk)
-                    completedChunks++
-                    if (completedChunks == chunks.size) {
-                        onComplete(allFriends)
-                    }
-                }
-                .addOnFailureListener {
-                    completedChunks++
-                    if (completedChunks == chunks.size) {
-                        onComplete(allFriends)
-                    }
-                }
+        // Lee una colección por trozos de 10 (límite de whereIn). Si falla, devuelve lo que haya.
+        fun readCollection(collection: String, ids: List<String>, done: (List<UserProfile>) -> Unit) {
+            if (ids.isEmpty()) { done(emptyList()); return }
+            val chunks = ids.chunked(10)
+            val found = mutableListOf<UserProfile>()
+            var finished = 0
+            for (chunk in chunks) {
+                firestore.collection(collection)
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk).get()
+                    .addOnSuccessListener { snap -> found += snap.documents.mapNotNull { parse(it) } }
+                    .addOnCompleteListener { if (++finished == chunks.size) done(found) }
+            }
         }
+
+        if (signedUid != null) {
+            // Primero `players` (v2); los ids que no estén allí se buscan en el perfil legacy
+            readCollection("players", currentFriends) { v2 ->
+                val missing = currentFriends - v2.map { it.uid }.toSet()
+                readCollection("users", missing) { legacy -> onComplete(v2 + legacy) }
+            }
+        } else {
+            readCollection("users", currentFriends, onComplete)
+        }
+    }
+
+    /**
+     * Tras iniciar sesión: si la cuenta ya tiene un perfil en la nube (otro dispositivo, reinstalación)
+     * se restaura el progreso más avanzado; si es nueva, se sube el perfil local.
+     */
+    fun syncAfterSignIn(onDone: (restored: Boolean) -> Unit) {
+        val firestore = db
+        val uid = signedUid
+        if (firestore == null || uid == null) { onDone(false); return }
+
+        firestore.collection("players").document(uid).get()
+            .addOnSuccessListener { doc ->
+                val local = getProfile()
+                if (doc.exists()) {
+                    val cloudLevel = doc.getLong("playerLevel")?.toInt() ?: 1
+                    val cloudCampaign = doc.getLong("currentCampaignLevel")?.toInt() ?: 1
+                    val cloudIsAhead = cloudLevel > local.playerLevel ||
+                        (cloudLevel == local.playerLevel && cloudCampaign > local.currentCampaignLevel)
+                    if (cloudIsAhead) {
+                        val restored = local.copy(
+                            name = doc.getString("name") ?: local.name,
+                            avatarId = doc.getLong("avatarId")?.toInt() ?: local.avatarId,
+                            playerLevel = cloudLevel,
+                            currentCampaignLevel = cloudCampaign,
+                            currentXp = doc.getLong("currentXp")?.toInt() ?: local.currentXp,
+                            xpToNextLevel = doc.getLong("xpToNextLevel")?.toInt() ?: local.xpToNextLevel,
+                            friendsUids = ((doc.get("friendsUids") as? List<String>) ?: emptyList()).union(local.friendsUids).toList(),
+                            unlockedBadges = (doc.get("unlockedBadges") as? List<String>) ?: local.unlockedBadges
+                        )
+                        saveProfile(restored)
+                        onDone(true)
+                        return@addOnSuccessListener
+                    }
+                }
+                // Cuenta nueva (o el local va más avanzado): se sube el perfil local
+                saveProfile(local)
+                onDone(false)
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "syncAfterSignIn: ${e.message}")
+                onDone(false)
+            }
     }
 
     fun syncFromFirebase(onResult: (UserProfile?) -> Unit) {
@@ -353,7 +455,7 @@ class ProfileManager(private val context: Context) {
             return
         }
 
-        firestore.collection("users").document(deviceId)
+        firestore.collection(profilesCollection).document(cloudId)
             .get(com.google.firebase.firestore.Source.SERVER)
             .addOnSuccessListener { document ->
                 if (document.exists()) {
