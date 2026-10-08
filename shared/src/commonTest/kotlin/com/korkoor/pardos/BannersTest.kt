@@ -51,8 +51,11 @@ class BannersTest {
         val season = 24321
         val free = (1..SeasonPass.TIERS).filter { SeasonPass.freeReward(it, season).banner != 0 }
         val premium = (1..SeasonPass.TIERS).filter { SeasonPass.premiumReward(it, season).banner != 0 }
-        assertEquals(listOf(SeasonPass.FREE_BANNER_TIER), free)
-        assertEquals(listOf(SeasonPass.PREMIUM_BANNER_TIER), premium)
+        assertEquals((listOf(SeasonPass.FREE_BANNER_TIER) + SeasonPass.FREE_EXTRA_BANNER_TIERS).sorted(), free)
+        assertEquals((listOf(SeasonPass.PREMIUM_BANNER_TIER) + SeasonPass.PREMIUM_EXTRA_BANNER_TIERS).sorted(), premium)
+        val all = SeasonPass.bannersOf(season)
+        assertEquals(all.size, all.toSet().size)
+        all.forEach { assertEquals(BannerSource.SEASON, Banners.byId(it).source) }
         assertEquals(Banners.seasonFree(season).id, SeasonPass.freeReward(SeasonPass.FREE_BANNER_TIER, season).banner)
         assertFalse(SeasonPass.premiumReward(SeasonPass.PREMIUM_BANNER_TIER, season).isEmpty)
     }
@@ -60,5 +63,27 @@ class BannersTest {
     @Test fun darkBannersAreDetected() {
         assertTrue(Banners.byId(12).isDark)
         assertFalse(Banners.byId(1).isDark)
+    }
+
+    @Test fun passExtrasRotateAndPrestigeBannersUnlockByRank() {
+        val seen = (0 until 3).flatMap { s -> (0 until 4).map { Banners.seasonExtra(s, it).id } }.toSet()
+        assertEquals(Banners.passExtras.map { it.id }.toSet(), seen)
+        for (s in 0 until 9) assertEquals(4, (0 until 4).map { Banners.seasonExtra(s, it).id }.toSet().size)
+        assertTrue(Banners.exists(Banners.seasonExtra(-5, 3).id))
+        val ranks = com.korkoor.pardos.domain.prestige.PrestigeRank.entries
+        assertEquals(0, Banners.prestigeUnlocked(ranks.first(), false).size)
+        assertEquals(7, Banners.prestigeUnlocked(ranks.last(), false).size)
+        assertEquals(8, Banners.prestigeUnlocked(ranks.last(), true).size)
+        (Banners.passExtras + Banners.prestige).forEach { assertIs<Banners.Purchase.NotPurchasable>(Banners.buy(it.id, emptySet(), 99_999, 99_999)) }
+    }
+
+    @Test fun catalogIsBigAndHasLegibleInk() {
+        assertTrue(Banners.all.size >= 50, "banners: ${Banners.all.size}")
+        // el texto siempre contrasta con el fondo
+        Banners.all.forEach {
+            fun l(c: Long): Double = (((c shr 16) and 0xFF) * 0.299 + ((c shr 8) and 0xFF) * 0.587 + (c and 0xFF) * 0.114) / 255.0
+            val bg = (l(it.top) + l(it.bottom)) / 2
+            assertTrue(kotlin.math.abs(bg - l(it.ink)) > 0.3, "${it.name}: fondo $bg tinta ${l(it.ink)}")
+        }
     }
 }

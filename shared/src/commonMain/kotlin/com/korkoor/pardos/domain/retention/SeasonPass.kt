@@ -113,27 +113,65 @@ object SeasonPass {
     /** Niveles donde cae un banner de perfil exclusivo (gratis / premium). */
     const val FREE_BANNER_TIER = 9
     const val PREMIUM_BANNER_TIER = 22
+    /**
+     * Cosméticos extra de cada temporada (además de los de arriba). Gratis: 2 avatares y 1 banner; premium: 3 avatares y 3 banners.
+     * Los avatares salen de [com.korkoor.pardos.domain.shop.Avatars.passExtras] y los banners de [com.korkoor.pardos.domain.shop.Banners.passExtras].
+     */
+    val FREE_EXTRA_AVATAR_TIERS = listOf(21, 27)
+    val PREMIUM_EXTRA_AVATAR_TIERS = listOf(6, 18, 24)
+    val FREE_EXTRA_BANNER_TIERS = listOf(18)
+    val PREMIUM_EXTRA_BANNER_TIERS = listOf(3, 14, 30)
+
     /** Niveles donde cae un efecto de fusión: uno de muestra en la vía gratis y el exclusivo (Rayo) en la premium. */
     const val FREE_FX_TIER = 25
     const val PREMIUM_FX_TIER = 26
     val FREE_FX = com.korkoor.pardos.domain.shop.MergeFx.SPARKS
     val PREMIUM_FX = com.korkoor.pardos.domain.shop.MergeFx.LIGHTNING
 
+    private fun freeAvatar(tier: Int, seasonId: Int): Int = when {
+        tier == FREE_AVATAR_TIER -> com.korkoor.pardos.domain.shop.Avatars.seasonFree(seasonId).id
+        tier in FREE_EXTRA_AVATAR_TIERS -> com.korkoor.pardos.domain.shop.Avatars.seasonExtra(seasonId, FREE_EXTRA_AVATAR_TIERS.indexOf(tier)).id
+        else -> 0
+    }
+
+    private fun premiumAvatar(tier: Int, seasonId: Int): Int = when {
+        tier == PREMIUM_AVATAR_TIER -> com.korkoor.pardos.domain.shop.Avatars.seasonPremium(seasonId).id
+        tier in PREMIUM_EXTRA_AVATAR_TIERS -> com.korkoor.pardos.domain.shop.Avatars.seasonExtra(seasonId, 2 + PREMIUM_EXTRA_AVATAR_TIERS.indexOf(tier)).id
+        else -> 0
+    }
+
+    private fun freeBanner(tier: Int, seasonId: Int): Int = when {
+        tier == FREE_BANNER_TIER -> com.korkoor.pardos.domain.shop.Banners.seasonFree(seasonId).id
+        tier in FREE_EXTRA_BANNER_TIERS -> com.korkoor.pardos.domain.shop.Banners.seasonExtra(seasonId, FREE_EXTRA_BANNER_TIERS.indexOf(tier)).id
+        else -> 0
+    }
+
+    private fun premiumBanner(tier: Int, seasonId: Int): Int = when {
+        tier == PREMIUM_BANNER_TIER -> com.korkoor.pardos.domain.shop.Banners.seasonPremium(seasonId).id
+        tier in PREMIUM_EXTRA_BANNER_TIERS -> com.korkoor.pardos.domain.shop.Banners.seasonExtra(seasonId, 1 + PREMIUM_EXTRA_BANNER_TIERS.indexOf(tier)).id
+        else -> 0
+    }
+
+    /** Todos los avatares / banners que reparte la temporada [seasonId] (en las dos vías). */
+    fun avatarsOf(seasonId: Int): List<Int> = (1..TIERS).flatMap { listOf(freeAvatar(it, seasonId), premiumAvatar(it, seasonId)) }.filter { it != 0 }
+    fun bannersOf(seasonId: Int): List<Int> = (1..TIERS).flatMap { listOf(freeBanner(it, seasonId), premiumBanner(it, seasonId)) }.filter { it != 0 }
+
     fun freeReward(tier: Int, seasonId: Int = 0): SeasonReward {
         require(tier in 1..TIERS)
         val chest = when {
             tier == TIERS -> ChestType.RARE
+            tier == 20 -> ChestType.RARE
             tier % 5 == 0 -> ChestType.COMMON
             else -> null
         }
         return SeasonReward(
-            coins = 20 + 3 * tier,
-            gems = if (tier == TIERS) 10 else if (tier % 5 == 0) 3 else 0,
+            coins = 25 + 4 * tier,
+            gems = if (tier == TIERS) 12 else if (tier % 5 == 0) 4 else 0,
             chest = chest,
             freezes = if (tier == 10 || tier == 20) 1 else 0,
             undos = if (tier == 7 || tier == 17 || tier == 27) 2 else 0,
-            avatar = if (tier == FREE_AVATAR_TIER) com.korkoor.pardos.domain.shop.Avatars.seasonFree(seasonId).id else 0,
-            banner = if (tier == FREE_BANNER_TIER) com.korkoor.pardos.domain.shop.Banners.seasonFree(seasonId).id else 0,
+            avatar = freeAvatar(tier, seasonId),
+            banner = freeBanner(tier, seasonId),
             fx = if (tier == FREE_FX_TIER) FREE_FX else null
         )
     }
@@ -142,19 +180,19 @@ object SeasonPass {
     fun premiumReward(tier: Int, seasonId: Int): SeasonReward {
         require(tier in 1..TIERS)
         val chest = when {
-            tier == TIERS || tier == 20 -> ChestType.EPIC
+            tier == TIERS || tier == 20 || tier == 10 || tier == 25 -> ChestType.EPIC
             tier % 5 == 0 -> ChestType.RARE
             else -> null
         }
         return SeasonReward(
-            coins = 40 + 6 * tier,
-            gems = (if (tier % 3 == 0) 4 else 0) + (if (tier % 5 == 0) 5 else 0),
+            coins = 60 + 9 * tier,
+            gems = (if (tier % 3 == 0) 5 else 0) + (if (tier % 5 == 0) 6 else 0) + (if (tier == TIERS) 25 else 0),
             chest = chest,
             freezes = if (tier == 8 || tier == 18 || tier == 28) 1 else 0,
-            undos = if (tier == 4 || tier == 14 || tier == 24) 3 else 0,
+            undos = if (tier == 4 || tier == 14 || tier == 24 || tier == 9 || tier == 19 || tier == 29) 3 else 0,
             skin = if (tier == TIERS) SeasonCalendar.skinFor(seasonId) else null,
-            avatar = if (tier == PREMIUM_AVATAR_TIER) com.korkoor.pardos.domain.shop.Avatars.seasonPremium(seasonId).id else 0,
-            banner = if (tier == PREMIUM_BANNER_TIER) com.korkoor.pardos.domain.shop.Banners.seasonPremium(seasonId).id else 0,
+            avatar = premiumAvatar(tier, seasonId),
+            banner = premiumBanner(tier, seasonId),
             fx = if (tier == PREMIUM_FX_TIER) PREMIUM_FX else null
         )
     }

@@ -207,6 +207,10 @@ class PrestigeManager(context: Context) {
             prefs.edit().putInt(K_RANK_SEEN, rank.ordinal).apply()
         }
 
+        // 3b. Cosméticos de rango: avatares y banners que se conceden solos (y el del Platino)
+        com.korkoor.pardos.domain.shop.Avatars.prestigeUnlocked(rank, stats.platinum).forEach { economy.grantAvatar(it.id) }
+        com.korkoor.pardos.domain.shop.Banners.prestigeUnlocked(rank, stats.platinum).forEach { economy.grantBanner(it.id) }
+
         // 4. Títulos nuevos
         val titlesSeen = (prefs.getStringSet(K_TITLES_SEEN, null))
         val earnedNow = ProfileTitles.all.filter { ProfileTitles.isEarned(it, rank, done, stats.platinum) }.map { it.id }.toSet()

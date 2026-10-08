@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -124,6 +125,19 @@ private fun RankUpDialog(ev: PrestigeEvent.RankUp, onDismiss: () -> Unit) {
                 "+${r.rewardCoins} monedas · +${r.rewardGems} gemas" + if (r.rewardChest != null) " · un cofre" else "",
                 fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, textAlign = TextAlign.Center
             )
+        }
+        val newAvatar = com.korkoor.pardos.domain.shop.Avatars.prestige.firstOrNull { it.unlockRank == r }
+        val newBanner = com.korkoor.pardos.domain.shop.Banners.prestige.firstOrNull { it.unlockRank == r }
+        if (newAvatar != null || newBanner != null) {
+            Spacer(Modifier.height(10.dp))
+            Text("NUEVO PARA TU PERFIL", fontSize = 9.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 2.sp)
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                newAvatar?.let { com.korkoor.pardos.ui.profile.AvatarFramed(it.id, Modifier.size(64.dp), ring = 4.dp) }
+                if (newAvatar != null && newBanner != null) Spacer(Modifier.width(12.dp))
+                newBanner?.let { com.korkoor.pardos.ui.profile.ProfileBanner(it, Modifier.width(120.dp).height(64.dp).clip(RoundedCornerShape(14.dp))) }
+            }
+            Text(listOfNotNull(newAvatar?.name, newBanner?.name).joinToString(" · "), fontSize = 11.sp, fontWeight = FontWeight.Black, color = Navy, modifier = Modifier.padding(top = 4.dp), textAlign = TextAlign.Center)
         }
         r.next?.let {
             Text("Siguiente: ${it.title} a los ${it.minScore} puntos", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Navy.copy(alpha = 0.55f), modifier = Modifier.padding(top = 8.dp))

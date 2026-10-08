@@ -60,6 +60,7 @@ sealed class Screen {
     data object Records : Screen()
     data object Achievements : Screen()
     data object Prestige : Screen()
+    data object Gallery : Screen()
     data object LevelSelector : Screen()
     data object Profile : Screen()
     data object Friends : Screen()
@@ -76,7 +77,7 @@ sealed class Screen {
 private fun Screen.navDepth(): Int = when (this) {
     Screen.Splash -> 0
     Screen.Menu -> 1
-    Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements, Screen.Prestige,
+    Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements, Screen.Prestige, Screen.Gallery,
     Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.AccessibilityGame,
     Screen.Season, Screen.Wheel -> 2
     Screen.Studio, Screen.Settings -> 3
@@ -260,6 +261,8 @@ class MainActivity : ComponentActivity() {
                             Screen.Splash -> AnimatedSplashScreen(onAnimationFinished = {
                                 // Solo en builds de depuración: `--ei debug_level N` abre ese nivel de campaña directamente
                                 val debuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+                                val debugGallery = if (debuggable) intent?.getIntExtra("debug_gallery", 0) ?: 0 else 0
+                                if (debugGallery > 0) { currentScreen = Screen.Gallery; return@AnimatedSplashScreen }
                                 val debugLevel = if (debuggable) intent?.getIntExtra("debug_level", 0) ?: 0 else 0
                                 // Torre en depuración: `--ei debug_tower PISO [--ei debug_hearts N] [--es debug_tower_end win|lose]`
                                 val debugTower = if (debuggable) intent?.getIntExtra("debug_tower", 0) ?: 0 else 0
@@ -427,6 +430,10 @@ class MainActivity : ComponentActivity() {
                                 currentTheme = currentTheme,
                                 onBack = { currentScreen = Screen.Menu },
                                 onPrestige = { currentScreen = Screen.Prestige }
+                            )
+
+                            Screen.Gallery -> com.korkoor.pardos.ui.profile.CosmeticsGallery(
+                                intent?.getIntExtra("debug_gallery", 1) ?: 1, intent?.getIntExtra("debug_page", 0) ?: 0
                             )
 
                             Screen.Prestige -> com.korkoor.pardos.ui.prestige.PrestigeScreen(

@@ -5,6 +5,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -36,6 +38,8 @@ import com.korkoor.pardos.data.local.EconomyManager
 import com.korkoor.pardos.domain.shop.AvatarSource
 import com.korkoor.pardos.domain.shop.Avatars
 import com.korkoor.pardos.ui.design.*
+import com.korkoor.pardos.ui.prestige.color
+import com.korkoor.pardos.ui.prestige.label
 
 fun getAvatarResource(avatarId: Int): Int {
     return when (avatarId) {
@@ -70,15 +74,19 @@ fun AvatarSelectorDialog(
     var preview by remember { mutableIntStateOf(currentAvatarId) }
     var message by remember { mutableStateOf<String?>(null) }
     var filter by remember { mutableIntStateOf(0) }
-    val filters = listOf("TODOS", "ANIMALES", "TEMPORADA", "CLÁSICOS")
-    val shown = remember(filter) {
+    val filters = listOf("TODOS", "TUYOS", "TIENDA", "HALLOWEEN", "PASE", "PRESTIGIO", "CLÁSICOS")
+    val shown = remember(filter, owned) {
         when (filter) {
-            1 -> Avatars.all.filter { it.animal != null && it.source == AvatarSource.SHOP }
-            2 -> Avatars.all.filter { it.source == AvatarSource.SEASON }
-            3 -> Avatars.classics
+            1 -> Avatars.all.filter { Avatars.isOwned(it.id, owned) }
+            2 -> Avatars.all.filter { it.source == AvatarSource.SHOP && !it.isHalloween }
+            3 -> Avatars.all.filter { it.isHalloween }
+            4 -> Avatars.all.filter { it.source == AvatarSource.SEASON }
+            5 -> Avatars.all.filter { it.source == AvatarSource.PRESTIGE }
+            6 -> Avatars.classics
             else -> Avatars.all
         }
     }
+    val haveCount = Avatars.all.count { Avatars.isOwned(it.id, owned) }
 
     val def = Avatars.byId(preview)
     val isOwned = Avatars.isOwned(preview, owned)
@@ -91,34 +99,42 @@ fun AvatarSelectorDialog(
             shadowElevation = 24.dp
         ) {
             Column(Modifier.padding(horizontal = 20.dp, vertical = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("IDENTIDAD ZEN", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 2.sp)
+                Text("IDENTIDAD ZEN  ·  $haveCount / ${Avatars.all.size}", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 2.sp)
                 Spacer(Modifier.height(10.dp))
 
                 // vista previa
                 AvatarFramed(preview, Modifier.size(116.dp).shadow(14.dp, CircleShape, spotColor = Navy), ring = 5.dp)
                 Spacer(Modifier.height(8.dp))
                 Text(if (def.animal == null) "Avatar clásico" else def.name, fontSize = 17.sp, fontWeight = FontWeight.Black, color = Navy)
+                if (def.source != AvatarSource.FREE) {
+                    Text(
+                        def.rarity.label().uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, color = def.rarity.color(),
+                        modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp)).background(def.rarity.color().copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
                 Text(
                     when {
                         isOwned && preview == currentAvatarId -> "EN USO"
                         isOwned -> "TUYO"
                         def.source == AvatarSource.SEASON -> "EXCLUSIVO DEL PASE"
+                        def.source == AvatarSource.PRESTIGE -> "SE GANA CON EL PRESTIGIO"
                         else -> "${def.coinPrice} MONEDAS"
                     },
                     fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
-                    color = when { isOwned -> Sage; def.source == AvatarSource.SEASON -> Violet; else -> Gold }
+                    color = when { isOwned -> Sage; def.source == AvatarSource.SEASON -> Violet; def.source == AvatarSource.PRESTIGE -> Color(0xFF6A4CE0); else -> Gold },
+                    modifier = Modifier.padding(top = 3.dp)
                 )
 
                 Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     filters.forEachIndexed { i, label ->
                         val sel = i == filter
                         Text(
-                            label, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp,
+                            label, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp,
                             color = if (sel) Color.White else Navy, maxLines = 1, softWrap = false, textAlign = TextAlign.Center,
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (sel) Navy else Color.White)
+                            modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (sel) Navy else Color.White)
                                 .border(1.dp, if (sel) Navy else Navy.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                                .clickable { filter = i }.padding(vertical = 8.dp)
+                                .clickable { filter = i }.padding(horizontal = 12.dp, vertical = 8.dp)
                         )
                     }
                 }
@@ -128,7 +144,7 @@ fun AvatarSelectorDialog(
                     columns = GridCells.Fixed(4),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.height(280.dp)
+                    modifier = Modifier.height(300.dp)
                 ) {
                     items(shown) { a ->
                         val has = Avatars.isOwned(a.id, owned)
@@ -151,7 +167,7 @@ fun AvatarSelectorDialog(
                             // insignia: candado / pase / en uso
                             when {
                                 a.id == currentAvatarId -> Badge(Sage) { Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
-                                !has && a.source == AvatarSource.SEASON -> Badge(Violet) { Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
+                                !has && (a.source == AvatarSource.SEASON || a.source == AvatarSource.PRESTIGE) -> Badge(if (a.source == AvatarSource.PRESTIGE) Color(0xFF6A4CE0) else Violet) { Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
                                 !has -> Badge(Navy.copy(alpha = 0.75f)) { Icon(Icons.Rounded.Lock, null, tint = Color.White, modifier = Modifier.size(11.dp)) }
                             }
                         }
@@ -173,6 +189,10 @@ fun AvatarSelectorDialog(
                     def.source == AvatarSource.SEASON -> PrimaryButton(
                         "SE GANA EN EL PASE DE TEMPORADA", onClick = { message = "Míralo en el Pase de temporada: sale como premio." },
                         enabled = false, height = 52.dp, fontSize = 11.sp
+                    )
+                    def.source == AvatarSource.PRESTIGE -> PrimaryButton(
+                        def.unlockRank?.let { "SE DESBLOQUEA AL SER ${it.title.uppercase()}" } ?: "SE DESBLOQUEA CON EL PLATINO",
+                        onClick = { message = "Sube de rango en Prestigio y es tuyo." }, enabled = false, height = 52.dp, fontSize = 11.sp
                     )
                     else -> PrimaryButton(
                         if (coins >= def.coinPrice) "COMPRAR · ${def.coinPrice} MONEDAS" else "TE FALTAN ${def.coinPrice - coins} MONEDAS",

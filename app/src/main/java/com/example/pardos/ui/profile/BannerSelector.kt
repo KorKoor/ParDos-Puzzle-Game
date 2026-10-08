@@ -3,6 +3,8 @@ package com.korkoor.pardos.ui.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -33,6 +35,8 @@ import com.korkoor.pardos.data.local.EconomyManager
 import com.korkoor.pardos.domain.shop.BannerSource
 import com.korkoor.pardos.domain.shop.Banners
 import com.korkoor.pardos.ui.design.*
+import com.korkoor.pardos.ui.prestige.color
+import com.korkoor.pardos.ui.prestige.label
 
 /**
  * Cabecera del perfil: el banner elegido con el avatar (y su marco) asomando por abajo.
@@ -73,13 +77,27 @@ fun BannerSelectorDialog(
     var preview by remember { mutableIntStateOf(currentBannerId) }
     var message by remember { mutableStateOf<String?>(null) }
 
+    var filter by remember { mutableIntStateOf(0) }
+    val filters = listOf("TODOS", "TUYOS", "TIENDA", "HALLOWEEN", "PASE", "PRESTIGIO")
+    val shown = remember(filter, owned) {
+        when (filter) {
+            1 -> Banners.all.filter { Banners.isOwned(it.id, owned) }
+            2 -> Banners.all.filter { it.source == BannerSource.SHOP && !it.isHalloween }
+            3 -> Banners.all.filter { it.isHalloween }
+            4 -> Banners.all.filter { it.source == BannerSource.SEASON }
+            5 -> Banners.all.filter { it.source == BannerSource.PRESTIGE }
+            else -> Banners.all
+        }
+    }
+    val haveCount = Banners.all.count { Banners.isOwned(it.id, owned) }
+
     val def = Banners.byId(preview)
     val isOwned = Banners.isOwned(preview, owned)
 
     Dialog(onDismissRequest = onDismissRequest) {
         JellySurface(shape = RoundedCornerShape(32.dp), color = Cream, shadowElevation = 24.dp, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(horizontal = 18.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("TU BANNER", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 2.sp)
+                Text("TU BANNER  ·  $haveCount / ${Banners.all.size}", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 2.sp)
                 Spacer(Modifier.height(10.dp))
 
                 // vista previa real: así se verá en tu perfil
@@ -91,26 +109,47 @@ fun BannerSelectorDialog(
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(def.name, fontSize = 17.sp, fontWeight = FontWeight.Black, color = Navy)
+                if (def.source != BannerSource.FREE) {
+                    Text(
+                        def.rarity.label().uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp, color = def.rarity.color(),
+                        modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp)).background(def.rarity.color().copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
                 Text(
                     when {
                         isOwned && preview == currentBannerId -> "EN USO"
                         isOwned -> "TUYO"
                         def.source == BannerSource.SEASON -> "EXCLUSIVO DEL PASE"
+                        def.source == BannerSource.PRESTIGE -> "SE GANA CON EL PRESTIGIO"
                         def.gemPrice > 0 -> "${def.gemPrice} GEMAS"
                         else -> "${def.coinPrice} MONEDAS"
                     },
                     fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp,
-                    color = when { isOwned -> Sage; def.source == BannerSource.SEASON -> Violet; def.gemPrice > 0 -> GemBlue; else -> Gold }
+                    color = when { isOwned -> Sage; def.source == BannerSource.SEASON -> Violet; def.source == BannerSource.PRESTIGE -> Color(0xFF6A4CE0); def.gemPrice > 0 -> GemBlue; else -> Gold },
+                    modifier = Modifier.padding(top = 3.dp)
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    filters.forEachIndexed { i, label ->
+                        val sel = i == filter
+                        Text(
+                            label, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp,
+                            color = if (sel) Color.White else Navy, maxLines = 1, softWrap = false, textAlign = TextAlign.Center,
+                            modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(if (sel) Navy else Color.White)
+                                .border(1.dp, if (sel) Navy else Navy.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                .clickable { filter = i }.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.height(250.dp)
                 ) {
-                    items(Banners.all) { b ->
+                    items(shown) { b ->
                         val has = Banners.isOwned(b.id, owned)
                         val selected = preview == b.id
                         Box(
@@ -127,6 +166,7 @@ fun BannerSelectorDialog(
                             val badge: @Composable () -> Unit = {
                                 when {
                                     b.id == currentBannerId -> Pin(Sage) { androidx.compose.material3.Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
+                                    !has && b.source == BannerSource.PRESTIGE -> Pin(Color(0xFF6A4CE0)) { androidx.compose.material3.Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
                                     !has && b.source == BannerSource.SEASON -> Pin(Violet) { androidx.compose.material3.Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
                                     !has && b.gemPrice > 0 -> Pin(GemBlue) { androidx.compose.material3.Icon(Icons.Rounded.Diamond, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
                                     !has -> Pin(Navy.copy(alpha = 0.75f)) { androidx.compose.material3.Icon(Icons.Rounded.Lock, null, tint = Color.White, modifier = Modifier.size(11.dp)) }
@@ -151,6 +191,10 @@ fun BannerSelectorDialog(
                     def.source == BannerSource.SEASON -> PrimaryButton(
                         "SE GANA EN EL PASE DE TEMPORADA", onClick = { message = "Míralo en el Pase de temporada: sale como premio." },
                         enabled = false, height = 52.dp, fontSize = 11.sp
+                    )
+                    def.source == BannerSource.PRESTIGE -> PrimaryButton(
+                        def.unlockRank?.let { "SE DESBLOQUEA AL SER ${it.title.uppercase()}" } ?: "SE DESBLOQUEA CON EL PLATINO",
+                        onClick = { message = "Sube de rango en Prestigio y es tuyo." }, enabled = false, height = 52.dp, fontSize = 11.sp
                     )
                     else -> {
                         val can = coins >= def.coinPrice && gems >= def.gemPrice

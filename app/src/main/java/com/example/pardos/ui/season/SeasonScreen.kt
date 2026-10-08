@@ -368,14 +368,17 @@ private data class StarItem(val tier: Int, val premium: Boolean, val title: Stri
 @Composable
 private fun StarRewards(pal: Pal, seasonId: Int, tier: Int, premiumOwned: Boolean, claimed: Set<String>) {
     val items = remember(seasonId) {
-        listOf(
-            StarItem(SeasonPass.FREE_BANNER_TIER, false, Banners.byId(SeasonPass.freeReward(SeasonPass.FREE_BANNER_TIER, seasonId).banner).name, SeasonPass.freeReward(SeasonPass.FREE_BANNER_TIER, seasonId)),
-            StarItem(SeasonPass.PREMIUM_AVATAR_TIER, true, Avatars.byId(SeasonPass.premiumReward(SeasonPass.PREMIUM_AVATAR_TIER, seasonId).avatar).name, SeasonPass.premiumReward(SeasonPass.PREMIUM_AVATAR_TIER, seasonId)),
-            StarItem(SeasonPass.FREE_AVATAR_TIER, false, Avatars.byId(SeasonPass.freeReward(SeasonPass.FREE_AVATAR_TIER, seasonId).avatar).name, SeasonPass.freeReward(SeasonPass.FREE_AVATAR_TIER, seasonId)),
-            StarItem(20, true, "Cofre épico", SeasonPass.premiumReward(20, seasonId)),
-            StarItem(SeasonPass.PREMIUM_BANNER_TIER, true, Banners.byId(SeasonPass.premiumReward(SeasonPass.PREMIUM_BANNER_TIER, seasonId).banner).name, SeasonPass.premiumReward(SeasonPass.PREMIUM_BANNER_TIER, seasonId)),
-            StarItem(SeasonPass.TIERS, true, SeasonCalendar.skinFor(seasonId).displayName, SeasonPass.premiumReward(SeasonPass.TIERS, seasonId))
-        ).sortedBy { it.tier }
+        fun special(r: SeasonReward) = r.skin != null || r.avatar != 0 || r.banner != 0 || r.fx != null
+        fun title(r: SeasonReward): String = r.skin?.displayName ?: r.avatar.takeIf { it != 0 }?.let { Avatars.byId(it).name }
+            ?: r.banner.takeIf { it != 0 }?.let { Banners.byId(it).name } ?: r.fx?.displayName ?: "Cofre épico"
+        val out = mutableListOf<StarItem>()
+        for (t in 1..SeasonPass.TIERS) {
+            val f = SeasonPass.freeReward(t, seasonId)
+            val p = SeasonPass.premiumReward(t, seasonId)
+            if (special(f)) out += StarItem(t, false, title(f), f)
+            if (special(p) || p.chest == com.korkoor.pardos.domain.collection.ChestType.EPIC) out += StarItem(t, true, title(p), p)
+        }
+        out.sortedBy { it.tier }
     }
     Text("PREMIOS ESTRELLA", fontSize = 11.sp, fontWeight = FontWeight.Black, color = pal.ink.copy(alpha = 0.6f), letterSpacing = 3.sp)
     Spacer(Modifier.height(10.dp))
@@ -450,8 +453,10 @@ private fun PremiumCard(pal: Pal, seasonId: Int, skinName: String, premium: Bool
     val shimmer by rememberInfiniteTransition(label = "shimmer").animateFloat(
         -0.4f, 1.4f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "sh"
     )
-    val avatar = Avatars.byId(SeasonPass.premiumReward(SeasonPass.PREMIUM_AVATAR_TIER, seasonId).avatar)
-    val banner = Banners.byId(SeasonPass.premiumReward(SeasonPass.PREMIUM_BANNER_TIER, seasonId).banner)
+    val premiumRewards = (1..SeasonPass.TIERS).map { SeasonPass.premiumReward(it, seasonId) }
+    val avatarIds = premiumRewards.map { it.avatar }.filter { it != 0 }
+    val bannerIds = premiumRewards.map { it.banner }.filter { it != 0 }
+    val banner = Banners.byId(bannerIds.first())
     Column(
         modifier = Modifier.fillMaxWidth().shadow(14.dp, shape, spotColor = Gold).clip(shape)
             .background(Brush.linearGradient(listOf(Color(0xFFF7C65A), Color(0xFFE88A3C), Color(0xFFD65A55))))
@@ -476,12 +481,12 @@ private fun PremiumCard(pal: Pal, seasonId: Int, skinName: String, premium: Bool
         }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            AvatarFramed(avatar.id, Modifier.size(46.dp), ring = 3.dp, animate = false)
-            ProfileBanner(banner, Modifier.width(78.dp).height(46.dp).clip(RoundedCornerShape(12.dp)), animate = false)
+            avatarIds.take(3).forEach { AvatarFramed(it, Modifier.size(40.dp), ring = 3.dp, animate = false) }
+            ProfileBanner(banner, Modifier.width(62.dp).height(40.dp).clip(RoundedCornerShape(12.dp)), animate = false)
             Column(Modifier.weight(1f)) {
                 Text("Skin $skinName", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.White)
-                Text("${avatar.name} · ${banner.name}", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("+ el doble de premios", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f))
+                Text("${avatarIds.size} avatares · ${bannerIds.size} banners exclusivos", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("+ el doble de premios y cofres épicos", fontSize = 10.sp, color = Color.White.copy(alpha = 0.9f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
