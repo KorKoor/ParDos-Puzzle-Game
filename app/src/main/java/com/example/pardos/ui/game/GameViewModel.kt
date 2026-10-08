@@ -263,28 +263,28 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _levels.value = updatedLevels
     }
 
+    /**
+     * Único reloj del juego (segundos). Cuenta atrás si hay maxTime, hacia arriba si no.
+     * Respeta los bonus de tiempo aplicados al estado y evita bucles duplicados.
+     */
     fun startLevelTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
             while (isActive) {
                 delay(1000)
-                _boardState.update { state ->
-                    // FIX: Si maxTime existe, es cuenta atrás. Si no, cuenta adelante.
-                    val isTimedLevel = state.maxTime != null
+                val state = _boardState.value
+                if (state.isGameOver || state.isLevelCompleted || state.isPaused) continue
 
-                    val nextTime = if (isTimedLevel) {
-                        (state.elapsedTime - 1).coerceAtLeast(0L)
-                    } else {
-                        state.elapsedTime + 1
-                    }
-
-                    if (isTimedLevel && nextTime <= 0L) {
-                        this@launch.cancel()
+                if (state.maxTime != null) {
+                    val next = (state.elapsedTime - 1).coerceAtLeast(0L)
+                    _boardState.update { it.copy(elapsedTime = next) }
+                    if (next <= 0L) {
+                        isGameStarted = false
                         handleGameOver()
-                        state.copy(elapsedTime = 0L, isGameOver = true)
-                    } else {
-                        state.copy(elapsedTime = nextTime)
+                        break
                     }
+                } else {
+                    _boardState.update { it.copy(elapsedTime = it.elapsedTime + 1) }
                 }
             }
         }
@@ -435,27 +435,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (!isGameStarted) {
             isGameStarted = true
             realStartTime = System.currentTimeMillis()
-
-            viewModelScope.launch {
-                while (isGameStarted) {
-                    val elapsed = System.currentTimeMillis() - realStartTime
-                    _boardState.update { current ->
-                        if (current.maxTime != null) {
-                            val remaining = current.maxTime - elapsed
-                            if (remaining <= 0) {
-                                handleGameOver()
-                                isGameStarted = false
-                                current.copy(elapsedTime = 0L)
-                            } else {
-                                current.copy(elapsedTime = remaining)
-                            }
-                        } else {
-                            current.copy(elapsedTime = elapsed) // Modo Campaña (Sin tiempo)
-                        }
-                    }
-                    delay(1000)
-                }
-            }
+            startLevelTimer()
         }
 
         if (state.showTutorialHand) {
@@ -1136,10 +1116,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     _boardState.update { state ->
-                        // ⏳ BALANCE DE TIEMPO: Añadimos 30 segundos (30000ms) si el tiempo es crítico
-                        val bonusTimeMs = 30000L
-                        val newTime = if (state.maxTime != null && state.elapsedTime <= 5000L) {
-                            state.elapsedTime + bonusTimeMs
+                        // ⏳ BALANCE DE TIEMPO: +30 segundos al revivir (el reloj trabaja en segundos)
+                        val bonusTimeSec = 30L
+                        val newTime = if (state.maxTime != null) {
+                            (state.elapsedTime + bonusTimeSec).coerceAtMost(state.maxTime)
                         } else {
                             state.elapsedTime
                         }
@@ -1152,7 +1132,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                             elapsedTime = newTime
                         )
                     }
-                    // Nota: Asegúrate de que startLevelTimer o tu lógica de onMove maneje la reanudación
+                    isGameStarted = true
+                    startLevelTimer()
                 }
             }
         }
@@ -1228,26 +1209,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Reiniciamos el loop del tiempo
-            viewModelScope.launch {
-                while (isGameStarted) {
-                    val elapsed = System.currentTimeMillis() - realStartTime
-                    _boardState.update { current ->
-                        if (current.maxTime != null) {
-                            val remaining = current.maxTime - elapsed
-                            if (remaining <= 0) {
-                                handleGameOver()
-                                isGameStarted = false
-                                current.copy(elapsedTime = 0L)
-                            } else {
-                                current.copy(elapsedTime = remaining)
-                            }
-                        } else {
-                            current.copy(elapsedTime = elapsed)
-                        }
-                    }
-                    delay(1000)
-                }
-            }
+            startLevelTimer()
         }
     }
 }
