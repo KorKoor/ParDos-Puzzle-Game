@@ -9,7 +9,7 @@ El catálogo son datos en `shared` (`Avatars.kt`, `Banners.kt`, `SeasonPass.kt`)
 - 12 accesorios nuevos: bruja, pirata, chef, Santa, diablillo, halo, ninja, chistera, gorra, gafas de sol, capa y gorro de fiesta.
 - 7 variantes de color nuevas: sakura, hielo, brasa, sombra, caramelo, galaxia y platino.
 - 13 escenas de fondo animadas: destellos, rayos, estrellas, nubes, corazones, nieve, noche de brujas, pétalos, burbujas, confeti, aurora y llamas.
-- Todos los animales ya tenían brillo y sombra de barbilla propios; los ojos llevan doble destello.
+- Todos los animales, también los de antes, ganan brillo en la frente, sombra bajo la barbilla y doble destello en los ojos.
 - Marco **Mítico** (arcoíris que gira rápido) para los avatares de prestigio.
 - Rareza visible (común, raro, épico, legendario) según cómo se consiguen.
 - Colección "Noche de brujas": 11 avatares en la tienda con su filtro propio.
@@ -20,7 +20,7 @@ El catálogo son datos en `shared` (`Avatars.kt`, `Banners.kt`, `SeasonPass.kt`)
 
 ## Pase de temporada (30 niveles)
 - Premios más grandes: gratis 25+4×nivel monedas (antes 20+3×), premium 60+9×nivel (antes 40+6×); más gemas, más deshacer, y cofres épicos premium en los niveles 10, 20, 25 y 30.
-- Cosméticos por temporada: **7 avatares y 7 banners** (antes 2 y 2): gratis 3 avatares y 2 banners; premium 4 avatares y 5 banners, más la skin y el efecto exclusivos.
+- Cosméticos por temporada: **7 avatares y 6 banners** (antes 2 y 2): gratis 3 avatares y 2 banners; premium 4 avatares y 4 banners, más la skin y el efecto exclusivos.
 - Los extras rotan cada mes entre 3 sets, así que el Pase no se repite durante 3 meses.
 - "Premios estrella" ahora lista todo lo especial del mes, y la tarjeta premium enseña los avatares y banners que desbloquea.
 
