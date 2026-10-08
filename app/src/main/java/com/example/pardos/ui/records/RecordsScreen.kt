@@ -285,20 +285,24 @@ private fun RecordCard(record: Record) {
                     )
                 }
 
-                // 🌍 Traducimos el detalle de la ficha máxima
-                val detailText = if (record.mode.contains("Tabla") || record.mode.contains("Table")) {
-                    val tableName = record.mode.substringAfter("(").replace(")", "")
-                    "${stringResource(R.string.records_level)} ${record.level} • $tableName"
-                } else {
-                    "${stringResource(R.string.max_tile_label)}: ${record.level}"
+                // `record.level` guarda el número de nivel (no la ficha máxima, como decía la etiqueta antes)
+                val detailText: String? = when {
+                    record.mode.contains("Tabla") || record.mode.contains("Table") -> {
+                        val tableName = record.mode.substringAfter("(").replace(")", "")
+                        "${stringResource(R.string.records_level, record.level)} • $tableName"
+                    }
+                    record.mode == "CLASICO" -> stringResource(R.string.records_level, record.level)
+                    else -> null // Desafío / Zen / Personalizado no tienen un nivel que mostrar
                 }
 
-                Text(
-                    text = detailText,
-                    fontSize = 12.sp,
-                    color = Color(0xFF3D405B).copy(alpha = 0.6f),
-                    fontWeight = FontWeight.Bold
-                )
+                if (detailText != null) {
+                    Text(
+                        text = detailText,
+                        fontSize = 12.sp,
+                        color = Color(0xFF3D405B).copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             Column(horizontalAlignment = Alignment.End) {
