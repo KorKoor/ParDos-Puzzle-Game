@@ -64,10 +64,10 @@ class GameEngine(val boardSize: Int) {
             if (next != null && current.value == next.value) {
                 val newValue = current.value * 2
                 scoreGained += newValue
-                result.add(current.copy(value = newValue, isMerged = true))
+                result.add(current.copy(value = newValue, isMerged = true, isNew = false))
                 skipIndexes.add(i + 1)
             } else {
-                result.add(current.copy(isMerged = false))
+                result.add(current.copy(isMerged = false, isNew = false))
             }
         }
 
@@ -113,7 +113,8 @@ class GameEngine(val boardSize: Int) {
                 id = TileModel.generateId(),
                 value = value, // El valor ya viene balanceado (2, 4, 8, 16)
                 row = r,
-                col = c
+                col = c,
+                isNew = true
             )
         }
     }

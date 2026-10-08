@@ -279,9 +279,16 @@ private fun AnimatedTile(
 
     val scaleAnim = remember { Animatable(0f) }
     LaunchedEffect(tile.value) {
-        val targetScale = if (tile.value > 128) 1.2f else 1.15f
-        scaleAnim.snapTo(targetScale)
-        scaleAnim.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+        if (tile.isNew) {
+            // Aparición: crece desde pequeña con rebote suave
+            scaleAnim.snapTo(0.2f)
+            scaleAnim.animateTo(1f, spring(dampingRatio = 0.55f, stiffness = 350f))
+        } else {
+            // Fusión: "pop" de gelatina
+            val targetScale = if (tile.value > 128) 1.22f else 1.16f
+            scaleAnim.snapTo(targetScale)
+            scaleAnim.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 420f))
+        }
     }
 
     val selectionScale by animateFloatAsState(
@@ -333,9 +340,11 @@ private fun AnimatedTile(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.2f), Color.Transparent),
-                        start = Offset(0f, 0f), end = Offset(80f, 80f)
+                    // Brillo tipo gelatina: luz arriba, sombra suave abajo
+                    Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.30f),
+                        0.45f to Color.White.copy(alpha = 0.04f),
+                        1f to Color(0xFF3D405B).copy(alpha = 0.10f)
                     )
                 )
         )
@@ -388,30 +397,36 @@ private fun AnimatedTile(
 // 3. UTILIDADES Y CLASES FALTANTES
 // ============================================================================
 
+/**
+ * Paleta "Toy & Jelly": crema cálido → arena → terracota → salvia → azul → violeta → noche.
+ * Usa los mismos colores de identidad de la app (terracota, salvia, arena, navy).
+ */
 @Composable
 fun getTileColor(value: Int, theme: GameTheme): Color {
     if (value >= 4096) return theme.accentColor
     return when (value) {
-        2 -> Color(0xFFEEE4DA)
-        4 -> Color(0xFFEFE0C9)
-        8 -> Color(0xFFEBCDAA)
-        16 -> Color(0xFFE6B89C)
-        32 -> Color(0xFFDDA684)
-        64 -> Color(0xFFD49372)
-        128 -> Color(0xFFECC271)
-        256 -> Color(0xFFEBC662)
-        512 -> Color(0xFFE9C052)
-        1024 -> Color(0xFFE7B843)
-        2048 -> Color(0xFFE5B032)
+        2 -> Color(0xFFF5ECDF)
+        4 -> Color(0xFFF2DFC2)
+        8 -> Color(0xFFF2CC8F)
+        16 -> Color(0xFFEDB27A)
+        32 -> Color(0xFFE5906A)
+        64 -> Color(0xFFD9694C)
+        128 -> Color(0xFF81B29A)
+        256 -> Color(0xFF5FA08A)
+        512 -> Color(0xFF4E8FA6)
+        1024 -> Color(0xFF7A74E0)
+        2048 -> Color(0xFF3D405B)
         else -> theme.accentColor
     }
 }
 
 @Composable
 fun getTileTextColor(value: Int): Color {
-    val darkText = Color(0xFF776E65)
-    val lightText = Color(0xFFF9F6F2)
-    return if (value < 8) darkText else lightText
+    return when {
+        value <= 16 -> Color(0xFF5C4F44)
+        value >= 2048 -> Color(0xFFF2CC8F)
+        else -> Color(0xFFFFFBF5)
+    }
 }
 
 @Composable
