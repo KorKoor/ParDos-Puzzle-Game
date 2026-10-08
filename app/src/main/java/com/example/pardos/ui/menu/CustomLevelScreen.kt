@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.menu
 
+import com.korkoor.pardos.ui.design.actionColor
+
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
@@ -107,9 +109,9 @@ fun CustomLevelScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(70.dp) // Botón un poco más compacto
-                                .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.4f)),
+                                .shadow(12.dp, RoundedCornerShape(24.dp), spotColor = currentTheme.actionColor.copy(alpha = 0.4f)),
                             shape = RoundedCornerShape(24.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor)
+                            colors = ButtonDefaults.buttonColors(containerColor = currentTheme.actionColor)
                         ) {
                             Text(
                                 text = stringResource(R.string.start_game_button),
@@ -171,9 +173,9 @@ fun CustomLevelScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(72.dp)
-                        .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.5f)),
+                        .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = currentTheme.actionColor.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor)
+                    colors = ButtonDefaults.buttonColors(containerColor = currentTheme.actionColor)
                 ) {
                     Text(
                         text = stringResource(R.string.start_game_button),
@@ -203,10 +205,10 @@ fun CustomOptionsContent(
     val haptic = LocalHapticFeedback.current
 
     // --- TAMAÑO ---
-    SectionHeader(Icons.Default.GridView, stringResource(R.string.section_board_size), currentTheme.accentColor)
+    SectionHeader(Icons.Default.GridView, stringResource(R.string.section_board_size), currentTheme.actionColor)
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         listOf(3, 4, 5, 6).forEach { option ->
-            SelectableCard("${option}x${option}", size == option, currentTheme.accentColor, Modifier.weight(1f)) {
+            SelectableCard("${option}x${option}", size == option, currentTheme.actionColor, Modifier.weight(1f)) {
                 onSizeChange(option)
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -216,10 +218,10 @@ fun CustomOptionsContent(
     Spacer(modifier = Modifier.height(16.dp))
 
     // --- META ---
-    SectionHeader(Icons.Default.Star, stringResource(R.string.section_target_tile), currentTheme.accentColor)
+    SectionHeader(Icons.Default.Star, stringResource(R.string.section_target_tile), currentTheme.actionColor)
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         listOf(64, 128, 256, 512).forEach { option ->
-            SelectableCard(option.toString(), target == option, currentTheme.accentColor, Modifier.weight(1f)) {
+            SelectableCard(option.toString(), target == option, currentTheme.actionColor, Modifier.weight(1f)) {
                 onTargetChange(option)
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -229,19 +231,19 @@ fun CustomOptionsContent(
     Spacer(modifier = Modifier.height(16.dp))
 
     // --- REGLAS ---
-    SectionHeader(Icons.Default.FlashOn, stringResource(R.string.section_game_rules), currentTheme.accentColor)
+    SectionHeader(Icons.Default.FlashOn, stringResource(R.string.section_game_rules), currentTheme.actionColor)
     Surface(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), shape = RoundedCornerShape(32.dp), color = Color.White.copy(alpha = 0.7f)) {
         Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.powerups_active), color = Color(0xFF3D405B), fontSize = 15.sp, fontWeight = FontWeight.Bold)
             Switch(checked = allowPowerUps, onCheckedChange = { onPowerUpsChange(it); haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
-                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = currentTheme.accentColor))
+                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = currentTheme.actionColor))
         }
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     // --- DIFICULTAD ---
-    SectionHeader(Icons.Default.Timer, stringResource(R.string.section_time_pressure), currentTheme.accentColor)
+    SectionHeader(Icons.Default.Timer, stringResource(R.string.section_time_pressure), currentTheme.actionColor)
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         val modes = listOf("Zen", "Normal", "Pro")
         modes.forEach { mode ->
@@ -250,7 +252,7 @@ fun CustomOptionsContent(
                 "Normal" -> stringResource(R.string.diff_normal)
                 else -> stringResource(R.string.diff_pro)
             }
-            SelectableCard(display, selectedTimeMode == mode, currentTheme.accentColor, Modifier.weight(1f)) {
+            SelectableCard(display, selectedTimeMode == mode, currentTheme.actionColor, Modifier.weight(1f)) {
                 onTimeModeChange(mode)
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
@@ -260,10 +262,8 @@ fun CustomOptionsContent(
 
 @Composable
 private fun HeaderSection(onBack: () -> Unit) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)) {
-        IconButton(onClick = onBack, modifier = Modifier.size(44.dp).background(Color.White.copy(alpha = 0.3f), CircleShape)) {
-            Icon(Icons.Default.ArrowBackIosNew, stringResource(R.string.back), tint = Color(0xFF3D405B), modifier = Modifier.size(18.dp))
-        }
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+        com.korkoor.pardos.ui.design.PardosBackButton(onBack)
     }
 }
 

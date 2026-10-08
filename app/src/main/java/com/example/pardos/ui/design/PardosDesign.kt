@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.design
 
+import com.korkoor.pardos.ui.theme.GameTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -61,6 +62,19 @@ val PrimaryGradient: Brush get() = Brush.linearGradient(listOf(SageLight, SageDa
 fun Color.darker(factor: Float = 0.8f) = copy(red = red * factor, green = green * factor, blue = blue * factor)
 
 fun Color.gradient(): Brush = Brush.linearGradient(listOf(this, this.darker()))
+
+/**
+ * Color de ACCIÓN del tema: botones, selección y énfasis. El `accentColor` de cada tema es un
+ * pastel pensado para fondos y no da contraste con texto blanco; este es su versión legible.
+ */
+val GameTheme.actionColor: Color
+    get() = when (this) {
+        GameTheme.Zen -> Sage
+        GameTheme.Forest -> Color(0xFFC76B76)   // Sakura
+        GameTheme.Sunset -> GemBlue             // Cloud
+        GameTheme.Cyber -> Color(0xFF7A74E0)    // Lavanda
+        GameTheme.Midnight -> Color(0xFF4F9A63) // Matcha
+    }
 
 // ---- Formas ----
 object Radius {

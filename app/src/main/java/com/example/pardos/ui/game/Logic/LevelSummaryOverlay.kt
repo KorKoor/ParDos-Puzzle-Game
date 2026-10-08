@@ -1,5 +1,7 @@
 package com.korkoor.pardos.ui.game.components
 
+import com.korkoor.pardos.ui.design.actionColor
+
 import androidx.compose.material.icons.rounded.MonetizationOn
 import android.content.res.Configuration
 import androidx.compose.animation.core.*
@@ -86,11 +88,11 @@ fun LevelSummaryOverlay(
                 .fillMaxWidth(if (isLandscape) 0.85f else 0.88f)
                 .scale(scale)
                 .alpha(alpha)
-                .shadow(30.dp, RoundedCornerShape(32.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.5f)),
+                .shadow(30.dp, RoundedCornerShape(32.dp), spotColor = currentTheme.actionColor.copy(alpha = 0.5f)),
             shape = RoundedCornerShape(32.dp),
             color = Color.White,
             border = BorderStroke(2.dp, Brush.linearGradient(
-                colors = listOf(Color.White, currentTheme.accentColor.copy(alpha = 0.3f))
+                colors = listOf(Color.White, currentTheme.actionColor.copy(alpha = 0.3f))
             ))
         ) {
             Column(
@@ -173,7 +175,7 @@ private fun VictoryHeader(stars: Int, modeName: String, base: Int, currentTheme:
             else stringResource(R.string.victory_well_done).uppercase(),
             fontSize = 12.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = currentTheme.accentColor,
+            color = currentTheme.actionColor,
             letterSpacing = 3.sp
         )
         Spacer(Modifier.height(4.dp))
@@ -274,8 +276,8 @@ private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(currentTheme.accentColor.copy(alpha = 0.08f))
-            .border(1.dp, currentTheme.accentColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+            .background(currentTheme.actionColor.copy(alpha = 0.08f))
+            .border(1.dp, currentTheme.actionColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
             .padding(vertical = 14.dp, horizontal = 16.dp)
     ) {
         Column(
@@ -286,7 +288,7 @@ private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime
                 text = stringResource(R.string.personal_records).uppercase(),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
-                color = currentTheme.accentColor.copy(alpha = 0.8f),
+                color = currentTheme.actionColor.copy(alpha = 0.8f),
                 letterSpacing = 1.5.sp
             )
             Spacer(Modifier.height(6.dp))
@@ -315,10 +317,10 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
                 .weight(1f)
                 .height(60.dp),
             shape = RoundedCornerShape(20.dp),
-            border = BorderStroke(2.dp, currentTheme.accentColor.copy(alpha = 0.2f)),
+            border = BorderStroke(2.dp, currentTheme.actionColor.copy(alpha = 0.2f)),
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = Color.Transparent,
-                contentColor = currentTheme.accentColor
+                contentColor = currentTheme.actionColor
             )
         ) {
             Icon(
@@ -333,8 +335,8 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
             modifier = Modifier
                 .weight(2f)
                 .height(60.dp)
-                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = currentTheme.accentColor.copy(alpha = 0.4f)),
-            colors = ButtonDefaults.buttonColors(containerColor = currentTheme.accentColor),
+                .shadow(12.dp, RoundedCornerShape(20.dp), spotColor = currentTheme.actionColor.copy(alpha = 0.4f)),
+            colors = ButtonDefaults.buttonColors(containerColor = currentTheme.actionColor),
             shape = RoundedCornerShape(20.dp)
         ) {
             Text(
