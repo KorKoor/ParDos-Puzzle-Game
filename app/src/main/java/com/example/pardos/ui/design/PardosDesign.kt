@@ -74,6 +74,7 @@ val GameTheme.actionColor: Color
         GameTheme.Sunset -> GemBlue             // Cloud
         GameTheme.Cyber -> Color(0xFF7A74E0)    // Lavanda
         GameTheme.Midnight -> Color(0xFF4F9A63) // Matcha
+        is GameTheme.Skinned -> accentColor.darker(0.62f) // legible con texto blanco
     }
 
 // ---- Formas ----

@@ -27,8 +27,23 @@ import androidx.lifecycle.ViewModel
 
 class ThemeViewModel : ViewModel() {
     // El tema que se está mostrando actualmente
-    var currentTheme by mutableStateOf<GameTheme>(GameTheme.Zen)
-        private set
+    // Tema por nivel (se desbloquea al llegar a ciertas metas) y, encima, el de la skin equipada
+    private var baseTheme by mutableStateOf<GameTheme>(GameTheme.Zen)
+    private var skinTheme by mutableStateOf<GameTheme?>(null)
+
+    /** Tema activo: el de la skin si cambia la temática; si no, el de nivel. */
+    val currentTheme: GameTheme get() = skinTheme ?: baseTheme
+
+    /**
+     * Tema para pantallas con texto oscuro sobre el fondo (mapa, listas): una skin clara se aplica,
+     * una oscura no, para no perder legibilidad.
+     */
+    val uiTheme: GameTheme
+        get() = skinTheme?.takeIf { !(it is GameTheme.Skinned && it.isDark) } ?: baseTheme
+
+    fun applySkin(skin: com.korkoor.pardos.domain.shop.TileSkin) {
+        skinTheme = GameTheme.fromSkin(skin)
+    }
 
     // El objetivo del nivel actual (para lógica de desbloqueo)
     var currentLevelTarget by mutableIntStateOf(0)
@@ -49,7 +64,7 @@ class ThemeViewModel : ViewModel() {
             .lastOrNull()
 
         targetTheme?.let { selected ->
-            currentTheme = selected
+            baseTheme = selected
         }
     }
 
@@ -59,7 +74,7 @@ class ThemeViewModel : ViewModel() {
     fun selectThemeManual(theme: GameTheme?) {
         // 🛡️ SEGURIDAD ORIGINAL: Solo permite cambiar manualmente si el nivel actual es suficiente
         if (theme != null && currentLevelTarget >= theme.minLevel) {
-            currentTheme = theme
+            baseTheme = theme
         }
     }
 
@@ -71,7 +86,7 @@ class ThemeViewModel : ViewModel() {
     fun selectThemeByIndex(index: Int) {
         val themes = GameTheme.allThemes.filterNotNull()
         themes.getOrNull(index)?.let { selected ->
-            currentTheme = selected
+            baseTheme = selected
         }
     }
 }

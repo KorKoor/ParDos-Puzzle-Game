@@ -1,6 +1,7 @@
 package com.korkoor.pardos.ui.game
 
 import com.korkoor.pardos.ui.design.*
+import com.korkoor.pardos.ui.theme.inkColor
 import androidx.compose.material.icons.rounded.SwipeRight
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.Star
@@ -95,13 +96,13 @@ internal fun GameHeader(
             text = currentTheme.name.uppercase(),
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
-            color = Navy.copy(alpha = 0.4f),
+            color = currentTheme.inkColor.copy(alpha = 0.5f),
             letterSpacing = 4.sp
         )
 
         AnimatedLevelDisplay(
             level = state.currentLevel,
-            textColor = currentTheme.mainTextColor,
+            textColor = currentTheme.inkColor,
             labelRes = when (state.gameMode) {
                 GameMode.CARRERA -> R.string.stage_label
                 GameMode.DUELO -> R.string.player_label
@@ -130,7 +131,7 @@ internal fun GameHeader(
                 TimeDisplay(
                     elapsedTime = state.elapsedTime,
                     accentColor = currentTheme.accentColor,
-                    textColor = currentTheme.mainTextColor
+                    textColor = currentTheme.inkColor
                 )
             }
         }
@@ -246,7 +247,7 @@ internal fun TimeDisplay(
             text = if (isUrgent) stringResource(R.string.hurry_up) else stringResource(R.string.time_remaining),
             fontSize = 10.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = if (isUrgent) Color(0xFFE07A5F) else Color(0xFF3D405B).copy(alpha = 0.4f),
+            color = if (isUrgent) Color(0xFFE07A5F) else textColor.copy(alpha = 0.55f),
             letterSpacing = 1.2.sp
         )
 
@@ -254,7 +255,7 @@ internal fun TimeDisplay(
             text = elapsedTime.formatTime(),
             fontSize = 34.sp,
             fontWeight = FontWeight.Black,
-            color = if (isUrgent) Color(0xFFE07A5F) else Color(0xFF3D405B)
+            color = if (isUrgent) Color(0xFFE07A5F) else textColor
         )
     }
 }
@@ -384,7 +385,7 @@ internal fun AnimatedLevelDisplay(
             modifier = modifier,
             fontSize = 34.sp,
             fontWeight = FontWeight.Black,
-            color = Navy,
+            color = textColor,
             letterSpacing = 1.sp
         )
     }

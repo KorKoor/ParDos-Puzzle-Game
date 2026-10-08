@@ -2,6 +2,7 @@ package com.korkoor.pardos.ui.game.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import com.korkoor.pardos.domain.shop.TileFinish
 import com.korkoor.pardos.domain.shop.TileSkin
 import com.korkoor.pardos.ui.theme.GameTheme
 import kotlin.math.log2
@@ -19,70 +20,53 @@ data class TileLook(
     val glow: Color? = null
 )
 
+/** 0 = ficha 2, 1 = ficha 4, … hasta 11. */
 private fun power(value: Int): Int = (log2(value.coerceAtLeast(2).toFloat()).toInt() - 1).coerceIn(0, 11)
 
-private val woodTones = listOf(
-    Color(0xFFF0E4D0), Color(0xFFEBD9BD), Color(0xFFE3C9A0), Color(0xFFD9B98A),
-    Color(0xFFCFA574), Color(0xFFC29360), Color(0xFFB58250), Color(0xFFA6713F),
-    Color(0xFF96612F), Color(0xFF85521F), Color(0xFF734517), Color(0xFF5F3811)
-)
-
-private val neonTones = listOf(
-    Color(0xFF7BE0D3), Color(0xFF6CC3F0), Color(0xFF7B8CFF), Color(0xFFA27BFF),
-    Color(0xFFD27BFF), Color(0xFFFF7BD0), Color(0xFFFF7B91), Color(0xFFFF9C6B),
-    Color(0xFFFFC96B), Color(0xFFE6F06B), Color(0xFF9CF06B), Color(0xFF6BF0A5)
-)
-
-/** Resuelve el aspecto de una ficha para la skin equipada. */
+/**
+ * Resuelve el aspecto de una ficha. Todo sale de los DATOS de la skin ([TileSkin.style]):
+ * paleta de 12 tonos, colores de texto y acabado. Añadir una skin no requiere tocar este código.
+ */
 @Composable
 fun tileLook(skin: TileSkin, value: Int, theme: GameTheme): TileLook {
-    val jelly = getTileColor(value, theme)
-    return when (skin) {
-        TileSkin.JELLY -> TileLook(
-            background = jelly,
-            text = getTileTextColor(value),
-            elevation = if (value >= 128) 4f else 2f
+    val st = skin.style
+    val p = power(value)
+
+    // Sin paleta propia (Gelatina): colores clásicos según el tema de nivel
+    val tone: Color = st.tilePalette?.let { Color(it[p]) } ?: getTileColor(value, theme)
+    val text: Color = st.tilePalette?.let {
+        if (p >= st.lightTextFromPower) Color(st.lightText) else Color(st.darkText)
+    } ?: getTileTextColor(value)
+
+    return when (st.finish) {
+        TileFinish.JELLY -> TileLook(tone, text, elevation = if (value >= 128) 4f else 2f)
+
+        TileFinish.FLAT -> TileLook(tone, text, gloss = false, elevation = 0f)
+
+        TileFinish.PORCELAIN -> TileLook(
+            tone, text, gloss = true, border = Color.White.copy(alpha = 0.65f), elevation = 3f
         )
 
-        // Sin brillo ni sombra: colores mates, más sobrios
-        TileSkin.FLAT -> TileLook(
-            background = jelly,
-            text = getTileTextColor(value),
+        TileFinish.WOOD -> TileLook(
+            tone, text, gloss = true, border = Color.White.copy(alpha = 0.35f), elevation = 3f
+        )
+
+        TileFinish.GLASS -> TileLook(
+            tone.copy(alpha = 0.6f), text, gloss = true, border = Color.White.copy(alpha = 0.85f), elevation = 0f
+        )
+
+        TileFinish.METAL -> TileLook(
+            tone, text, gloss = true, border = Color(0xFFFFF3CF).copy(alpha = 0.7f), elevation = 4f
+        )
+
+        // Neón: ficha oscura; el color de la paleta pasa al borde, el número y el halo
+        TileFinish.NEON -> TileLook(
+            background = Color(st.surface ?: 0xFF24273B),
+            text = tone,
             gloss = false,
-            elevation = 0f
+            border = tone,
+            elevation = 0f,
+            glow = tone
         )
-
-        // Madera: ecos del ícono de la app. Números marrones grabados sobre tonos de madera.
-        TileSkin.WOOD -> {
-            val p = power(value)
-            TileLook(
-                background = woodTones[p],
-                text = if (p <= 3) Color(0xFF6B4A34) else Color(0xFFFFF4E3),
-                border = Color(0xFFFFFFFF).copy(alpha = 0.35f),
-                elevation = 3f
-            )
-        }
-
-        // Cristal: translúcido con borde claro
-        TileSkin.GLASS -> TileLook(
-            background = jelly.copy(alpha = 0.55f),
-            text = Color(0xFF3D405B),
-            gloss = true,
-            border = Color.White.copy(alpha = 0.85f),
-            elevation = 0f
-        )
-
-        // Neón: oscuro, borde y número del color de la ficha
-        TileSkin.NEON -> {
-            val c = neonTones[power(value)]
-            TileLook(
-                background = Color(0xFF24273B),
-                text = c,
-                gloss = false,
-                border = c,
-                elevation = 0f,
-                glow = c
-            )
-        }
     }
 }

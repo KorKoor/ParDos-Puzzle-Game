@@ -53,6 +53,8 @@ import com.korkoor.pardos.data.local.ProfileManager
 import com.korkoor.pardos.ui.game.menu.PicnicBackgroundOptimized
 import com.korkoor.pardos.ui.theme.ThemeViewModel
 import com.korkoor.pardos.ui.theme.GameTheme
+import com.korkoor.pardos.ui.theme.particleKind
+import com.korkoor.pardos.ui.theme.particleTintColor
 import com.korkoor.pardos.R
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,7 +79,7 @@ fun MenuScreen(
     val profileManager = remember { ProfileManager(context) }
 
     val currentTheme = themeViewModel.currentTheme
-    val bgColor = currentTheme.colors.first().copy(alpha = 0.98f)
+    val bgBrush = androidx.compose.ui.graphics.Brush.verticalGradient(currentTheme.colors.map { it.copy(alpha = 0.98f) }.let { if (it.size == 1) it + it else it })
     val textColor = currentTheme.mainTextColor
     val prefs = context.getSharedPreferences("pardos_prefs", android.content.Context.MODE_PRIVATE)
 
@@ -138,10 +140,17 @@ fun MenuScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(bgColor)
+            .background(bgBrush)
     ) {
         // Fondo de patrón picnic aesthetic
         PicnicBackgroundOptimized(currentTheme.accentColor.copy(alpha = 0.06f))
+        // Con una skin temática, las partículas también viven en el menú
+        if (currentTheme is com.korkoor.pardos.ui.theme.GameTheme.Skinned) {
+            com.korkoor.pardos.ui.game.components.AmbientParticles(
+                kind = currentTheme.particleKind,
+                tint = currentTheme.particleTintColor
+            )
+        }
 
         if (isLandscape) {
             // --- DISEÑO HORIZONTAL (LANDSCAPE) ---

@@ -57,7 +57,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.pardos.ui.game.components.SakuraBackgroundAnimation
+import com.korkoor.pardos.ui.theme.particleKind
+import com.korkoor.pardos.ui.theme.inkColor
+import com.korkoor.pardos.ui.theme.particleTintColor
 import com.korkoor.pardos.R
 import com.korkoor.pardos.domain.achievements.AchievementPopUp
 import com.korkoor.pardos.domain.logic.Direction
@@ -143,7 +145,10 @@ fun GameScreen(
                 else currentTheme.accentColor.copy(alpha = 0.05f)
             )
 
-            SakuraBackgroundAnimation(density = 0.5f)
+            com.korkoor.pardos.ui.game.components.AmbientParticles(
+                kind = currentTheme.particleKind,
+                tint = currentTheme.particleTintColor
+            )
 
             Box(
                 modifier = Modifier
@@ -270,7 +275,7 @@ fun GameScreen(
                                 Spacer(Modifier.height(24.dp))
 
                                 if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                    PowerUpSection(viewModel, haptic, activity)
+                                    PowerUpSection(viewModel, haptic, activity, labelColor = currentTheme.inkColor)
                                 }
                             }
                         }
@@ -371,7 +376,7 @@ fun GameScreen(
                                     GameFooter(state = state)
 
                                     if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                        PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth())
+                                        PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth(), labelColor = currentTheme.inkColor)
                                     }
                                 }
                             }

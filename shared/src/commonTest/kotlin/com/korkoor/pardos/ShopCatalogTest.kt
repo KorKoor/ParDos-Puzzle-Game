@@ -27,8 +27,8 @@ class ShopCatalogTest {
     }
 
     @Test fun streakFreezeRules() {
-        assertTrue(CoinShop.canBuyStreakFreeze(coins = 200, owned = 0))
-        assertFalse(CoinShop.canBuyStreakFreeze(coins = 199, owned = 0))
+        assertTrue(CoinShop.canBuyStreakFreeze(coins = CoinShop.STREAK_FREEZE_PRICE_COINS, owned = 0))
+        assertFalse(CoinShop.canBuyStreakFreeze(coins = CoinShop.STREAK_FREEZE_PRICE_COINS - 1, owned = 0))
         assertFalse(CoinShop.canBuyStreakFreeze(coins = 9999, owned = CoinShop.MAX_STREAK_FREEZES))
     }
 

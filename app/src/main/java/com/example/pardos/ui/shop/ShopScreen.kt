@@ -134,6 +134,7 @@ fun ShopScreen(
                                     SkinInventory.Purchase.NotEnoughCoins -> localMessage = "Te faltan monedas"
                                     SkinInventory.Purchase.NotEnoughGems -> localMessage = "Te faltan gemas"
                                     SkinInventory.Purchase.AlreadyOwned -> Unit
+                                    SkinInventory.Purchase.NotPurchasable -> localMessage = "Esta skin es exclusiva"
                                 }
                             }
                         }
@@ -353,13 +354,12 @@ private fun ShopRow(
 }
 
 
-private fun skinName(skin: TileSkin): String = when (skin) {
-    TileSkin.JELLY -> "Gelatina"
-    TileSkin.FLAT -> "Mate"
-    TileSkin.WOOD -> "Madera"
-    TileSkin.GLASS -> "Cristal"
-    TileSkin.NEON -> "Neón"
-}
+private fun skinName(skin: TileSkin): String = mapOf(
+    TileSkin.JELLY to "Gelatina", TileSkin.FLAT to "Papel", TileSkin.WOOD to "Madera",
+    TileSkin.SAKURA to "Cerezo", TileSkin.FOREST to "Bosque", TileSkin.AUTUMN to "Otoño",
+    TileSkin.GLASS to "Hielo", TileSkin.CANDY to "Dulces", TileSkin.NEON to "Neón",
+    TileSkin.OCEAN to "Océano", TileSkin.SPACE to "Galaxia", TileSkin.GOLD to "Oro Real"
+)[skin] ?: skin.id
 
 @Composable
 private fun SkinCard(

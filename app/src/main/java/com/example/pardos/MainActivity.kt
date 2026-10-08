@@ -173,7 +173,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
-                val currentTheme = themeViewModel.currentTheme
+                // La skin equipada trae su propia temática (fondo, texto, partículas)
+                val skinEconomy = remember { com.korkoor.pardos.data.local.EconomyManager(this@MainActivity) }
+                val equippedSkin by skinEconomy.equippedSkin.collectAsState()
+                LaunchedEffect(equippedSkin) { themeViewModel.applySkin(equippedSkin) }
+                // Pantallas con texto oscuro sobre el fondo usan un tema claro (las skins oscuras solo aplican al juego y al menú)
+                val currentTheme = themeViewModel.uiTheme
 
                 LaunchedEffect(gameViewModel.dailyChallengeThemeIndex) {
                     gameViewModel.dailyChallengeThemeIndex?.let { index ->

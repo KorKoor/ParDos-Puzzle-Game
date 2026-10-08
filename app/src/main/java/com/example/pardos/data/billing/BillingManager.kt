@@ -157,6 +157,18 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
                         }
                     }
                 }
+                ProductKind.STARTER -> {
+                    // Compra única (no consumible): se entrega una sola vez por cuenta de Play
+                    if (!economy.isStarterClaimed()) {
+                        economy.claimStarterPack()
+                        if (!silent) _message.value = "¡Pack inicial entregado!"
+                    }
+                    if (!purchase.isAcknowledged) {
+                        val params = AcknowledgePurchaseParams.newBuilder()
+                            .setPurchaseToken(purchase.purchaseToken).build()
+                        client.acknowledgePurchase(params) { }
+                    }
+                }
                 ProductKind.VIP -> {
                     economy.setVip(true)
                     if (!purchase.isAcknowledged) {

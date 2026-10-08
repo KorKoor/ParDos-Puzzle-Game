@@ -20,6 +20,7 @@ object LocalDay {
  * Los StateFlow son compartidos entre instancias para que la UI siempre vea el valor actual.
  */
 class EconomyManager(context: Context) {
+    private val appContext = context.applicationContext
     private val prefs: SharedPreferences =
         context.applicationContext.getSharedPreferences("pardos_economy", Context.MODE_PRIVATE)
 
@@ -92,6 +93,28 @@ class EconomyManager(context: Context) {
         addCoins(reward.coins)
         addGems(reward.gems)
         return reward
+    }
+
+    // --- Pack inicial (compra real, una sola vez) ---
+    fun isStarterClaimed(): Boolean = prefs.getBoolean("starter_claimed", false)
+
+    /** Entrega gemas y la skin Sakura. Los cofres se añaden desde la colección. */
+    fun claimStarterPack() {
+        if (isStarterClaimed()) return
+        prefs.edit().putBoolean("starter_claimed", true).apply()
+        addGems(com.korkoor.pardos.domain.economy.Economy.STARTER_GEMS)
+        grantSkin(TileSkin.SAKURA)
+        com.korkoor.pardos.data.local.CollectionManager(appContext).addChests(
+            com.korkoor.pardos.domain.collection.ChestType.RARE,
+            com.korkoor.pardos.domain.economy.Economy.STARTER_RARE_CHESTS
+        )
+    }
+
+    /** Concede una skin sin cobrar (recompensas, packs). */
+    fun grantSkin(skin: TileSkin) {
+        val inv = skinInventory().grant(skin)
+        _ownedSkins.value = inv.owned
+        prefs.edit().putStringSet(KEY_OWNED_SKINS, inv.owned).apply()
     }
 
     /** Cambia gemas por monedas. */

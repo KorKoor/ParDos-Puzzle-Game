@@ -107,13 +107,15 @@ fun PowerUpSection(
     viewModel: GameViewModel,
     haptic: HapticFeedback,
     activity: Activity?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    labelColor: Color = Color(0xFF3D405B)
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
 
     PowerUpBar(
         viewModel = viewModel,
         modifier = modifier,
+        labelColor = labelColor,
         activity = activity,
         onCleanClick = {
             if (viewModel.isPowerUpAvailable(viewModel.lastCleanTime, currentTime)) {

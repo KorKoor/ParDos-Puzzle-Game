@@ -37,7 +37,6 @@ import com.korkoor.pardos.R
 import com.korkoor.pardos.ui.game.logic.AdManager
 import com.korkoor.pardos.ui.game.GameViewModel
 
-private val LabelColor = Color(0xFF3D405B)
 
 @Composable
 fun PowerUpBar(
@@ -45,7 +44,8 @@ fun PowerUpBar(
     onMergeClick: () -> Unit,
     viewModel: GameViewModel,
     activity: Activity?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    labelColor: Color = Color(0xFF3D405B)
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val isVip by remember { com.korkoor.pardos.data.local.EconomyManager(context).isVip }.collectAsState()
@@ -66,6 +66,7 @@ fun PowerUpBar(
             color = Color(0xFF81B29A),
             lastUseTime = viewModel.lastCleanTime,
             viewModel = viewModel,
+            labelColor = labelColor,
             onClick = onCleanClick
         )
         PowerUpButton(
@@ -74,6 +75,7 @@ fun PowerUpBar(
             color = Color(0xFFE0A93B),
             lastUseTime = viewModel.lastMergeTime,
             viewModel = viewModel,
+            labelColor = labelColor,
             onClick = onMergeClick
         )
         PowerUpButton(
@@ -83,6 +85,7 @@ fun PowerUpBar(
             lastUseTime = 0L,
             viewModel = viewModel,
             forceAdMode = true,
+            labelColor = labelColor,
             onClick = { withAd { viewModel.activateSelectMode("SINGLE_CLEAN") } }
         )
         PowerUpButton(
@@ -92,6 +95,7 @@ fun PowerUpBar(
             lastUseTime = 0L,
             viewModel = viewModel,
             forceAdMode = true,
+            labelColor = labelColor,
             onClick = { withAd { viewModel.activateSelectMode("MANUAL_MERGE") } }
         )
     }
@@ -111,6 +115,7 @@ private fun PowerUpButton(
     lastUseTime: Long,
     viewModel: GameViewModel,
     forceAdMode: Boolean = false,
+    labelColor: Color,
     onClick: () -> Unit
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
@@ -145,7 +150,7 @@ private fun PowerUpButton(
                         text = remainingText,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
-                        color = LabelColor.copy(alpha = 0.55f)
+                        color = Color(0xFF3D405B).copy(alpha = 0.55f)
                     )
                 } else {
                     Icon(icon, contentDescription = label, tint = color, modifier = Modifier.size(28.dp))
@@ -168,7 +173,7 @@ private fun PowerUpButton(
             text = label,
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
-            color = LabelColor.copy(alpha = if (isCooldown) 0.4f else 0.75f),
+            color = labelColor.copy(alpha = if (isCooldown) 0.5f else 0.85f),
             maxLines = 1,
             modifier = Modifier.padding(top = 6.dp),
             letterSpacing = 0.5.sp

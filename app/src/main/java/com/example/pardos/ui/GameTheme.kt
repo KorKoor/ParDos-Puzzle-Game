@@ -1,6 +1,9 @@
 package com.korkoor.pardos.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.korkoor.pardos.domain.shop.ParticleKind
+import com.korkoor.pardos.domain.shop.TileSkin
 
 sealed class GameTheme(
     val colors: List<Color>,
@@ -60,7 +63,49 @@ sealed class GameTheme(
         minLevel = 2048
     )
 
+    /** Tema completo que viene con una skin: fondo, texto, acento y partículas. */
+    class Skinned(
+        val skin: TileSkin,
+        colors: List<Color>,
+        name: String,
+        val ink: Color,
+        accentColor: Color,
+        surfaceColor: Color,
+        val isDark: Boolean,
+        val particles: ParticleKind,
+        val particleTint: Color
+    ) : GameTheme(colors, name, ink, accentColor, surfaceColor, minLevel = 0)
+
     companion object {
         val allThemes = listOf(Zen, Forest, Sunset, Cyber, Midnight)
+
+        /** Tema de una skin; `null` si la skin no cambia la temática (Gelatina). */
+        fun fromSkin(skin: TileSkin): Skinned? {
+            val st = skin.style
+            if (!st.changesTheme) return null
+            val top = Color(st.bgTop!!)
+            val bottom = Color(st.bgBottom!!)
+            return Skinned(
+                skin = skin,
+                colors = listOf(top, bottom),
+                name = skin.id,
+                ink = Color(st.ink ?: 0xFF3D405B),
+                accentColor = Color(st.accent ?: 0xFFB8C1B0),
+                surfaceColor = Color(st.surface ?: 0xFFFFFFFF),
+                isDark = ((top.luminance() + bottom.luminance()) / 2f) < 0.35f,
+                particles = st.particles,
+                particleTint = Color(st.particleTint)
+            )
+        }
     }
 }
+
+/** Color del texto que va directamente sobre el fondo (títulos): claro en temas oscuros. */
+val GameTheme.inkColor: Color
+    get() = if (this is GameTheme.Skinned) ink else Color(0xFF3D405B)
+
+val GameTheme.particleKind: ParticleKind
+    get() = if (this is GameTheme.Skinned) particles else ParticleKind.PETALS
+
+val GameTheme.particleTintColor: Color
+    get() = if (this is GameTheme.Skinned) particleTint else Color(0xFFF4B6C2)
