@@ -405,6 +405,12 @@ fun GameScreen(
                     stars = state.starsEarned,
                     currentTheme = currentTheme,
                     coinsEarned = viewModel.lastCoinsEarned,
+                    canDouble = !viewModel.coinsDoubled && viewModel.lastCoinsEarned > 0,
+                    onDouble = {
+                        // VIP: gratis, sin anuncio
+                        if (com.korkoor.pardos.data.local.EconomyManager(context).isVip.value) viewModel.grantDoubleCoins()
+                        else activity?.let { act -> AdManager.showRewardedAd(act) { viewModel.grantDoubleCoins() } }
+                    },
                     onRetry = { viewModel.retryLevel() },
                     onDismiss = { viewModel.nextLevel() }
                 )

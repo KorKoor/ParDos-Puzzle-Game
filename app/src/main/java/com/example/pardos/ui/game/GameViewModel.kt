@@ -87,6 +87,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var lastCoinsEarned by mutableIntStateOf(0)
         private set
     private val economy = com.korkoor.pardos.data.local.EconomyManager(application)
+    private val rewardsManager = com.korkoor.pardos.data.local.RewardsManager(application)
 
     var lastCleanTime by mutableLongStateOf(0L)
     var lastMergeTime by mutableLongStateOf(0L)
@@ -885,6 +886,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 com.korkoor.pardos.domain.events.EventCalendar.coinMultiplier(com.korkoor.pardos.data.local.LocalDay.today())
             )
             economy.addCoins(lastCoinsEarned)
+            coinsDoubled = false
 
             saveLevelProgress(
                 level = currentLvl,
@@ -1052,6 +1054,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             val key = "ach_${achievement.id}"
             if (!prefs.getBoolean(key, false) && achievement.condition(currentState)) {
                 prefs.edit().putBoolean(key, true).apply()
+                // 💰 El logro paga monedas (y gemas/cofre según su rareza)
+                rewardsManager.payAchievement(achievement.id)
                 viewModelScope.launch {
                     _unlockedAchievements.update { it + achievement.id }
                     activeAchievementPopup = achievement
@@ -1231,6 +1235,18 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             delay(1000) // FIX: El combo dura 1 segundo
             _comboCount.value = 0 // FIX: Se reinicia a 0
         }
+    }
+
+    /** Ya se duplicaron las monedas de esta victoria (una vez por partida). */
+    var coinsDoubled by mutableStateOf(false)
+        private set
+
+    /** Tras ver el anuncio: suma el bono (tope definido en Economy) y lo refleja en el resumen. */
+    fun grantDoubleCoins() {
+        if (coinsDoubled || lastCoinsEarned <= 0) return
+        coinsDoubled = true
+        val bonus = rewardsManager.doubleCoins(lastCoinsEarned)
+        lastCoinsEarned += bonus
     }
 
     fun grantAdReward(type: String) {

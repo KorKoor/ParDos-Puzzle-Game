@@ -74,6 +74,14 @@ fun AchievementsScreen(
 ) {
     val all = gameAchievements.all
     val total = all.size
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val rewards = remember { com.korkoor.pardos.data.local.RewardsManager(context) }
+    // Primera vez con el sistema de premios: se pagan los logros que ya tenías
+    var backfill by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    LaunchedEffect(unlockedIds) {
+        val paid = rewards.backfillAchievements(unlockedIds)
+        if (paid.first > 0 || paid.second > 0) backfill = paid
+    }
     val unlocked = all.count { it.id in unlockedIds }
 
     var category by remember { mutableStateOf(AchCategory.ALL) }
@@ -108,6 +116,26 @@ fun AchievementsScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item { SummaryCard(unlocked, total, all, unlockedIds) }
+
+                backfill?.let { (coins, gems) ->
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(Radius.Medium))
+                                .background(Gold.copy(alpha = 0.16f))
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = Gold, modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                "¡Tus logros ahora dan premio! Recibiste +$coins monedas" + if (gems > 0) " y +$gems gemas" else "",
+                                fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Navy
+                            )
+                        }
+                    }
+                }
 
                 item {
                     LazyRow(
@@ -169,7 +197,7 @@ fun AchievementsScreen(
                 }
 
                 items(filtered, key = { it.id }) { ach ->
-                    AchievementRow(ach, unlocked = ach.id in unlockedIds)
+                    AchievementRow(ach, unlocked = ach.id in unlockedIds, reward = rewards.rewardFor(ach.id), rarity = rewards.rarityOf(ach.id))
                 }
 
                 item { Spacer(Modifier.height(24.dp)) }
@@ -244,7 +272,12 @@ private fun CategoryChip(label: String, count: String, selected: Boolean, onClic
 }
 
 @Composable
-private fun AchievementRow(achievement: Achievement, unlocked: Boolean) {
+private fun AchievementRow(
+    achievement: Achievement,
+    unlocked: Boolean,
+    reward: com.korkoor.pardos.domain.economy.Economy.AchievementReward,
+    rarity: com.korkoor.pardos.domain.collection.Rarity
+) {
     val shape = RoundedCornerShape(Radius.Large)
     val color = achievement.color
 
@@ -305,6 +338,27 @@ private fun AchievementRow(achievement: Achievement, unlocked: Boolean) {
                 fontSize = 12.sp, lineHeight = 16.sp,
                 color = if (unlocked) InkSecondary else InkTertiary
             )
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val rarityColor = when (rarity) {
+                    com.korkoor.pardos.domain.collection.Rarity.COMMON -> Navy.copy(alpha = 0.35f)
+                    com.korkoor.pardos.domain.collection.Rarity.RARE -> GemBlue
+                    com.korkoor.pardos.domain.collection.Rarity.EPIC -> Violet
+                    com.korkoor.pardos.domain.collection.Rarity.LEGENDARY -> Gold
+                }
+                Text(
+                    "+${reward.coins}", fontSize = 11.sp, fontWeight = FontWeight.Black,
+                    color = if (unlocked) Gold else Gold.copy(alpha = 0.6f)
+                )
+                if (reward.gems > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    Text("+${reward.gems}◆", fontSize = 11.sp, fontWeight = FontWeight.Black, color = GemBlue)
+                }
+                if (rarity.ordinal >= com.korkoor.pardos.domain.collection.Rarity.EPIC.ordinal) {
+                    Spacer(Modifier.width(8.dp))
+                    Text("+COFRE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = rarityColor, letterSpacing = 1.sp)
+                }
+            }
         }
 
         if (unlocked) {

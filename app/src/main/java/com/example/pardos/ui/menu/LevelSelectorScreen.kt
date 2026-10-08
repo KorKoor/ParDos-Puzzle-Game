@@ -200,7 +200,8 @@ fun LevelSelectorScreen(
                                     val reward = economy.claimChapterChest(item.chapter)
                                     if (reward != null) {
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        hint = "¡Cofre abierto! +${reward.coins} monedas y +${reward.gems} gemas"
+                                        com.korkoor.pardos.data.local.RewardsManager(context).grantChapterChest(item.chapter)
+                                        hint = "¡Cofre abierto! +${reward.coins} monedas, +${reward.gems} gemas y un cofre de colección"
                                         claimTick++
                                     }
                                 }

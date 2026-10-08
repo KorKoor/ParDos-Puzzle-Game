@@ -3,6 +3,7 @@ package com.korkoor.pardos.ui.game.components
 import com.korkoor.pardos.ui.design.actionColor
 
 import androidx.compose.material.icons.rounded.MonetizationOn
+import androidx.compose.material.icons.rounded.PlayCircle
 import android.content.res.Configuration
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -48,6 +49,8 @@ fun LevelSummaryOverlay(
     stars: Int,
     currentTheme: GameTheme,
     coinsEarned: Int = 0,
+    canDouble: Boolean = false,
+    onDouble: () -> Unit = {},
     onRetry: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -131,7 +134,7 @@ fun LevelSummaryOverlay(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             StatsRow(moves, timeElapsed)
-                            CoinsEarnedChip(coinsEarned)
+                            CoinsEarnedChip(coinsEarned, canDouble, onDouble)
                             Spacer(Modifier.height(16.dp))
                             PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                             Spacer(Modifier.height(20.dp))
@@ -156,7 +159,7 @@ fun LevelSummaryOverlay(
                     VictoryHeader(stars, modeName, base, currentTheme)
                     Spacer(modifier = Modifier.height(24.dp))
                     StatsRow(moves, timeElapsed)
-                            CoinsEarnedChip(coinsEarned)
+                            CoinsEarnedChip(coinsEarned, canDouble, onDouble)
                     Spacer(modifier = Modifier.height(24.dp))
                     PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                     Spacer(modifier = Modifier.height(32.dp))
@@ -394,23 +397,40 @@ fun formatTime(ms: Long): String {
 }
 
 @Composable
-private fun CoinsEarnedChip(coins: Int) {
+private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit) {
     if (coins <= 0) return
     Spacer(modifier = Modifier.height(14.dp))
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFE0A93B).copy(alpha = 0.14f))
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.MonetizationOn,
-            contentDescription = null,
-            tint = Color(0xFFE0A93B),
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(text = "+$coins", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFFE0A93B).copy(alpha = 0.14f))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.MonetizationOn,
+                contentDescription = null,
+                tint = Color(0xFFE0A93B),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text = "+$coins", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF3D405B))
+        }
+        if (canDouble) {
+            Spacer(modifier = Modifier.width(10.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF6C63FF))
+                    .clickable(onClick = onDouble)
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Rounded.PlayCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("x2", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
+            }
+        }
     }
 }

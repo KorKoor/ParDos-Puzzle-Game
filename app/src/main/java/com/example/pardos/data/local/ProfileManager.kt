@@ -205,6 +205,8 @@ class ProfileManager(private val context: Context) {
             }
             economy.setStreakFreezes(result.freezesLeft)
             syncToFirebase()
+            // 🎁 Hito de racha (3, 7, 14, 30, 60, 100 días): monedas, gemas y cofre
+            RewardsManager(context).claimStreakMilestone(result.state.streak)
         }
         return result.change
     }
