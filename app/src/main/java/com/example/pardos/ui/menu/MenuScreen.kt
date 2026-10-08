@@ -17,6 +17,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudSync
 import androidx.compose.material.icons.rounded.Timer
@@ -207,8 +212,11 @@ fun MenuScreen(
                 ) {
                     AestheticMenuButton(
                         text = stringResource(R.string.menu_play),
-                        color = currentTheme.accentColor,
-                        onClick = onPlayClick
+                        color = Color(0xFF6B9E86),
+                        onClick = onPlayClick,
+                        icon = androidx.compose.material.icons.Icons.Rounded.PlayArrow,
+                        filled = true,
+                        fontSize = 18.sp
                     )
 
                     Row(
@@ -247,13 +255,15 @@ fun MenuScreen(
                             text = "MI PERFIL",
                             color = Color(0xFF457B9D), // Azul sereno
                             modifier = Modifier.weight(1f),
-                            onClick = onProfileClick
+                            onClick = onProfileClick,
+                            icon = androidx.compose.material.icons.Icons.Rounded.Person
                         )
                         MiniMenuButton(
                             text = "AMIGOS",
                             color = Color(0xFF2A9D8F), // Verde agua
                             modifier = Modifier.weight(1f),
-                            onClick = onFriendsClick
+                            onClick = onFriendsClick,
+                            icon = androidx.compose.material.icons.Icons.Rounded.Group
                         )
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -261,13 +271,15 @@ fun MenuScreen(
                             text = stringResource(R.string.menu_records),
                             color = Color(0xFFE07A5F), // Terracota
                             modifier = Modifier.weight(1f),
-                            onClick = onRecordsClick
+                            onClick = onRecordsClick,
+                            icon = androidx.compose.material.icons.Icons.Rounded.Leaderboard
                         )
                         MiniMenuButton(
                             text = stringResource(R.string.menu_achievements),
                             color = Color(0xFF6C63FF), // Morado
                             modifier = Modifier.weight(1f),
-                            onClick = onAchievementsClick
+                            onClick = onAchievementsClick,
+                            icon = androidx.compose.material.icons.Icons.Rounded.EmojiEvents
                         )
                     }
                 }
@@ -433,7 +445,9 @@ fun AestheticMenuButton(
     color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(0.92f).height(74.dp),
-    fontSize: androidx.compose.ui.unit.TextUnit = 15.sp // Permitimos ajustar la fuente dinámicamente
+    fontSize: androidx.compose.ui.unit.TextUnit = 15.sp, // Permitimos ajustar la fuente dinámicamente
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    filled: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -444,18 +458,24 @@ fun AestheticMenuButton(
         label = "Scale"
     )
 
+    val shape = RoundedCornerShape(24.dp)
+    val bg = if (filled) {
+        Brush.linearGradient(listOf(color, color.copy(red = color.red * 0.82f, green = color.green * 0.82f, blue = color.blue * 0.82f)))
+    } else {
+        Brush.verticalGradient(listOf(Color.White, Color(0xFFF9FAFB)))
+    }
+    val content = if (filled) Color.White else color
+
     Box(
         modifier = modifier
             .scale(scale)
             .shadow(
                 elevation = if (isPressed) 4.dp else 16.dp,
-                shape = RoundedCornerShape(24.dp),
+                shape = shape,
                 spotColor = color.copy(alpha = 0.5f)
             )
-            .background(
-                brush = Brush.verticalGradient(listOf(Color.White, Color(0xFFF9FAFB))),
-                shape = RoundedCornerShape(24.dp)
-            )
+            .background(brush = bg, shape = shape)
+            .clip(shape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -464,13 +484,17 @@ fun AestheticMenuButton(
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(6.dp).background(color, CircleShape))
+            if (icon != null) {
+                Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(26.dp))
+            } else {
+                Box(modifier = Modifier.size(6.dp).background(content, CircleShape))
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = text.uppercase(),
                 fontSize = fontSize,
                 fontWeight = FontWeight.Black,
-                color = color,
+                color = content,
                 letterSpacing = 2.sp,
                 maxLines = 1
             )
@@ -509,28 +533,41 @@ fun MiniMenuButton(
     text: String,
     color: Color,
     modifier: Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(64.dp),
+        modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(22.dp),
         color = Color.White.copy(alpha = 0.95f),
         shadowElevation = 6.dp,
-        border = BorderStroke(2.dp, color.copy(alpha = 0.15f))
+        border = BorderStroke(1.5.dp, color.copy(alpha = 0.25f))
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(colors = listOf(Color.White, color.copy(alpha = 0.05f)))),
-            contentAlignment = Alignment.Center
+                .background(Brush.verticalGradient(colors = listOf(Color.White, color.copy(alpha = 0.08f))))
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier.size(34.dp).background(color.copy(alpha = 0.14f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+            }
             Text(
                 text = text.uppercase(),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 color = color,
-                letterSpacing = 2.sp,
+                letterSpacing = 1.5.sp,
+                maxLines = 1,
                 textAlign = TextAlign.Center
             )
         }

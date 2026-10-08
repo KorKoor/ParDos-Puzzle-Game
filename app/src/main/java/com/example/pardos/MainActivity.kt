@@ -81,6 +81,10 @@ class MainActivity : ComponentActivity() {
 
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
 
         val profileManager = com.korkoor.pardos.data.local.ProfileManager(this)
         profileManager.syncFromFirebase { cloudProfile ->
