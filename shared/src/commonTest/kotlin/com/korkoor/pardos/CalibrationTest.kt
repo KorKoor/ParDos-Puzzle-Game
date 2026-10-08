@@ -20,7 +20,8 @@ class CalibrationTest {
                 size = spec.boardSize, blocked = spec.stoneSet, seed = seed * 7L + 3, maxMoves = cap, startTiles = start,
                 spawn = { SpawnRules.pick(spec.spawn, spec.scaleTile, it) },
                 targetTile = if (spec.goal == com.korkoor.pardos.domain.level.LevelGoal.REACH_TILE) spec.goalValue else null,
-                storm = spec.storm, comboSize = LevelRules.comboSize(spec),
+                storm = spec.storm, comboSize = LevelRules.comboSize(spec), harvestValue = LevelRules.harvestValue(spec), drops = spec.dropsPerMove, allowed = spec.twist::allows, phase = spec.phase2,
+                phaseSpawn = spec.phase2?.spawn?.let { st -> { r: kotlin.random.Random -> SpawnRules.pick(st, spec.scaleTile, r) } },
                 goalReached = { t, sc, st -> LevelRules.isGoalReached(spec, t, sc, st) }
             )
             if (run.reached) wins++
@@ -36,7 +37,7 @@ class CalibrationTest {
         for (seed in 1..seeds) {
             val run = GreedyBot.play(
                 size = spec.boardSize, blocked = spec.stoneSet, seed = seed * 7L + 3, maxMoves = 5000, startTiles = start,
-                spawn = { SpawnRules.pick(spec.spawn, spec.scaleTile, it) }, storm = spec.storm, comboSize = LevelRules.comboSize(spec),
+                spawn = { SpawnRules.pick(spec.spawn, spec.scaleTile, it) }, storm = spec.storm, comboSize = LevelRules.comboSize(spec), harvestValue = LevelRules.harvestValue(spec), drops = spec.dropsPerMove, allowed = spec.twist::allows,
                 goalReached = { t, sc, st -> LevelRules.isGoalReached(spec, t, sc, st) }
             )
             if (run.reached) ms.add(run.moves) else fails++
@@ -91,6 +92,12 @@ class CalibrationTest {
         if (what == "sprint" || what == "all") {
             for (e in 7..10) for (slack in listOf(1.5, 1.4, 1.3, 1.2, 1.1)) line("SPRINT", LevelBuilders.sprint(1, 1 shl e, 4, slack))
             for (e in 7..10) for (spc in listOf(1.9, 1.6, 1.4, 1.2)) line("CLOCK", LevelBuilders.clock(1, 1 shl e, 4, spc))
+        }
+        if (what == "new2" || what == "all") {
+            for (size in listOf(4, 5)) for ((v, counts) in listOf(16 to listOf(8, 14, 24), 32 to listOf(6, 10, 18), 64 to listOf(4, 8, 14), 128 to listOf(3, 6, 10))) for (c in counts) line("HARVEST", LevelBuilders.harvest(1, v, c, size))
+            for (size in listOf(4, 5)) for (e in 6..10) line("DOUBLE", LevelBuilders.doubleDrop(1, 1 shl e, size))
+            for (tw in listOf(com.korkoor.pardos.domain.level.Twist.NO_UP, com.korkoor.pardos.domain.level.Twist.NO_DOWN, com.korkoor.pardos.domain.level.Twist.NO_LEFT, com.korkoor.pardos.domain.level.Twist.NO_RIGHT))
+                for (e in 7..9) line("BLOCK $tw", LevelBuilders.twisted(LevelBuilders.zen(1, 1 shl e, 4), tw))
         }
         if (what == "big" || what == "all") {
             for (e in 8..11) { line("ZEN6", LevelBuilders.zen(1, 1 shl e, 6)); line("ZEN5", LevelBuilders.zen(1, 1 shl e, 5)) }

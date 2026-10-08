@@ -33,7 +33,8 @@ class LevelFeasibilityTest {
                 size = spec.boardSize, blocked = spec.stoneSet, seed = seed * 7L + spec.id, maxMoves = cap, startTiles = start,
                 spawn = { SpawnRules.pick(spec.spawn, spec.scaleTile, it) },
                 targetTile = if (spec.goal == com.korkoor.pardos.domain.level.LevelGoal.REACH_TILE) spec.goalValue else null,
-                storm = spec.storm, comboSize = LevelRules.comboSize(spec),
+                storm = spec.storm, comboSize = LevelRules.comboSize(spec), harvestValue = LevelRules.harvestValue(spec), drops = spec.dropsPerMove, allowed = spec.twist::allows, phase = spec.phase2,
+                phaseSpawn = spec.phase2?.spawn?.let { st -> { r: kotlin.random.Random -> SpawnRules.pick(st, spec.scaleTile, r) } },
                 goalReached = { tiles, score, stats -> LevelRules.isGoalReached(spec, tiles, score, stats) }
             )
             if (run.reached) wins++
@@ -64,5 +65,17 @@ class LevelFeasibilityTest {
         }
         println("FEAS total ${unique.size} niveles distintos, victorias $totalWins/${unique.size * seeds}")
         assertTrue(bad.isEmpty(), "Niveles demasiado difíciles para el bot:\n" + bad.joinToString("\n") + report)
+    }
+
+    @Test fun botWinsTheDailyChallenges() {
+        val days = (20000..20062).map { com.korkoor.pardos.domain.logic.DailyChallenge.forDay(it) }
+        val unique = days.map { it.spec }.distinctBy { sig(it) }
+        val bad = mutableListOf<String>()
+        for (spec in unique) {
+            val (wins, n) = winRate(spec, 6)
+            if (wins < 3) bad.add("DIARIO ${spec.kind} ${spec.title} ${spec.boardSize}x${spec.boardSize} ${spec.goalText()} stones=${spec.stones.size} moves=${spec.moveLimit} wins=$wins/$n")
+        }
+        println("FEAS diarios: ${unique.size} retos distintos, ${bad.size} difíciles")
+        assertTrue(bad.isEmpty(), "Retos diarios demasiado difíciles para el bot:" + bad.joinToString(prefix = "\n", separator = "\n"))
     }
 }

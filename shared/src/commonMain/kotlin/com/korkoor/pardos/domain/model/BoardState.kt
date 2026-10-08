@@ -1,5 +1,6 @@
 package com.korkoor.pardos.domain.model
 
+import com.korkoor.pardos.domain.level.BossPhase
 import com.korkoor.pardos.domain.level.Cell
 import com.korkoor.pardos.domain.level.GoalStats
 import com.korkoor.pardos.domain.level.LevelGoal
@@ -58,7 +59,10 @@ data class BoardState(
     val twist: Twist = Twist.NONE,
     /** Tormenta del nivel y las piedras temporales que hay ahora (ya incluidas en [blocked]). */
     val storm: Storm? = null,
-    val stormStones: List<StormStone> = emptyList()
+    val stormStones: List<StormStone> = emptyList(),
+    /** Jefes: la segunda fase (si la hay) y en cuál se está. */
+    val phase2: BossPhase? = null,
+    val phase: Int = 1
 )
 {
     // --- PROPIEDADES CALCULADAS ---

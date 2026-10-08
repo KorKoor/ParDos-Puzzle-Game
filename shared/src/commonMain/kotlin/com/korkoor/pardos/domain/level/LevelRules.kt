@@ -6,12 +6,16 @@ import com.korkoor.pardos.domain.model.TileModel
  * Lo que se cuenta durante la partida para las metas que no se ven en el tablero: fusiones totales, el mayor número de
  * pares fusionados en un solo movimiento y cuántas veces se logró el combo pedido.
  */
-data class GoalStats(val merges: Int = 0, val bestChain: Int = 0, val comboHits: Int = 0) {
-    /** Estadística tras un movimiento que fusionó [pairs] pares; [comboNeeded] es el tamaño del combo de la meta (0 si no hay). */
-    fun after(pairs: Int, comboNeeded: Int): GoalStats = GoalStats(
+data class GoalStats(val merges: Int = 0, val bestChain: Int = 0, val comboHits: Int = 0, val harvested: Int = 0) {
+    /**
+     * Estadística tras un movimiento que fusionó [pairs] pares; [comboNeeded] es el tamaño del combo de la meta (0 si no hay)
+     * y [harvested] cuántas de esas fusiones dieron la ficha de una meta de cosecha.
+     */
+    fun after(pairs: Int, comboNeeded: Int, harvested: Int = 0): GoalStats = GoalStats(
         merges = merges + pairs,
         bestChain = maxOf(bestChain, pairs),
-        comboHits = comboHits + if (comboNeeded > 0 && pairs >= comboNeeded) 1 else 0
+        comboHits = comboHits + if (comboNeeded > 0 && pairs >= comboNeeded) 1 else 0,
+        harvested = this.harvested + harvested
     )
 }
 
@@ -31,6 +35,7 @@ object LevelRules {
         }
         LevelGoal.MERGES -> stats.merges >= goalValue
         LevelGoal.COMBO -> stats.comboHits >= goalCount.coerceAtLeast(1)
+        LevelGoal.HARVEST -> stats.harvested >= goalCount.coerceAtLeast(1)
     }
 
     fun isGoalReached(spec: LevelSpec, tiles: List<TileModel>, score: Int, stats: GoalStats = GoalStats()): Boolean =
@@ -38,6 +43,9 @@ object LevelRules {
 
     /** Cuánto del tamaño de combo hay que lograr por movimiento (0 si la meta no es un combo). */
     fun comboSize(spec: LevelSpec): Int = if (spec.goal == LevelGoal.COMBO) spec.goalValue else 0
+
+    /** Valor de la ficha que se cosecha (0 si la meta no es una cosecha). */
+    fun harvestValue(spec: LevelSpec): Int = if (spec.goal == LevelGoal.HARVEST) spec.goalValue else 0
 
     /**
      * Avance hacia la meta de 0 a 1 para la barra del nivel (cada tipo de meta lo mide a su manera).
@@ -55,6 +63,7 @@ object LevelRules {
             val present = tiles.map { it.value }.toSet()
             if (rungs.isEmpty()) 0f else rungs.count { it in present }.toFloat() / rungs.size
         }
+        LevelGoal.HARVEST -> (stats.harvested.toFloat() / goalCount.coerceAtLeast(1)).coerceIn(0f, 1f)
         LevelGoal.REACH_TILE -> 0f // lo calcula el tablero en escala logarítmica
     }
 

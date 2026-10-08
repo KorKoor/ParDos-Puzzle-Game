@@ -13,17 +13,26 @@ object LevelValidator {
         val tag = "Nivel ${spec.id}"
         if (spec.boardSize !in 3..6) add("$tag: tablero ${spec.boardSize} fuera de 3..6")
         if (spec.goalValue <= 0) add("$tag: meta ${spec.goalValue} no válida")
-        val maxCount = when (spec.goal) { LevelGoal.LADDER -> 5; LevelGoal.COMBO -> 4; else -> 3 }
-        val minCount = if (spec.goal == LevelGoal.LADDER) 2 else 1
+        val maxCount = when (spec.goal) { LevelGoal.LADDER -> 5; LevelGoal.COMBO -> 4; LevelGoal.HARVEST -> 40; else -> 3 }
+        val minCount = if (spec.goal == LevelGoal.LADDER) 2 else if (spec.goal == LevelGoal.HARVEST) 3 else 1
         if (spec.goalCount !in minCount..maxCount) add("$tag: cantidad meta ${spec.goalCount} fuera de $minCount..$maxCount para ${spec.goal}")
         if (spec.scaleTile <= 1 || !isPowerOfTwo(spec.scaleTile)) add("$tag: ficha de escala ${spec.scaleTile} no es potencia de 2")
-        if ((spec.goal == LevelGoal.REACH_TILE || spec.goal == LevelGoal.LADDER) && !isPowerOfTwo(spec.goalValue)) add("$tag: la ficha meta ${spec.goalValue} no es potencia de 2")
+        if ((spec.goal == LevelGoal.REACH_TILE || spec.goal == LevelGoal.LADDER || spec.goal == LevelGoal.HARVEST) && !isPowerOfTwo(spec.goalValue)) add("$tag: la ficha meta ${spec.goalValue} no es potencia de 2")
         if ((spec.goal == LevelGoal.SCORE || spec.goal == LevelGoal.MERGES) && spec.goalCount != 1) add("$tag: una meta de ${spec.goal} no lleva cantidad")
         if (spec.goal == LevelGoal.LADDER && spec.goalValue shr (spec.goalCount - 1) < 4) add("$tag: la escalera baja de 4")
         if (spec.goal == LevelGoal.COMBO && spec.goalValue !in 2..(spec.boardSize * 2 - 2)) add("$tag: combo de ${spec.goalValue} pares imposible en ${spec.boardSize}×${spec.boardSize}")
         if (spec.goal == LevelGoal.MERGES && spec.goalValue < 20) add("$tag: maratón de ${spec.goalValue} fusiones es demasiado corto")
         if (spec.kind == LevelKind.TWIST && spec.twist == Twist.NONE) add("$tag: nivel del revés sin giro")
+        if (spec.dropsPerMove !in 1..2) add("$tag: ${spec.dropsPerMove} fichas por jugada")
+        if (spec.kind == LevelKind.DOUBLE && spec.dropsPerMove != 2) add("$tag: doble caída sin dos fichas por jugada")
+        if (spec.goal == LevelGoal.HARVEST && spec.goalValue < 8) add("$tag: cosecha de fichas de ${spec.goalValue}")
         if (spec.kind == LevelKind.STORM && spec.storm == null) add("$tag: nivel de tormenta sin tormenta")
+        spec.phase2?.let { ph ->
+            if (spec.kind != LevelKind.BOSS) add("$tag: solo los jefes tienen segunda fase")
+            if (ph.atMoves < 8 || ph.atMoves >= LevelMath.minMoves(spec)) add("$tag: la fase 2 empieza en ${ph.atMoves} y el nivel dura unos ${LevelMath.minMoves(spec)}")
+            if (ph.storm == null && ph.twist == null && ph.spawn == null) add("$tag: la fase 2 no cambia nada")
+            ph.storm?.let { st -> if (spec.freeCells - st.maxStones < 9) add("$tag: la tormenta de la fase 2 deja poco sitio") }
+        }
         spec.storm?.let { st ->
             if (st.everyMoves < 3 || st.lifeMoves < 2 || st.maxStones !in 1..4) add("$tag: tormenta $st fuera de rango")
             if (spec.freeCells - st.maxStones < 9) add("$tag: la tormenta deja demasiado poco sitio")

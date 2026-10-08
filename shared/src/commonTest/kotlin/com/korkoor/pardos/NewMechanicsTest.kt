@@ -129,7 +129,7 @@ class NewMechanicsTest {
     @Test fun twistsAreIntroducedOneByOne() {
         assertTrue(LevelGenerator.twistsFor(9).isEmpty())
         assertEquals(listOf(Twist.MIRROR_H), LevelGenerator.twistsFor(10))
-        assertEquals(4, LevelGenerator.twistsFor(34).size)
+        assertEquals(Twist.entries.size - 1, LevelGenerator.twistsFor(34).size)
         for (id in 1..LevelCatalog.TOTAL_LEVELS) {
             val spec = LevelCatalog.spec(id)
             if (spec.twist != Twist.NONE) assertTrue(spec.twist in LevelGenerator.twistsFor((id - 1) / 20), "nivel $id usa un giro que aún no existe")
@@ -156,5 +156,51 @@ class NewMechanicsTest {
         assertTrue(all.any { it.spawn == SpawnStyle.HEAVY && it.boardSize == 6 })
         assertTrue(all.any { it.boardSize == 6 && it.stones.isNotEmpty() })
         assertTrue(all.flatMap { LevelValidator.problems(it) }.isEmpty())
+    }
+
+    // ---------------------------------------------------------------- cosecha, doble caída, callejones y fases de jefe
+
+    @Test fun harvestCountsEachMergeThatMakesTheTile() {
+        var stats = GoalStats()
+        stats = stats.after(3, 0, harvested = 2)
+        stats = stats.after(1, 0, harvested = 1)
+        assertEquals(3, stats.harvested)
+        assertTrue(LevelRules.isGoalReached(LevelGoal.HARVEST, 32, 3, emptyList(), 0, stats))
+        assertFalse(LevelRules.isGoalReached(LevelGoal.HARVEST, 32, 4, emptyList(), 0, stats))
+        assertEquals("Crea 12 fichas de 64", LevelBuilders.harvest(1, 64, 12).goalText())
+        assertEquals(0.75f, LevelRules.progress(LevelGoal.HARVEST, 32, 4, emptyList(), 0, stats), 0.001f)
+    }
+
+    @Test fun doubleDropHalvesTheMovesNeeded() {
+        val normal = LevelBuilders.zen(1, 256, 4)
+        val double = LevelBuilders.doubleDrop(1, 256, 4)
+        assertEquals(2, double.dropsPerMove)
+        assertTrue(com.korkoor.pardos.domain.level.LevelMath.minMoves(double) < com.korkoor.pardos.domain.level.LevelMath.minMoves(normal) * 0.6)
+        assertTrue(double.ruleChips().any { it.contains("2 fichas") })
+    }
+
+    @Test fun blockedDirectionsOnlyForbidTheirOwn() {
+        for ((tw, banned) in listOf(Twist.NO_UP to Direction.UP, Twist.NO_DOWN to Direction.DOWN, Twist.NO_LEFT to Direction.LEFT, Twist.NO_RIGHT to Direction.RIGHT)) {
+            for (d in Direction.entries) assertEquals(d != banned, tw.allows(d), "$tw $d")
+            assertEquals(Direction.UP, tw.apply(Direction.UP))
+        }
+        for (tw in listOf(Twist.NONE, Twist.MIRROR_H, Twist.FLIP, Twist.SPIN)) assertTrue(Direction.entries.all { tw.allows(it) })
+    }
+
+    @Test fun everyBossAfterTheFirstChapterHasASecondPhase() {
+        val bosses = LevelCatalog.all().filter { it.isBoss }
+        val withPhase = bosses.filter { it.phase2 != null }
+        assertTrue(withPhase.size >= bosses.size - 2, "solo el primer capítulo es de una fase")
+        for (b in withPhase) {
+            val ph = b.phase2!!
+            assertTrue(ph.atMoves < com.korkoor.pardos.domain.level.LevelMath.minMoves(b), "nivel ${b.id}: la fase 2 llega a verse")
+            assertTrue(ph.title.startsWith("¡"))
+        }
+        assertTrue(withPhase.map { it.phase2!!.title }.toSet().size >= 5, "las fases son variadas")
+    }
+
+    @Test fun thereAreSixteenBossRecipes() {
+        assertEquals(16, LevelGenerator.bossNames.size)
+        assertTrue(LevelCatalog.all().filter { it.isBoss }.map { it.title }.toSet().size >= 14)
     }
 }

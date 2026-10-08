@@ -23,7 +23,10 @@ enum class LevelGoal {
     MERGES,
 
     /** Combo: lograr [LevelSpec.goalCount] veces un movimiento que fusione [LevelSpec.goalValue] pares a la vez. */
-    COMBO
+    COMBO,
+
+    /** Cosecha: crear [LevelSpec.goalCount] fichas de [LevelSpec.goalValue] (cuenta cada fusión que da ese valor). */
+    HARVEST
 }
 
 /** Cómo caen las fichas nuevas. */
@@ -46,17 +49,47 @@ enum class Twist(val label: String, val hint: String) {
     MIRROR_H("Izquierda ↔ derecha", "Izquierda y derecha están cambiadas"),
     MIRROR_V("Arriba ↔ abajo", "Arriba y abajo están cambiados"),
     FLIP("Todo al revés", "Cada deslizamiento va en la dirección contraria"),
-    SPIN("Giro de 90°", "Cada deslizamiento gira un cuarto de vuelta a la derecha");
+    SPIN("Giro de 90°", "Cada deslizamiento gira un cuarto de vuelta a la derecha"),
+
+    // Callejones: una dirección no se puede usar (el deslizamiento se ignora)
+    NO_UP("Sin arriba", "No puedes deslizar hacia arriba"),
+    NO_DOWN("Sin abajo", "No puedes deslizar hacia abajo"),
+    NO_LEFT("Sin izquierda", "No puedes deslizar hacia la izquierda"),
+    NO_RIGHT("Sin derecha", "No puedes deslizar hacia la derecha");
+
+    /** Los callejones prohíben una dirección en vez de girarla. */
+    val isDeadEnd: Boolean get() = this == NO_UP || this == NO_DOWN || this == NO_LEFT || this == NO_RIGHT
+
+    /** ¿Se puede deslizar en esta dirección? (los callejones prohíben una). */
+    fun allows(d: Direction): Boolean = when (this) {
+        NO_UP -> d != Direction.UP
+        NO_DOWN -> d != Direction.DOWN
+        NO_LEFT -> d != Direction.LEFT
+        NO_RIGHT -> d != Direction.RIGHT
+        else -> true
+    }
 
     /** Dirección real del tablero para el deslizamiento hecho por el jugador. */
     fun apply(d: Direction): Direction = when (this) {
-        NONE -> d
+        NONE, NO_UP, NO_DOWN, NO_LEFT, NO_RIGHT -> d
         MIRROR_H -> when (d) { Direction.LEFT -> Direction.RIGHT; Direction.RIGHT -> Direction.LEFT; else -> d }
         MIRROR_V -> when (d) { Direction.UP -> Direction.DOWN; Direction.DOWN -> Direction.UP; else -> d }
         FLIP -> when (d) { Direction.UP -> Direction.DOWN; Direction.DOWN -> Direction.UP; Direction.LEFT -> Direction.RIGHT; Direction.RIGHT -> Direction.LEFT }
         SPIN -> when (d) { Direction.UP -> Direction.RIGHT; Direction.RIGHT -> Direction.DOWN; Direction.DOWN -> Direction.LEFT; Direction.LEFT -> Direction.UP }
     }
 }
+
+/**
+ * Segunda fase de un jefe: cuando se llevan [atMoves] movimientos cambian las reglas (cae una tormenta, se giran o se
+ * bloquean los controles, o las fichas nuevas cambian de reparto). [title] es el aviso grande que sale al empezar la fase.
+ */
+data class BossPhase(
+    val atMoves: Int,
+    val title: String,
+    val storm: Storm? = null,
+    val twist: Twist? = null,
+    val spawn: SpawnStyle? = null
+)
 
 /**
  * Tormenta: cada [everyMoves] movimientos cae una piedra temporal en una casilla libre y se va [lifeMoves] movimientos
@@ -84,10 +117,12 @@ enum class LevelKind(val label: String, val rule: String) {
     MARATHON("Maratón", "Cuenta las fusiones: cada deslizamiento tiene que valer"),
     COMBO("Combo", "Un solo deslizamiento tiene que fusionar varios pares"),
     TWIST("Del revés", "Los controles no van hacia donde deslizas"),
-    STORM("Tormenta", "Caen piedras temporales que te cierran el paso");
+    STORM("Tormenta", "Caen piedras temporales que te cierran el paso"),
+    HARVEST("Cosecha", "Crea muchas fichas del mismo valor"),
+    DOUBLE("Doble caída", "Caen dos fichas nuevas por cada jugada");
 
     /** Tipos que castigan el error y no deberían ir seguidos en el mapa. */
-    val isDemanding: Boolean get() = this == SPRINT || this == CLOCK || this == BOSS || this == TWINS || this == COMBO || this == STORM || this == TWIST
+    val isDemanding: Boolean get() = this == SPRINT || this == CLOCK || this == BOSS || this == TWINS || this == COMBO || this == STORM || this == TWIST || this == DOUBLE
 }
 
 /** Ficha que ya está en el tablero al empezar. */
@@ -119,7 +154,11 @@ data class LevelSpec(
     /** Giro de los controles (solo cambia cómo se juega, no el tablero). */
     val twist: Twist = Twist.NONE,
     /** Piedras temporales que van cayendo durante la partida. */
-    val storm: Storm? = null
+    val storm: Storm? = null,
+    /** Fichas nuevas por jugada (2 = "doble caída"). */
+    val dropsPerMove: Int = 1,
+    /** Segunda fase del jefe (null = el nivel no cambia de reglas). */
+    val phase2: BossPhase? = null
 ) {
     val stoneSet: Set<Cell> get() = stones.toSet()
     val freeCells: Int get() = boardSize * boardSize - stones.size
@@ -139,6 +178,8 @@ data class LevelSpec(
         if (spawn == SpawnStyle.HEAVY) add("Fichas pesadas")
         if (startTiles.isNotEmpty()) add("Con ventaja")
         if (twist != Twist.NONE) add(twist.label)
+        if (dropsPerMove > 1) add("$dropsPerMove fichas por jugada")
+        phase2?.let { add("2 fases") }
         storm?.let { add("Tormenta: cada ${it.everyMoves} mov.") }
     }
 }
@@ -148,6 +189,7 @@ fun goalText(goal: LevelGoal, value: Int, count: Int): String = when {
     goal == LevelGoal.SCORE -> "Suma ${formatThousands(value)} puntos"
     goal == LevelGoal.LADDER -> "Reúne ${ladderRungs(value, count).joinToString("-")} a la vez"
     goal == LevelGoal.MERGES -> "Haz ${formatThousands(value)} fusiones"
+    goal == LevelGoal.HARVEST -> "Crea $count fichas de $value"
     goal == LevelGoal.COMBO -> if (count > 1) "Fusiona $value pares de golpe, $count veces" else "Fusiona $value pares de golpe"
     count > 1 -> "Ten $count fichas de $value a la vez"
     else -> "Llega a $value"

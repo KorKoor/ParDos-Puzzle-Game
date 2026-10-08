@@ -244,3 +244,40 @@ fun FlowSummaryExtras(
         }
     }
 }
+
+/** Aviso grande de la segunda fase de un jefe. */
+@Composable
+fun PhaseBannerUi(banner: GameViewModel.PhaseBanner?, modifier: Modifier = Modifier) {
+    var last by remember { mutableStateOf("") }
+    if (banner != null) last = banner.title
+    AnimatedVisibility(
+        visible = banner != null,
+        modifier = modifier,
+        enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 300f), initialScale = 0.3f) + fadeIn(tween(120)),
+        exit = fadeOut(tween(400))
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .clip(RoundedCornerShape(26.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFFB4413C), Color(0xFF7E2A2E))))
+                .padding(horizontal = 26.dp, vertical = 14.dp)
+        ) {
+            Text("FASE 2", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.White.copy(alpha = 0.75f), letterSpacing = 4.sp)
+            Text(last, fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+/** "¡Sin arriba!": aviso breve al deslizar hacia una dirección prohibida. */
+@Composable
+fun BlockedHintUi(text: String?, modifier: Modifier = Modifier) {
+    var last by remember { mutableStateOf("") }
+    if (text != null) last = text
+    AnimatedVisibility(visible = text != null, modifier = modifier, enter = fadeIn(tween(80)) + scaleIn(initialScale = 0.8f), exit = fadeOut(tween(250))) {
+        Text(
+            last, fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.White,
+            modifier = Modifier.clip(RoundedCornerShape(50)).background(Terracotta).padding(horizontal = 16.dp, vertical = 7.dp)
+        )
+    }
+}

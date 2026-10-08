@@ -97,7 +97,9 @@ internal fun GameHeader(
     /** Reemplaza "JUGADOR n" (p. ej. "TU RETO" en duelos a distancia). */
     titleOverride: String? = null,
     /** Niveles de campaña ganados seguidos (0 = no se enseña). */
-    winStreak: Int = 0
+    winStreak: Int = 0,
+    /** Corazones que quedan en la torre (null = no se está en la torre). */
+    towerHearts: Int? = null
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -139,6 +141,7 @@ internal fun GameHeader(
             )
             LevelRuleChips(state, Modifier.padding(top = 6.dp))
             if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = 6.dp))
+            if (towerHearts != null) TowerHearts(towerHearts, Modifier.padding(top = 6.dp))
         }
 
         if (state.maxTime != null) {
@@ -440,6 +443,7 @@ internal fun ObjectiveCard(
     val isMerges = goal == com.korkoor.pardos.domain.level.LevelGoal.MERGES
     val isCombo = goal == com.korkoor.pardos.domain.level.LevelGoal.COMBO
     val isLadder = goal == com.korkoor.pardos.domain.level.LevelGoal.LADDER
+    val isHarvest = goal == com.korkoor.pardos.domain.level.LevelGoal.HARVEST
     val plainTile = !isScore && !isMerges && !isCombo
     // La barra usa escala logarítmica: duplicar la ficha mayor siempre se siente como un avance parejo
     val animated by animateFloatAsState(
@@ -509,6 +513,7 @@ internal fun ObjectiveCard(
                         isMerges -> "FUSIONES  ${goalStats.merges} / $targetPiece"
                         isCombo -> "COMBO DE $targetPiece  ·  MEJOR ${goalStats.bestChain}" + if (goalCount > 1) "  ·  ${goalStats.comboHits.coerceAtMost(goalCount)}/$goalCount" else ""
                         isLadder -> "ESCALERA"
+                        isHarvest -> "COSECHA  ${goalStats.harvested} / $goalCount"
                         else -> stringResource(R.string.objective_title).uppercase()
                     },
                     fontSize = 9.sp,

@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,11 +40,13 @@ private const val TOTAL_LEVELS = 2400
 @Composable
 fun ModeSelectionScreen(
     onModeSelected: (GameMode) -> Unit,
+    onTowerSelected: () -> Unit,
     onBack: () -> Unit,
     currentTheme: GameTheme
 ) {
     val context = LocalContext.current
     val campaignLevel = remember { ProfileManager(context).getProfile().currentCampaignLevel }
+    val towerBest = remember { context.getSharedPreferences("pardos_storage", android.content.Context.MODE_PRIVATE).getInt("tower_best_floor", 0) }
 
     Box(modifier = Modifier.fillMaxSize().pardosBackdrop(Brush.verticalGradient(currentTheme.colors))) {
         PicnicBackgroundOptimized(color = currentTheme.accentColor.copy(alpha = 0.05f))
@@ -96,6 +99,14 @@ fun ModeSelectionScreen(
                     modifier = Modifier.padding(start = 4.dp)
                 )
 
+                ModeRow(
+                    title = "Torre infinita",
+                    description = if (towerBest > 0) "Sube piso a piso con 3 corazones. Tu récord: piso $towerBest"
+                    else "Sube piso a piso con 3 corazones: cada 5 pisos, un jefe",
+                    icon = Icons.Rounded.Layers,
+                    color = Color(0xFF8E6BD6),
+                    onClick = onTowerSelected
+                )
                 ModeRow(
                     title = stringResource(R.string.mode_tables_title),
                     description = stringResource(R.string.mode_tables_desc),

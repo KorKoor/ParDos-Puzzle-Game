@@ -174,7 +174,9 @@ fun GameOverOverlay(
     coinsEarned: Int = 0,
     reason: GameOverReason = GameOverReason.BOARD_FULL,
     /** "¡Te faltó una fusión!": lo cerca que estuviste (null = nada que decir). */
-    nearMiss: String? = null
+    nearMiss: String? = null,
+    /** Línea extra bajo el "casi" (por ejemplo los corazones que quedan en la torre). */
+    footnote: String? = null
 ) {
     Box(
         modifier = Modifier
@@ -260,6 +262,10 @@ fun GameOverOverlay(
                             .background(com.korkoor.pardos.ui.design.Terracotta.copy(alpha = 0.12f))
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     )
+                }
+                if (footnote != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(footnote, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f), textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(24.dp))
                 com.korkoor.pardos.ui.design.PrimaryButton(

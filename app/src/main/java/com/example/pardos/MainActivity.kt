@@ -260,6 +260,14 @@ class MainActivity : ComponentActivity() {
                                 // Solo en builds de depuración: `--ei debug_level N` abre ese nivel de campaña directamente
                                 val debuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
                                 val debugLevel = if (debuggable) intent?.getIntExtra("debug_level", 0) ?: 0 else 0
+                                // Torre en depuración: `--ei debug_tower PISO [--ei debug_hearts N] [--es debug_tower_end win|lose]`
+                                val debugTower = if (debuggable) intent?.getIntExtra("debug_tower", 0) ?: 0 else 0
+                                if (debugTower > 0) {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.debugStartTower(debugTower, intent?.getIntExtra("debug_hearts", 3) ?: 3, intent?.getStringExtra("debug_tower_end"))
+                                    currentScreen = Screen.Game
+                                    return@AnimatedSplashScreen
+                                }
                                 if (debugLevel > 0) {
                                     gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.startCampaignLevel(debugLevel)
@@ -361,6 +369,11 @@ class MainActivity : ComponentActivity() {
                                         gameViewModel.startNewGame(mode)
                                         currentScreen = Screen.Game
                                     }
+                                },
+                                onTowerSelected = {
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.startTower()
+                                    currentScreen = Screen.Game
                                 },
                                 onBack = { currentScreen = Screen.Menu },
                                 currentTheme = currentTheme

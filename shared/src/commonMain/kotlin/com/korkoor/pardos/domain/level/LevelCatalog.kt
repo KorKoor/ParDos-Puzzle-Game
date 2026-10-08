@@ -4,6 +4,8 @@ import com.korkoor.pardos.domain.level.LevelBuilders.boss
 import com.korkoor.pardos.domain.level.LevelBuilders.clock
 import com.korkoor.pardos.domain.level.LevelBuilders.combo
 import com.korkoor.pardos.domain.level.LevelBuilders.fours
+import com.korkoor.pardos.domain.level.LevelBuilders.doubleDrop
+import com.korkoor.pardos.domain.level.LevelBuilders.harvest
 import com.korkoor.pardos.domain.level.LevelBuilders.headStart
 import com.korkoor.pardos.domain.level.LevelBuilders.heavy
 import com.korkoor.pardos.domain.level.LevelBuilders.ladder
@@ -59,8 +61,8 @@ internal object LevelGenerator {
     /** Capítulo en el que cada tipo entra en la campaña (los que no aparecen empiezan en el 0). */
     val UNLOCK: Map<LevelKind, Int> = mapOf(
         LevelKind.TWINS to 2, LevelKind.CLOCK to 2,
-        LevelKind.HEAVY to 3, LevelKind.LADDER to 6, LevelKind.TWIST to 10,
-        LevelKind.MARATHON to 14, LevelKind.STORM to 20, LevelKind.COMBO to 26
+        LevelKind.HEAVY to 3, LevelKind.LADDER to 6, LevelKind.HARVEST to 8, LevelKind.TWIST to 10,
+        LevelKind.MARATHON to 14, LevelKind.DOUBLE to 17, LevelKind.STORM to 20, LevelKind.COMBO to 26
     )
 
     fun unlockOf(kind: LevelKind): Int = UNLOCK[kind] ?: 0
@@ -86,7 +88,8 @@ internal object LevelGenerator {
             LevelKind.SCORE to 14.0, LevelKind.FOURS to 12.0, LevelKind.HEADSTART to 12.0, LevelKind.STONES to 16.0,
             LevelKind.SPRINT to 10.0, LevelKind.TWINS to 7.0, LevelKind.CLOCK to 7.0,
             LevelKind.HEAVY to 9.0, LevelKind.LADDER to 9.0, LevelKind.TWIST to 9.0,
-            LevelKind.MARATHON to 8.0, LevelKind.STORM to 10.0, LevelKind.COMBO to 10.0
+            LevelKind.MARATHON to 8.0, LevelKind.STORM to 10.0, LevelKind.COMBO to 10.0,
+            LevelKind.HARVEST to 9.0, LevelKind.DOUBLE to 8.0
         )
         return base.filterKeys { chapter >= unlockOf(it) }.mapValues { (k, w) ->
             val age = chapter - unlockOf(k)
@@ -96,7 +99,8 @@ internal object LevelGenerator {
 
     private val specialKinds = listOf(
         LevelKind.STONES, LevelKind.SPRINT, LevelKind.TWINS, LevelKind.CLOCK, LevelKind.FOURS,
-        LevelKind.HEAVY, LevelKind.LADDER, LevelKind.TWIST, LevelKind.MARATHON, LevelKind.STORM, LevelKind.COMBO
+        LevelKind.HEAVY, LevelKind.LADDER, LevelKind.TWIST, LevelKind.MARATHON, LevelKind.STORM, LevelKind.COMBO,
+        LevelKind.HARVEST, LevelKind.DOUBLE
     )
 
     internal fun plan(chapter: Int): List<LevelKind> {
@@ -179,7 +183,7 @@ internal object LevelGenerator {
             LevelKind.SPRINT -> {
                 val wide = chapter >= 2 && rnd.nextDouble() < 0.2
                 val size = if (wide) 5 else 4
-                val pattern = if (chapter >= 1 && rnd.nextDouble() < 0.3) StonePatterns.pick(size, if (size == 4 && chapter >= 30 && rnd.nextBoolean()) 2 else 1, rnd) else null
+                val pattern = if (chapter >= 1 && rnd.nextDouble() < 0.3) StonePatterns.pick(size, 1, rnd) else null
                 val e = (exp - 1 + if (wide) 1 else 0).coerceIn(6, MAX_EXP)
                 val slack = sprintSlack(chapter) + (rnd.nextInt(3) - 1) * 0.06
                 sprint(level, tileOf(pattern?.let { StonePatterns.exponentFor(e - 1, it) } ?: e), size, slack = slack, stones = pattern)
@@ -201,6 +205,8 @@ internal object LevelGenerator {
             LevelKind.TWIST -> twistLevel(level, chapter, exp, rnd, fresh)
             LevelKind.STORM -> stormLevel(level, chapter, exp, rnd, fresh)
             LevelKind.BOSS -> bossLevel(level, chapter, pos, exp, rnd)
+            LevelKind.HARVEST -> harvestLevel(level, chapter, exp, rnd, fresh)
+            LevelKind.DOUBLE -> doubleLevel(level, chapter, exp, rnd, fresh)
         }
     }
 
@@ -215,7 +221,7 @@ internal object LevelGenerator {
     private fun plainVariant(level: Int, chapter: Int, kind: LevelKind, exp: Int, rnd: Random): LevelSpec {
         val roll = if (chapter >= 1) rnd.nextDouble() else 1.0
         val (size, e, suffix) = when {
-            roll < 0.18 -> Triple(3, if (kind == LevelKind.ZEN && rnd.nextBoolean()) 7 else 6, " mini")
+            roll < 0.18 -> Triple(3, 6, " mini")
             roll < 0.42 -> Triple(5, (exp + 1).coerceAtMost(MAX_EXP), " amplio")
             else -> Triple(4, exp, "")
         }
@@ -287,7 +293,7 @@ internal object LevelGenerator {
         val heavy = chapter >= 34 && rnd.nextDouble() < 0.25
         val size = if (heavy || (chapter >= 18 && rnd.nextDouble() < 0.3)) 5 else 4
         val merges = ((70 + chapter * 4).coerceAtMost(if (size == 5) 300 else 220) - if (fresh) 40 else 0) / 10 * 10
-        val severity = if (size == 5 && chapter >= 40 && rnd.nextBoolean()) 2 else 1
+        val severity = 1
         val pattern = if (!heavy && chapter >= 22 && rnd.nextDouble() < 0.45) StonePatterns.pick(size, severity, rnd) else null
         val spawn = if (heavy) SpawnStyle.HEAVY else SpawnStyle.NORMAL
         val slack = (if (fresh) 1.4 else 1.22 - 0.0015 * chapter).coerceAtLeast(1.1)
@@ -313,20 +319,25 @@ internal object LevelGenerator {
         return combo(level, pairs, times, size, slack)
     }
 
-    /** Controles girados: los giros nuevos entran uno a uno y, desde el 30, se mezclan con otras reglas. */
-    fun twistsFor(chapter: Int): List<Twist> = buildList {
-        if (chapter >= 10) add(Twist.MIRROR_H)
-        if (chapter >= 16) add(Twist.MIRROR_V)
-        if (chapter >= 24) add(Twist.FLIP)
-        if (chapter >= 34) add(Twist.SPIN)
+    /** Capítulo en el que entra cada giro de controles (los callejones prohíben una dirección). */
+    fun twistArrival(twist: Twist): Int = when (twist) {
+        Twist.NONE -> 0
+        Twist.MIRROR_H -> 10
+        Twist.NO_UP, Twist.NO_DOWN -> 13
+        Twist.MIRROR_V -> 16
+        Twist.NO_LEFT, Twist.NO_RIGHT -> 20
+        Twist.FLIP -> 24
+        Twist.SPIN -> 34
     }
+
+    /** Controles girados: los giros nuevos entran uno a uno y, desde el 30, se mezclan con otras reglas. */
+    fun twistsFor(chapter: Int): List<Twist> = Twist.entries.filter { it != Twist.NONE && chapter >= twistArrival(it) }
 
     private fun twistLevel(level: Int, chapter: Int, exp: Int, rnd: Random, fresh: Boolean): LevelSpec {
         val available = twistsFor(chapter)
-        // El giro que acaba de llegar sale más a menudo
-        val newest = available.last()
-        val newestJustArrived = chapter == (when (newest) { Twist.MIRROR_H -> 10; Twist.MIRROR_V -> 16; Twist.FLIP -> 24; else -> 34 })
-        val twist = if (newestJustArrived && rnd.nextDouble() < 0.6) newest else available.random(rnd)
+        // Los giros que acaban de llegar salen más a menudo
+        val arrivals = available.filter { twistArrival(it) == chapter }
+        val twist = if (arrivals.isNotEmpty() && rnd.nextDouble() < 0.6) arrivals.random(rnd) else available.random(rnd)
         val e = (exp - if (twist == Twist.SPIN || twist == Twist.FLIP) 3 else 2).coerceIn(6, 8) - if (fresh) 1 else 0
         val base = when {
             chapter >= 30 && rnd.nextDouble() < 0.35 -> sprint(level, tileOf(e), 4, slack = sprintSlack(chapter) + 0.3)
@@ -336,6 +347,36 @@ internal object LevelGenerator {
             else -> zen(level, tileOf(e), 4)
         }
         return twisted(base, twist)
+    }
+
+    /**
+     * Cosecha: la cantidad se calcula para que la suma de fichas creadas sea parecida a la de un nivel normal de ese tramo
+     * (más o menos 1,3 veces la ficha base) y la ficha cosechada sube con los capítulos.
+     */
+    private fun harvestLevel(level: Int, chapter: Int, exp: Int, rnd: Random, fresh: Boolean): LevelSpec {
+        val size = if (chapter >= 14 && rnd.nextDouble() < 0.3) 5 else 4
+        val values = when {
+            chapter < 12 -> listOf(16, 32)
+            chapter < 30 -> listOf(32, 64)
+            else -> listOf(64, 128)
+        }
+        val value = values.random(rnd)
+        val sum = (1.3 * tileOf(exp)).toInt() * (if (fresh) 5 else 10) / 10
+        val maxCount = when (value) { 16 -> 30; 32 -> 22; 64 -> if (size == 5) 16 else 12; else -> if (size == 5) 10 else 6 }
+        val count = (sum / value).coerceIn(4, maxCount)
+        val pattern = if (size == 5 && chapter >= 20 && rnd.nextDouble() < 0.4) StonePatterns.pick(5, 1, rnd) else null
+        return harvest(level, value, if (pattern != null) (count * 4 / 5).coerceAtLeast(4) else count, size, pattern)
+    }
+
+    /** Doble caída: en 4×4 la meta se queda en 256; en 5×5 puede subir hasta 1.024. */
+    private fun doubleLevel(level: Int, chapter: Int, exp: Int, rnd: Random, fresh: Boolean): LevelSpec {
+        val wide = chapter >= 10 && rnd.nextDouble() < 0.35
+        val size = if (wide) 5 else 4
+        var e = if (wide) exp.coerceIn(8, 10) else (exp - 1).coerceIn(6, 8)
+        val pattern = if (wide && chapter >= 25 && rnd.nextDouble() < 0.3) StonePatterns.pick(5, 1, rnd) else null
+        if (pattern != null) e = StonePatterns.exponentFor(e - 1, pattern)
+        if (fresh) e = (e - 1).coerceAtLeast(6)
+        return doubleDrop(level, tileOf(e), size, pattern)
     }
 
     /** Tormenta: cae una piedra cada vez más a menudo, dura algo más y puede haber más a la vez. */
@@ -364,7 +405,8 @@ internal object LevelGenerator {
         Recipe("El Muro", 0), Recipe("Tormenta de 4", 0), Recipe("Doble o nada", 0), Recipe("La Cantera", 0),
         Recipe("Relojería", 0), Recipe("Duelo de puntos", 0), Recipe("Rompecabezas", 0),
         Recipe("Escalera real", 6), Recipe("Pesadilla", 3), Recipe("Espejismo", 10),
-        Recipe("Ojo del huracán", 20), Recipe("Gran maratón", 14), Recipe("Reacción en cadena", 26)
+        Recipe("Ojo del huracán", 20), Recipe("Gran maratón", 14), Recipe("Reacción en cadena", 26),
+        Recipe("Cosecha de oro", 8), Recipe("Lluvia de meteoros", 17), Recipe("Callejón sin salida", 13)
     )
 
     /** Nombres de todos los jefes (para las pruebas y la interfaz). */
@@ -379,6 +421,34 @@ internal object LevelGenerator {
         val pillar = StonePatterns.all.filter { it.size == 4 && it.cells.size == 1 && it.severity == 2 }.random(rnd)
         val goal = tileOf(e)
         val name = recipes[recipe].name
+        val base = bossBase(recipe, level, chapter, e, goal, corner, pillar, rnd, name)
+        // El primer jefe de todos (capítulo 1) se queda de una sola fase; los demás cambian las reglas a media partida
+        return if (chapter >= 1) withBossPhase(recipe, base, chapter) else base
+    }
+
+    /** Fase 2 de cada receta de jefe: una regla que entra a media partida. */
+    private fun withBossPhase(recipe: Int, base: LevelSpec, chapter: Int): LevelSpec {
+        val calmStorm = Storm(everyMoves = 9, lifeMoves = 5, maxStones = 2)
+        val storm = if (chapter >= 20) stormFor(chapter, false).let { it.copy(everyMoves = (it.everyMoves + 2).coerceAtMost(8)) } else calmStorm
+        val B = LevelBuilders
+        // Con una segunda fase el jefe pide más: se compensa con un poco más de margen de movimientos
+        @Suppress("NAME_SHADOWING")
+        val base = base.copy(moveLimit = base.moveLimit?.let { (it * 1.12).toInt() })
+        return when (recipe) {
+            0, 3, 6, 9, 13 -> B.withPhase(base, "¡Cae una tormenta!", storm = storm)
+            1, 5, 12 -> B.withPhase(base, "¡Llueven los 4!", spawn = SpawnStyle.FOURS)
+            2, 10, 14 -> B.withPhase(base, "¡Controles cambiados!", twist = Twist.MIRROR_H)
+            4 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_UP)
+            7 -> B.withPhase(base, "¡Arriba y abajo se cambian!", twist = Twist.MIRROR_V)
+            8 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_DOWN)
+            11 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_LEFT)
+            else -> B.withPhase(base, "¡Todo al revés!", twist = Twist.FLIP)
+        }
+    }
+
+    private fun bossBase(
+        recipe: Int, level: Int, chapter: Int, e: Int, goal: Int, corner: StonePattern, pillar: StonePattern, rnd: Random, name: String
+    ): LevelSpec {
         return when (recipe) {
             0 -> boss(sprint(level, tileOf(StonePatterns.exponentFor(if (chapter >= 4) e else e - 1, pillar)), 4, slack = sprintSlack(chapter) + 0.1, stones = pillar), name)
             1 -> boss(fours(level, goal, 4).let { it.copy(timeLimitMs = LevelMath.timeLimitMs(it, clockSeconds(chapter) + 0.6)) }, name)
@@ -398,7 +468,10 @@ internal object LevelGenerator {
             9 -> boss(twisted(sprint(level, tileOf((e - 2).coerceAtLeast(6)), 4, slack = sprintSlack(chapter) + 0.35), twistsFor(chapter).random(rnd)), name)
             10 -> boss(storm(level, tileOf((e - 1).coerceIn(7, 9)), 4, stormFor(chapter, false).let { it.copy(everyMoves = (it.everyMoves - 1).coerceAtLeast(3)) }, corner), name)
             11 -> boss(marathon(level, ((130 + chapter * 2).coerceAtMost(260)) / 10 * 10, 5, 1.2, StonePatterns.pick(5, 1, rnd)), name)
-            else -> boss(combo(level, 3, 2, if (chapter >= 40) 5 else 4, 2.4), name)
+            12 -> boss(combo(level, 3, 2, if (chapter >= 40) 5 else 4, 2.4), name)
+            13 -> boss(harvest(level, 32, (24 + chapter / 4).coerceAtMost(40), 5, StonePatterns.pick(5, 1, rnd)), name)
+            14 -> boss(doubleDrop(level, tileOf((e - 1).coerceIn(7, 9)), 5, StonePatterns.pick(5, 1, rnd)), name)
+            else -> boss(twisted(zen(level, tileOf((e - 2).coerceIn(6, 8)), 4), listOf(Twist.NO_UP, Twist.NO_DOWN, Twist.NO_LEFT, Twist.NO_RIGHT).random(rnd)), name)
         }
     }
 }

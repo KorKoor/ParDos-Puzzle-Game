@@ -15,6 +15,8 @@ class CatalogReportTest {
             println("REP kind=$kind count=${of.size} (${of.size * 100 / all.size}%) first=${of.firstOrNull()?.id} last=${of.lastOrNull()?.id}")
             for (s in of.take(3)) println("REP   #${s.id} ${s.title} ${s.boardSize}x${s.boardSize} ${s.goalText()} chips=${s.ruleChips()}")
         }
+        for (b in all.filter { it.phase2 != null }.take(4)) println("REP fase2 #${b.id} ${b.title} ${b.goalText()} ${b.phase2}")
+        for (tw in com.korkoor.pardos.domain.level.Twist.entries.filter { it.name.startsWith("NO_") }) println("REP ${tw} first=${all.firstOrNull { it.twist == tw }?.id}")
         // los giros y las tormentas por capítulo
         for (twist in com.korkoor.pardos.domain.level.Twist.entries.drop(1)) {
             val first = all.firstOrNull { it.twist == twist }

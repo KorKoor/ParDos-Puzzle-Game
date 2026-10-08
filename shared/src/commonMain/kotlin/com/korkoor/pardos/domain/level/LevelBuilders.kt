@@ -107,8 +107,22 @@ object LevelBuilders {
         return base.copy(moveLimit = LevelMath.moveLimit(base, slack), tip = "Prepara filas con pares iguales y deslízalas todas a la vez")
     }
 
+    /** Cosecha: crear [count] fichas de [tile] (cada fusión que da ese valor cuenta). */
+    fun harvest(id: Int, tile: Int, count: Int, size: Int = 4, stones: StonePattern? = null, title: String = LevelKind.HARVEST.label) =
+        LevelSpec(
+            id, LevelKind.HARVEST, title, size, goal = LevelGoal.HARVEST, goalValue = tile, goalCount = count, stones = stones?.cells.orEmpty(),
+            scaleTile = (tile * 4).coerceAtLeast(64), tip = "Cada ficha de $tile que creas cuenta: sigue fusionando"
+        )
+
+    /** Doble caída: dos fichas nuevas por jugada, así que se avanza el doble… y el tablero se llena el doble de rápido. */
+    fun doubleDrop(id: Int, tile: Int, size: Int = 4, stones: StonePattern? = null, title: String = LevelKind.DOUBLE.label) =
+        LevelSpec(
+            id, LevelKind.DOUBLE, title, size, goalValue = tile, stones = stones?.cells.orEmpty(), dropsPerMove = 2,
+            tip = "Cada jugada deja dos fichas nuevas: deja siempre sitio"
+        )
+
     /** Un nivel normal con los controles girados. */
-    fun twisted(base: LevelSpec, twist: Twist, title: String = LevelKind.TWIST.label): LevelSpec =
+    fun twisted(base: LevelSpec, twist: Twist, title: String = if (twist.isDeadEnd) "Callejón" else LevelKind.TWIST.label): LevelSpec =
         base.copy(kind = LevelKind.TWIST, title = title, twist = twist, tip = twist.hint)
 
     /** Piedras temporales que caen durante la partida. */
@@ -117,6 +131,15 @@ object LevelBuilders {
             id, LevelKind.STORM, title, size, goalValue = tile, stones = stones?.cells.orEmpty(), storm = storm,
             tip = "Las piedras que caen se van solas pasados ${storm.lifeMoves} movimientos"
         )
+
+    /**
+     * Da a un jefe una segunda fase que empieza tras el [fraction] de los movimientos mínimos del nivel (así siempre llega a
+     * verse). La fase puede soltar una tormenta, cambiar los controles o cambiar las fichas nuevas.
+     */
+    fun withPhase(base: LevelSpec, title: String, storm: Storm? = null, twist: Twist? = null, spawn: SpawnStyle? = null, fraction: Double = 0.45): LevelSpec {
+        val at = (LevelMath.minMoves(base) * fraction).toInt().coerceAtLeast(12)
+        return base.copy(phase2 = BossPhase(at, title, storm, twist, spawn))
+    }
 
     /** Convierte un nivel en jefe de capítulo: se queda con todas sus reglas y gana nombre propio. */
     fun boss(base: LevelSpec, title: String, tip: String? = null): LevelSpec =

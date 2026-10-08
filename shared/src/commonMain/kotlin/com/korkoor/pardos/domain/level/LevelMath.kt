@@ -73,6 +73,7 @@ object LevelMath {
         LevelGoal.REACH_TILE -> spec.goalValue * spec.goalCount
         LevelGoal.SCORE -> sumForScore(spec.goalValue)
         LevelGoal.LADDER -> ladderRungs(spec.goalValue, spec.goalCount).sum()
+        LevelGoal.HARVEST -> spec.goalValue * spec.goalCount
         LevelGoal.MERGES, LevelGoal.COMBO -> 0
     }
 
@@ -82,7 +83,7 @@ object LevelMath {
         if (spec.goal == LevelGoal.MERGES) return spec.goalValue
         // Un combo de N pares necesita preparar el tablero: se estima unos 12 movimientos por cada par exigido y repetición
         if (spec.goal == LevelGoal.COMBO) return spec.goalCount * (10 + 6 * spec.goalValue)
-        val avg = SpawnRules.expected(spec.spawn, spec.scaleTile)
+        val avg = SpawnRules.expected(spec.spawn, spec.scaleTile) * spec.dropsPerMove
         val needed = neededSum(spec)
         val initial = if (spec.startTiles.isNotEmpty()) spec.startTiles.sumOf { it.value }.toDouble()
         else LevelMath.initialTileCount(spec.boardSize) * avg

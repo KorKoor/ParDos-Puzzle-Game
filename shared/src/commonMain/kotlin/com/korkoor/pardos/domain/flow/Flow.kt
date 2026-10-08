@@ -137,6 +137,10 @@ object NearMiss {
                 val missing = ladderRungs(goalValue, goalCount).filter { it !in present }
                 if (missing.size == 1) "¡Te faltó solo el peldaño ${missing.first()}!" else null
             }
+            LevelGoal.HARVEST -> {
+                val left = goalCount - stats.harvested
+                if (left in 1..(goalCount / 4).coerceAtLeast(1)) "¡Te faltaron solo $left fichas de $goalValue!" else null
+            }
             LevelGoal.COMBO -> if (stats.bestChain >= goalValue - 1 && stats.bestChain > 0) "¡Casi! Lograste un combo de ${stats.bestChain}" else null
         }
     }

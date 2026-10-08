@@ -85,12 +85,15 @@ internal fun LevelRuleChips(state: BoardState, modifier: Modifier = Modifier) {
     if (kind == LevelKind.ZEN && movesLeft == null && state.blocked.isEmpty()) return
 
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (kind != LevelKind.ZEN) KindPill(kind, if (kind == LevelKind.BOSS) (state.levelTitle ?: kind.label) else kind.label)
+        if (kind != LevelKind.ZEN) KindPill(kind, if (kind == LevelKind.BOSS) (state.levelTitle ?: kind.label) else state.kindLabel())
         if (movesLeft != null) MovesPill(movesLeft, state.moveLimit ?: movesLeft)
         if (state.blocked.isNotEmpty() && kind != LevelKind.STONES) {
             SmallPill(Icons.Rounded.Terrain, "${state.blocked.size}", LevelKind.STONES.accent())
         }
         if (state.twist != Twist.NONE) SmallPill(Icons.Rounded.SwapHoriz, state.twist.label, LevelKind.TWIST.accent())
+        if (kind == LevelKind.BOSS && state.phase2 != null) {
+            SmallPill(Icons.Rounded.SwapHoriz, if (state.phase >= 2) "Fase 2" else "Fase 1", LevelKind.BOSS.accent())
+        }
     }
 }
 
@@ -156,9 +159,9 @@ internal fun NewRuleDialog(state: BoardState, onStart: () -> Unit) {
         Box(Modifier.wobble(4f, 1700)) { KindBadge(kind, 84.dp) }
         Spacer(Modifier.height(10.dp))
         Text(if (kind == LevelKind.BOSS) "JEFE" else "NUEVA REGLA", fontSize = 11.sp, fontWeight = FontWeight.Black, color = c, letterSpacing = 3.sp)
-        Text(if (kind == LevelKind.BOSS) (state.levelTitle ?: kind.label) else kind.label, fontSize = 26.sp, fontWeight = FontWeight.Black, color = Navy, textAlign = TextAlign.Center)
+        Text(if (kind == LevelKind.BOSS) (state.levelTitle ?: kind.label) else state.kindLabel(), fontSize = 26.sp, fontWeight = FontWeight.Black, color = Navy, textAlign = TextAlign.Center)
         Spacer(Modifier.height(6.dp))
-        Text(kind.rule, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = InkSecondary, textAlign = TextAlign.Center)
+        Text(if (state.twist.isDeadEnd && kind == LevelKind.TWIST) "Una de las direcciones está prohibida" else kind.rule, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = InkSecondary, textAlign = TextAlign.Center)
         state.levelTip?.let {
             Spacer(Modifier.height(4.dp))
             Text(it, fontSize = 12.sp, color = InkTertiary, textAlign = TextAlign.Center)
@@ -177,6 +180,8 @@ internal fun NewRuleDialog(state: BoardState, onStart: () -> Unit) {
                 if (state.blocked.isNotEmpty() && state.storm == null) add(if (state.blocked.size == 1) "1 piedra" else "${state.blocked.size} piedras")
                 if (state.twist != Twist.NONE) add(state.twist.hint)
                 state.storm?.let { add("Cada ${it.everyMoves} mov. cae una piedra · dura ${it.lifeMoves}") }
+                if (spec.dropsPerMove > 1) add("${spec.dropsPerMove} fichas nuevas por jugada")
+                state.phase2?.let { add("Fase 2 a los ${it.atMoves} movimientos: cambian las reglas") }
             }
             if (rules.isNotEmpty()) Text(rules.joinToString("  ·  "), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = c.darker(0.7f))
             Text(LevelRules.threeStarHint(spec), fontSize = 11.sp, color = InkSecondary, textAlign = TextAlign.Center)
@@ -232,4 +237,10 @@ fun BoardMiniPreview(spec: com.korkoor.pardos.domain.level.LevelSpec, modifier: 
             }
         }
     }
+}
+
+/** Nombre del tipo de nivel que se enseña: los callejones se llaman así aunque sean del tipo "Del revés". */
+fun BoardState.kindLabel(): String = when {
+    levelKind == LevelKind.TWIST && twist.isDeadEnd -> "Callejón"
+    else -> levelKind?.label.orEmpty()
 }

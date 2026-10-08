@@ -180,7 +180,8 @@ fun GameScreen(
     val remoteTitle = when (viewModel.remoteRole) {
         RemoteRole.CREATOR -> "TU RETO"
         RemoteRole.CHALLENGED -> "EL RETO"
-        RemoteRole.NONE -> if (viewModel.dailyChallengeThemeIndex != null) "RETO DIARIO" else null
+        RemoteRole.NONE -> if (viewModel.towerActive) com.korkoor.pardos.domain.tower.TowerRules.floorLabel(viewModel.towerFloor)
+            else if (viewModel.dailyChallengeThemeIndex != null) "RETO DIARIO" else null
     }
 
     val shouldBlur = viewModel.showLevelSummary || state.isGameOver || showExitDialog || showThemeMenu
@@ -268,7 +269,8 @@ fun GameScreen(
                                             extraTimes = extraTimes,
                                             onExtraTime = { viewModel.useExtraTime() },
                                             titleOverride = remoteTitle,
-                                            winStreak = if (inCampaign) viewModel.winStreak else 0
+                                            winStreak = if (inCampaign) viewModel.winStreak else 0,
+                                            towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null
                                         )
                                     }
                                 }
@@ -398,7 +400,8 @@ fun GameScreen(
                                             extraTimes = extraTimes,
                                             onExtraTime = { viewModel.useExtraTime() },
                                             titleOverride = remoteTitle,
-                                            winStreak = if (inCampaign) viewModel.winStreak else 0
+                                            winStreak = if (inCampaign) viewModel.winStreak else 0,
+                                            towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null
                                         )
                                     }
 
@@ -467,6 +470,18 @@ fun GameScreen(
                 enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
                 exit = scaleOut() + fadeOut()
             ) {
+                if (viewModel.towerActive) {
+                    TowerSummaryOverlay(
+                        floor = viewModel.towerFloor,
+                        reward = viewModel.lastTowerReward,
+                        hearts = viewModel.towerHearts,
+                        best = viewModel.towerBest,
+                        runCoins = viewModel.towerRunCoins,
+                        autoNextMs = if (autoNextOn) 4000 else null,
+                        onNext = { viewModel.nextLevel() },
+                        onExit = { onBackToMenu() }
+                    )
+                } else {
                 val stats = viewModel.getBestStats(state.currentLevel)
                 LevelSummaryOverlay(
                     modeName = stringResource(state.gameMode.nameResId),
@@ -517,6 +532,7 @@ fun GameScreen(
                         context.startActivity(android.content.Intent.createChooser(send, null))
                     }
                 )
+                }
             }
 
             androidx.compose.animation.AnimatedVisibility(
@@ -548,7 +564,18 @@ fun GameScreen(
                 } else if (viewModel.loadingAdType == "REVIVE") {
                     AdLoadingOverlay(currentTheme)
                 }
-                else if (state.secondChanceUsed == false) {
+                else if (viewModel.towerActive && viewModel.towerHearts <= 0) {
+                    TowerEndOverlay(
+                        floor = viewModel.towerFloor,
+                        best = viewModel.towerBest,
+                        runCoins = viewModel.towerRunCoins,
+                        runGems = viewModel.towerRunGems,
+                        newRecord = viewModel.towerNewRecord,
+                        onRetry = { viewModel.retryLevel() },
+                        onExit = { onBackToMenu() }
+                    )
+                }
+                else if (state.secondChanceUsed == false && !viewModel.towerActive) {
                     SecondChanceOverlay(
                         onUseSecondChance = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -571,6 +598,7 @@ fun GameScreen(
                         stagesCleared = viewModel.raceStagesCleared,
                         coinsEarned = viewModel.lastCoinsEarned,
                         nearMiss = viewModel.nearMissMessage,
+                        footnote = if (viewModel.towerActive) "Pierdes un corazón · te quedan ${viewModel.towerHearts}" else null,
                         reason = state.gameOverReason()
                     )
                 }
@@ -580,6 +608,8 @@ fun GameScreen(
 
             // Ayuda adaptativa a la vista: "Te echamos una mano…" al empezar un nivel que se atascó
             AssistBanner(viewModel.assistMessage, Modifier.align(Alignment.TopCenter).padding(top = 92.dp))
+            PhaseBannerUi(viewModel.phaseBanner, Modifier.align(Alignment.Center))
+            BlockedHintUi(viewModel.blockedHint, Modifier.align(Alignment.TopCenter).padding(top = 150.dp))
 
             if (showRuleCard) {
                 NewRuleDialog(state) {

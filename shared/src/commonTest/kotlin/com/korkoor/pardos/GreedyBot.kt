@@ -35,6 +35,15 @@ object GreedyBot {
         storm: Storm? = null,
         /** Pares por movimiento que pide un nivel de combo (0 = no es combo): el bot los busca. */
         comboSize: Int = 0,
+        /** Valor de la ficha que se cosecha (0 = no es una cosecha). */
+        harvestValue: Int = 0,
+        /** Fichas nuevas por jugada (2 = doble caída). */
+        drops: Int = 1,
+        /** Direcciones permitidas (los callejones prohíben una). */
+        allowed: (Direction) -> Boolean = { true },
+        /** Segunda fase de un jefe y el reparto de fichas que trae (si lo cambia). */
+        phase: com.korkoor.pardos.domain.level.BossPhase? = null,
+        phaseSpawn: ((Random) -> Int)? = null,
         goalReached: (tiles: List<TileModel>, score: Int, stats: GoalStats) -> Boolean
     ): Run {
         val rng = Random(seed)
@@ -44,6 +53,10 @@ object GreedyBot {
         var engine = GameEngine(size, rng, curBlocked)
         var probe = GameEngine(size, Random(seed xor 0x9E3779B9L), curBlocked)
         var stats = GoalStats()
+        var curStorm = storm
+        var curAllowed = allowed
+        var curSpawn = spawn
+        var phased = false
         var tiles = startTiles.toList()
         if (tiles.isEmpty()) repeat(if (size >= 5) 4 else if (size == 4) 3 else 2) {
             engine.spawnTileWithSpecificValue(tiles, spawn(rng))?.let { t -> tiles = tiles + t }
@@ -51,9 +64,16 @@ object GreedyBot {
         var score = 0
         var moves = 0
         while (moves < maxMoves) {
+            if (phase != null && !phased && moves >= phase.atMoves) {
+                phased = true
+                phase.storm?.let { curStorm = it }
+                phase.twist?.let { tw -> curAllowed = tw::allows }
+                phaseSpawn?.let { curSpawn = it }
+            }
             var best: Pair<List<TileModel>, Int>? = null
             var bestValue = Double.NEGATIVE_INFINITY
             for (dir in Direction.entries) {
+                if (!curAllowed(dir)) continue
                 val (moved, gained) = engine.move(tiles, dir)
                 if (sameBoard(tiles, moved)) continue
                 // Dos jugadas: se promedia el mejor segundo movimiento tras unas cuantas apariciones posibles de un 2
@@ -70,13 +90,16 @@ object GreedyBot {
             val (moved, gained) = best ?: return Run(false, moves, score, tiles.maxOfOrNull { it.value } ?: 0)
             moves++
             score += gained
-            stats = stats.after((tiles.size - moved.size).coerceAtLeast(0), comboSize)
+            stats = stats.after(
+                (tiles.size - moved.size).coerceAtLeast(0), comboSize,
+                if (harvestValue > 0) moved.count { it.isMerged && it.value == harvestValue } else 0
+            )
             tiles = moved
             if (goalReached(tiles, score, stats)) return Run(true, moves, score, tiles.maxOf { it.value })
-            engine.spawnTileWithSpecificValue(tiles, spawn(rng))?.let { tiles = tiles + it }
+            repeat(drops) { engine.spawnTileWithSpecificValue(tiles, curSpawn(rng))?.let { tiles = tiles + it } }
             if (goalReached(tiles, score, stats)) return Run(true, moves, score, tiles.maxOf { it.value })
-            if (storm != null) {
-                stones = StormRules.step(storm, moves, stones, tiles, blocked, size, stormRng)
+            if (curStorm != null) {
+                stones = StormRules.step(curStorm!!, moves, stones, tiles, blocked, size, stormRng)
                 val now = StormRules.blockedNow(blocked, stones)
                 if (now != curBlocked) {
                     curBlocked = now

@@ -3,6 +3,8 @@ package com.korkoor.pardos.ui.design
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Grain
+import androidx.compose.material.icons.rounded.LooksTwo
 import androidx.compose.material.icons.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Stairs
@@ -40,6 +42,8 @@ fun LevelKind.accent(): Color = when (this) {
     LevelKind.COMBO -> Color(0xFFE0568B)
     LevelKind.TWIST -> Color(0xFF5C6BC0)
     LevelKind.STORM -> Color(0xFF3C8DAD)
+    LevelKind.HARVEST -> Color(0xFF7A9A3C)
+    LevelKind.DOUBLE -> Color(0xFFCC7A00)
 }
 
 fun LevelKind.symbol(): ImageVector = when (this) {
@@ -58,4 +62,6 @@ fun LevelKind.symbol(): ImageVector = when (this) {
     LevelKind.COMBO -> Icons.Rounded.Whatshot
     LevelKind.TWIST -> Icons.Rounded.SwapHoriz
     LevelKind.STORM -> Icons.Rounded.Cloud
+    LevelKind.HARVEST -> Icons.Rounded.Grain
+    LevelKind.DOUBLE -> Icons.Rounded.LooksTwo
 }

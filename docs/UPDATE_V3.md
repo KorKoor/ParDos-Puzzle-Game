@@ -343,3 +343,6 @@ Todo el juego comparte ahora un lenguaje propio en `ui/design/Jelly.kt`, `ToySwi
 
 ## Contenido de niveles para ~1 mes y medio
 6 tipos de nivel nuevos (Pesadas, Escalera, Del revés, Maratón, Tormenta, Combo), 4 giros de controles, tableros 6×6, jefes nuevos, más distribuciones de piedras y una dificultad que sigue subiendo hasta el nivel 2.400. Calendario de novedades, horas estimadas (~173 h) y cómo se probó en `docs/CONTENIDO_NIVELES.md`.
+
+## Más contenido: Cosecha, Doble caída, Callejones, jefes con 2 fases y Torre infinita
+Dos tipos de nivel más (17 en total), 4 callejones (una dirección prohibida), **jefes con segunda fase** (16 recetas), **Torre infinita** (pisos con corazones, cada 5 un jefe) y retos diarios en 3 semanas. Detalle y calendario en `docs/CONTENIDO_NIVELES.md`.

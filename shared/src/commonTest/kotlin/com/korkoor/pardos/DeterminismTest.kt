@@ -58,8 +58,11 @@ class DeterminismTest {
     @Test fun dailyChallengeHasADifferentRuleEachWeekdayAndIsPlayable() {
         val days = (20000..20400).map { DailyChallenge.forDay(it) }
         // el tipo de reto sigue al día de la semana
-        days.forEach { assertEquals(DailyChallenge.WEEK[DailyChallenge.weekday(it.day)], it.spec.kind) }
-        assertEquals(DailyChallenge.WEEK.toSet(), days.map { it.spec.kind }.toSet())
+        days.forEach { assertEquals(DailyChallenge.kindFor(it.day), it.spec.kind) }
+        assertEquals(DailyChallenge.WEEKS.flatten().toSet(), days.map { it.spec.kind }.toSet())
+        // los domingos siempre se descansa y cada semana trae retos distintos
+        assertTrue(DailyChallenge.WEEKS.all { it.last() == com.korkoor.pardos.domain.level.LevelKind.ZEN })
+        assertEquals(3, DailyChallenge.WEEKS.size)
         // el día 0 (1-1-1970) fue jueves
         assertEquals(3, DailyChallenge.weekday(0))
         // y todos los retos son válidos

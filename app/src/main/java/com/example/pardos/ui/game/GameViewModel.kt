@@ -203,13 +203,120 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var nearMissMessage by mutableStateOf<String?>(null)
         private set
     private var activeAssist = com.korkoor.pardos.domain.flow.AssistPolicy.forAttempts(0)
+
+    // --- Jefes: aviso de la fase 2 y reparto de fichas que trae; callejones: aviso de dirección bloqueada ---
+    data class PhaseBanner(val title: String, val id: Int)
+    var phaseBanner by mutableStateOf<PhaseBanner?>(null)
+        private set
+    private var phaseSpawn: SpawnStyle? = null
+    var blockedHint by mutableStateOf<String?>(null)
+        private set
+
+    private fun maybeStartPhase2(moves: Int) {
+        val s = _boardState.value
+        val ph = s.phase2 ?: return
+        if (s.phase >= 2 || moves < ph.atMoves) return
+        phaseSpawn = ph.spawn
+        _boardState.update { it.copy(phase = 2, twist = ph.twist ?: it.twist, storm = ph.storm ?: it.storm) }
+        val id = ++calloutSeq
+        phaseBanner = PhaseBanner(ph.title, id)
+        soundManager.playBetterPop(combo = 12)
+        viewModelScope.launch { delay(2400); if (phaseBanner?.id == id) phaseBanner = null }
+    }
     private val KEY_WIN_STREAK = "campaign_win_streak"
 
-    private fun isCampaignRun() = currentMode == GameMode.CLASICO && dailyChallengeThemeIndex == null
+    private fun isCampaignRun() = currentMode == GameMode.CLASICO && dailyChallengeThemeIndex == null && !towerActive
+
+    // --- TORRE INFINITA: pisos seguidos con corazones (ver domain/tower) ---
+    var towerActive by mutableStateOf(false)
+        private set
+    var towerFloor by mutableIntStateOf(1)
+        private set
+    var towerHearts by mutableIntStateOf(0)
+        private set
+    var towerBest by mutableIntStateOf(0)
+        private set
+    var towerRunCoins by mutableIntStateOf(0)
+        private set
+    var towerRunGems by mutableIntStateOf(0)
+        private set
+    var lastTowerReward by mutableStateOf<com.korkoor.pardos.domain.tower.TowerRules.FloorReward?>(null)
+        private set
+    var towerNewRecord by mutableStateOf(false)
+        private set
+    private var pendingTower = false
+    private var towerRecordAtStart = 0
+
+    /** Empieza una subida nueva: piso 1 con los corazones de salida. */
+    fun startTower() {
+        towerFloor = 1
+        towerHearts = com.korkoor.pardos.domain.tower.TowerRules.START_HEARTS
+        towerRunCoins = 0
+        towerRunGems = 0
+        towerNewRecord = false
+        towerRecordAtStart = towerBest
+        startTowerFloor()
+    }
+
+    private fun startTowerFloor() {
+        // El récord es el piso más alto al que has llegado (no hace falta haberlo superado)
+        if (towerFloor > towerBest) {
+            towerBest = towerFloor
+            prefs.edit().putInt("tower_best_floor", towerFloor).apply()
+        }
+        pendingTower = true
+        startCampaignLevel(com.korkoor.pardos.domain.tower.TowerRules.levelIdFor(towerFloor))
+    }
+
+    /** Solo para pruebas en el teléfono (builds de depuración): abre un piso y, si se pide, lo gana o lo pierde al instante. */
+    fun debugStartTower(floor: Int, hearts: Int, end: String?) {
+        towerFloor = floor
+        towerHearts = hearts
+        towerRunCoins = 0
+        towerRunGems = 0
+        towerNewRecord = false
+        towerRecordAtStart = 0
+        startTowerFloor()
+        if (end == null) return
+        viewModelScope.launch {
+            delay(1500)
+            when (end) {
+                "win" -> { isGameStarted = false; handleTowerFloorCleared() }
+                "lose" -> handleGameOver()
+            }
+        }
+    }
+
+    /** Piso superado: se cobra al momento (aunque luego te vayas) y se guarda el récord. */
+    private fun handleTowerFloorCleared() {
+        val floor = towerFloor
+        val reward = com.korkoor.pardos.domain.tower.TowerRules.rewardFor(floor)
+        economy.addCoins(reward.coins)
+        if (reward.gems > 0) economy.addGems(reward.gems)
+        towerRunCoins += reward.coins
+        towerRunGems += reward.gems
+        lastTowerReward = reward
+        _boardState.update { it.copy(isLevelCompleted = true, starsEarned = 3, isGameOver = false) }
+        missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
+        missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
+        retention.onGameFinished(won = true, dailyChallenge = false)
+        soundManager.playWin()
+        viewModelScope.launch {
+            delay(800)
+            showLevelSummary = true
+        }
+    }
 
     /** Derrota: cuenta el intento (para la ayuda), enfría la racha y prepara la frase del "casi". */
     private fun registerLoss() {
         val s = _boardState.value
+        if (towerActive && currentMode == GameMode.CLASICO) {
+            // En la torre perder cuesta un corazón (no cuenta como intento de la campaña ni enfría la racha)
+            towerHearts = (towerHearts - 1).coerceAtLeast(0)
+            towerNewRecord = towerHearts == 0 && towerFloor > towerRecordAtStart && towerFloor > 1
+            nearMissMessage = com.korkoor.pardos.domain.flow.NearMiss.message(s.goal, s.levelLimit, s.goalCount, s.tiles, s.score, s.goalStats, s.outOfMoves)
+            return
+        }
         val level = s.currentLevel
         prefs.edit().putInt("$KEY_ATTEMPTS$level", prefs.getInt("$KEY_ATTEMPTS$level", 0) + 1).apply()
         if (isCampaignRun()) {
@@ -230,7 +337,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val KEY_SAVED_SCORE = "saved_score_level"
     // Nueva llave para contar intentos fallidos
     private val KEY_ATTEMPTS = "attempts_fail_level_"
-    init { winStreak = prefs.getInt("campaign_win_streak", 0) }
+    init {
+        winStreak = prefs.getInt("campaign_win_streak", 0)
+        towerBest = prefs.getInt("tower_best_floor", 0)
+    }
 
     // 3. ESTADOS DE FLUJO
     private val _currentTimeProvider = MutableStateFlow(System.currentTimeMillis())
@@ -739,6 +849,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         timeLimitMs: Long? = null,
         spec: LevelSpec? = null
     ) {
+        // La torre solo se activa si la arranca startTowerFloor(); cualquier otro modo la apaga
+        towerActive = pendingTower
+        pendingTower = false
+
         // 1. LIMPIEZA TOTAL DE ESTADOS PREVIOS
         timerJob?.cancel()
         timerManager.stop()
@@ -791,6 +905,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         assistMessage = activeAssist.message
         nearMissMessage = null
+        phaseSpawn = null
+        phaseBanner = null
+        blockedHint = null
         flowStreak = 0
         flowCallout = null
         peakFlowTier = com.korkoor.pardos.domain.flow.FlowTier.CALM
@@ -822,6 +939,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 blocked = spec?.stones.orEmpty(),
                 goalStats = com.korkoor.pardos.domain.level.GoalStats(),
                 twist = spec?.twist ?: com.korkoor.pardos.domain.level.Twist.NONE,
+                phase2 = spec?.phase2,
+                phase = 1,
                 storm = spec?.storm,
                 stormStones = emptyList(),
                 moveLimit = spec?.moveLimit?.let { (it * assistFactor).toInt() },
@@ -852,6 +971,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (isMoving || state.isLevelCompleted || state.isGameOver) return
+
+        // Callejones: una dirección no se puede usar (se avisa y no se gasta jugada)
+        if (!state.twist.allows(direction)) {
+            val msg = "¡${state.twist.label}!"
+            blockedHint = msg
+            viewModelScope.launch { delay(900); if (blockedHint == msg) blockedHint = null }
+            return
+        }
 
         viewModelScope.launch {
             val currentState = _boardState.value
@@ -893,9 +1020,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 🎲 GENERACIÓN INTELIGENTE (Aparición normal)
                 val finalTiles = movedTiles.toMutableList()
-                val newValue = pickNewTileValue(currentState.levelLimit)
-                gameEngine.spawnTileWithSpecificValue(movedTiles, newValue, 1)?.let {
-                    finalTiles.add(it)
+                repeat(activeSpec?.dropsPerMove ?: 1) {
+                    val newValue = pickNewTileValue(currentState.levelLimit)
+                    gameEngine.spawnTileWithSpecificValue(finalTiles, newValue, 1)?.let { finalTiles.add(it) }
                 }
 
                 // ✨ EVOLUCIÓN ESPONTÁNEA (Solo 4, 8, 16 de vez en cuando)
@@ -925,7 +1052,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val newScore = currentState.score + scoreGained
-                val newStats = currentState.goalStats.after(mergesCount, if (currentState.goal == LevelGoal.COMBO) currentState.levelLimit else 0)
+                val harvested = if (currentState.goal == LevelGoal.HARVEST) movedTiles.count { it.isMerged && it.value == currentState.levelLimit } else 0
+                val newStats = currentState.goalStats.after(mergesCount, if (currentState.goal == LevelGoal.COMBO) currentState.levelLimit else 0, harvested)
                 val reachedTarget = LevelRules.isGoalReached(
                     currentState.goal, currentState.levelLimit, currentState.goalCount, finalTiles, newScore, newStats
                 )
@@ -959,6 +1087,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         goalStats = newStats, stormStones = stormStones, blocked = blockedNow
                     )
                 }
+                if (!reachedTarget) maybeStartPhase2(currentState.moveCount + 1)
 
                 if (currentState.gameMode == GameMode.CLASICO) {
                     prefs.edit().putInt(KEY_SAVED_SCORE, newScore).apply()
@@ -1125,6 +1254,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         timerJob?.cancel()
         timerManager.stop()
         stopTimer()
+
+        // Torre: sin estrellas ni progreso de campaña; solo el premio del piso
+        if (towerActive && currentMode == GameMode.CLASICO) {
+            handleTowerFloorCleared()
+            return
+        }
 
         // 🏆 VICTORIA: Limpiamos intentos fallidos
         val level = currentState.currentLevel
@@ -1323,6 +1458,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun getBestStats(level: Int): Pair<Int, Long> = levelStore.bestStats(currentMode, level)
 
     fun retryLevel() {
+        if (towerActive && currentMode == GameMode.CLASICO) {
+            showLevelSummary = false
+            isMoving = false
+            isGameStarted = false
+            timerJob?.cancel()
+            if (towerHearts <= 0) startTower() else startTowerFloor()
+            return
+        }
         if (currentMode == GameMode.DUELO) {
             isMoving = false
             isGameStarted = false
@@ -1405,6 +1548,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun nextLevel() {
+        if (towerActive && currentMode == GameMode.CLASICO) {
+            showLevelSummary = false
+            floatingScores.clear()
+            towerHearts = com.korkoor.pardos.domain.tower.TowerRules.heartsAfterClear(towerFloor, towerHearts)
+            towerFloor++
+            viewModelScope.launch {
+                delay(300)
+                startTowerFloor()
+            }
+            return
+        }
         val currentState = _boardState.value
         val nextLv = currentState.currentLevel + 1
 
@@ -1666,7 +1820,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val spec = activeSpec
         // En los niveles de campaña la escala (y el reparto de 2/4/8) la da el nivel; si no, la meta
         val scale = spec?.scaleTile ?: target
-        if (!accessibilitySpawnAssist) return SpawnRules.pick(spec?.spawn ?: SpawnStyle.NORMAL, scale, rng)
+        if (!accessibilitySpawnAssist) return SpawnRules.pick(phaseSpawn ?: spec?.spawn ?: SpawnStyle.NORMAL, scale, rng)
 
         val rand = rng.nextDouble()
         return when {
