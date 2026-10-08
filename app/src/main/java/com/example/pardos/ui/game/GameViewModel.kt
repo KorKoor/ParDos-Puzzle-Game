@@ -93,9 +93,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // 2. PREFERENCIAS
     private val prefs = application.getSharedPreferences("pardos_storage", Context.MODE_PRIVATE)
-    private val KEY_LAST_LEVEL = "last_reached_level"
-    private val KEY_TABLES_LEVEL = "last_reached_tables_level"
-    private val KEY_LAST_UNLOCKED = "last_unlocked_level"
+    private val levelStore = com.korkoor.pardos.data.local.LevelProgressStore(prefs)
+    private val KEY_TABLES_LEVEL = com.korkoor.pardos.data.local.LevelProgressStore.KEY_TABLES_LEVEL
+    private val KEY_LAST_UNLOCKED = com.korkoor.pardos.data.local.LevelProgressStore.KEY_LAST_UNLOCKED
     private val KEY_SAVED_SCORE = "saved_score_level"
     // Nueva llave para contar intentos fallidos
     private val KEY_ATTEMPTS = "attempts_fail_level_"
@@ -245,22 +245,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // 🔥 FIX: Función pública para recargar datos en el menú
     fun loadLevelsWithProgress() {
-        val baseLevels = LevelRepository.getGeneratedLevels()
-        val unlockedUntil = prefs.getInt(KEY_LAST_UNLOCKED, 1)
-
-        val updatedLevels = baseLevels.map { level ->
-            val stars = prefs.getInt("stars_level_${level.id}", 0)
-            val bestTime = prefs.getLong("best_time_level_${level.id}", 0L)
-            val bestMoves = prefs.getInt("best_moves_level_${level.id}", 0)
-
-            level.copy(
-                starsEarned = stars,
-                bestTime = bestTime,
-                bestMoves = bestMoves,
-                isLocked = level.id > unlockedUntil
-            )
-        }
-        _levels.value = updatedLevels
+        _levels.value = levelStore.loadCampaignLevels()
     }
 
     /**
@@ -813,74 +798,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun saveLevelProgress(level: Int, stars: Int, finalTime: Long, finalMoves: Int) {
-        val editor = prefs.edit()
-
-        val prefix = when (currentMode) {
-            GameMode.CLASICO -> ""
-            GameMode.TABLAS -> "tablas_"
-            GameMode.DESAFIO -> "daily_"
-            else -> "custom_"
-        }
-
-        val starKey = "${prefix}stars_level_$level"
-        val previousStars = prefs.getInt(starKey, 0)
-        if (stars > previousStars) {
-            editor.putInt(starKey, stars)
-        }
-
-        val timeKey = "${prefix}best_time_level_$level"
-        val prevTime = prefs.getLong(timeKey, Long.MAX_VALUE)
-        val validPrevTime = if (prevTime == 0L) Long.MAX_VALUE else prevTime
-
-        if (finalTime > 0 && finalTime < validPrevTime) {
-            editor.putLong(timeKey, finalTime)
-        }
-
-        val movesKey = "${prefix}best_moves_level_$level"
-        val prevMoves = prefs.getInt(movesKey, Int.MAX_VALUE)
-        val validPrevMoves = if (prevMoves == 0) Int.MAX_VALUE else prevMoves
-        if (finalMoves > 0 && finalMoves < validPrevMoves) {
-            editor.putInt(movesKey, finalMoves)
-        }
-
-        if (currentMode == GameMode.CLASICO) {
-            val nextLevelToUnlock = level + 1
-            val currentMaxUnlocked = prefs.getInt(KEY_LAST_UNLOCKED, 1)
-            val newMax = max(currentMaxUnlocked, nextLevelToUnlock)
-            editor.putInt(KEY_LAST_UNLOCKED, newMax)
-
-            val currentReached = prefs.getInt(KEY_LAST_LEVEL, 1)
-            val newReached = max(currentReached, nextLevelToUnlock)
-            editor.putInt(KEY_LAST_LEVEL, newReached)
-            editor.commit()
-        }
-        else if (currentMode == GameMode.TABLAS) {
-            val nextLevelToUnlock = level + 1
-            val currentTableLevel = prefs.getInt(KEY_TABLES_LEVEL, 1)
-            val newMax = max(currentTableLevel, nextLevelToUnlock)
-            editor.putInt(KEY_TABLES_LEVEL, newMax)
-            editor.commit()
-        }
-        else {
-            editor.apply()
-        }
-
-        if (currentMode == GameMode.CLASICO) {
-            loadLevelsWithProgress()
-        }
+        levelStore.recordResult(currentMode, level, stars, finalTime, finalMoves)
+        if (currentMode == GameMode.CLASICO) loadLevelsWithProgress()
     }
 
-    fun getBestStats(level: Int): Pair<Int, Long> {
-        val prefix = when (currentMode) {
-            GameMode.CLASICO -> ""
-            GameMode.TABLAS -> "tablas_"
-            GameMode.DESAFIO -> "daily_"
-            else -> "custom_"
-        }
-        val bMoves = prefs.getInt("${prefix}best_moves_level_$level", 0)
-        val bTime = prefs.getLong("${prefix}best_time_level_$level", 0L)
-        return Pair(bMoves, bTime)
-    }
+    fun getBestStats(level: Int): Pair<Int, Long> = levelStore.bestStats(currentMode, level)
 
     fun retryLevel() {
         val levelToRetry = _boardState.value.currentLevel
