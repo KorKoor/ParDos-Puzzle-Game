@@ -1,5 +1,7 @@
 package com.korkoor.pardos.domain.model
 
+import kotlin.math.log2
+
 
 /**
  * Estado inmutable del tablero de juego.
@@ -38,10 +40,15 @@ data class BoardState(
     val isActive: Boolean
         get() = !isGameOver && !isLevelCompleted && !isPaused
 
+    /**
+     * Avance hacia la meta en escala logarítmica: duplicar la ficha mayor siempre suma lo mismo
+     * (con 2 de 64 la barra no queda casi vacía como con una escala lineal).
+     */
     val levelProgress: Float
         get() {
-            val maxTileValue = tiles.maxOfOrNull { it.value } ?: 2
-            return (maxTileValue.toFloat() / levelLimit).coerceIn(0f, 1f)
+            val maxTileValue = tiles.maxOfOrNull { it.value } ?: return 0f
+            if (levelLimit <= 2 || maxTileValue <= 1) return 0f
+            return (log2(maxTileValue.toFloat()) / log2(levelLimit.toFloat())).coerceIn(0f, 1f)
         }
 
     val emptySpaces: Int

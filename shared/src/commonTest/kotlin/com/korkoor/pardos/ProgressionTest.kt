@@ -35,4 +35,13 @@ class ProgressionTest {
         assertEquals(180_000L, state.maxTime)
         assertEquals(180_000L, state.elapsedTime)
     }
+
+    @Test fun levelProgressIsLogarithmic() {
+        fun t(v: Int) = com.korkoor.pardos.domain.model.TileModel("x$v", v, 0, 0)
+        val base = BoardState(levelLimit = 64, boardSize = 4)
+        assertEquals(0f, base.levelProgress)
+        assertEquals(1f, base.copy(tiles = listOf(t(64))).levelProgress)
+        // 8 es la mitad del camino hacia 64 (2^3 de 2^6)
+        assertEquals(0.5f, base.copy(tiles = listOf(t(8))).levelProgress, 0.001f)
+    }
 }

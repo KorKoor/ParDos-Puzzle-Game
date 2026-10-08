@@ -1,5 +1,14 @@
 package com.korkoor.pardos.ui.game
 
+import com.korkoor.pardos.ui.design.*
+import androidx.compose.material.icons.rounded.SwipeRight
+import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.runtime.getValue
+import com.korkoor.pardos.ui.game.components.getTileColor
+import com.korkoor.pardos.ui.game.components.getTileTextColor
 import FloatingScore
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -82,38 +91,27 @@ internal fun GameHeader(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Surface(
-            shape = CircleShape,
-            color = currentTheme.accentColor.copy(alpha = 0.12f),
-            border = BorderStroke(0.5.dp, currentTheme.accentColor.copy(alpha = 0.3f)),
-            modifier = Modifier.padding(bottom = 2.dp)
-        ) {
-            Text(
-                text = currentTheme.name.uppercase(),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                fontSize = 7.sp,
-                fontWeight = FontWeight.Black,
-                color = currentTheme.mainTextColor,
-                letterSpacing = 1.5.sp
-            )
-        }
+        Text(
+            text = currentTheme.name.uppercase(),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            color = Navy.copy(alpha = 0.4f),
+            letterSpacing = 4.sp
+        )
 
-        Box(modifier = Modifier.scale(0.9f)) {
-            AnimatedLevelDisplay(
-                level = state.currentLevel,
-                textColor = currentTheme.mainTextColor,
-                modifier = Modifier.padding(bottom = 2.dp)
-            )
-        }
+        AnimatedLevelDisplay(
+            level = state.currentLevel,
+            textColor = currentTheme.mainTextColor
+        )
 
-        Box(modifier = Modifier.scale(0.85f)) {
-            ObjectiveCard(
-                targetPiece = state.levelLimit,
-                boardSize = state.boardSize,
-                backgroundColor = currentTheme.surfaceColor,
-                modifier = Modifier.padding(top = 0.dp)
-            )
-        }
+        Spacer(Modifier.height(6.dp))
+
+        ObjectiveCard(
+            targetPiece = state.levelLimit,
+            boardSize = state.boardSize,
+            progress = state.levelProgress,
+            theme = currentTheme
+        )
 
         if (state.maxTime != null) {
             Box(
@@ -322,36 +320,39 @@ internal fun GameFooter(
     state: BoardState,
     modifier: Modifier = Modifier
 ) {
+    // En modos con tiempo, el reloj grande ya está en el encabezado: aquí solo mostramos movimientos y puntos
+    val showClock = state.maxTime == null
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         StatCard(
-            icon = Icons.Default.Flag,
+            icon = Icons.Rounded.SwipeRight,
             value = state.moveCount.toString(),
             label = stringResource(R.string.moves_label),
-            color = Color(0xFF81B29A)
+            color = Sage,
+            modifier = Modifier.weight(1f)
         )
-
-        Box(modifier = Modifier.padding(horizontal = 8.dp)) {
-            TimerDisplay(
-                seconds = state.elapsedTime,
-                isLowTime = state.gameMode == GameMode.DESAFIO && state.elapsedTime in 1..10_000,
-                modifier = Modifier.scale(0.85f)
-            )
-        }
-
-        if (state.score > 0) {
+        if (showClock) {
             StatCard(
-                icon = Icons.Default.Flag,
-                value = state.score.toString(),
-                label = stringResource(R.string.points_label),
-                color = Color(0xFFE07A5F)
+                icon = Icons.Rounded.Timer,
+                value = state.elapsedTime.formatTime(),
+                label = stringResource(R.string.time_label),
+                color = GemBlue,
+                modifier = Modifier.weight(1f),
+                animateValue = false
             )
         }
+        StatCard(
+            icon = Icons.Rounded.Star,
+            value = state.score.toString(),
+            label = stringResource(R.string.points_label),
+            color = Gold,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -372,9 +373,10 @@ internal fun AnimatedLevelDisplay(
         Text(
             text = stringResource(R.string.level_label, targetLevel),
             modifier = modifier,
-            fontSize = 42.sp,
+            fontSize = 34.sp,
             fontWeight = FontWeight.Black,
-            color = Color(0xFF3D405B)
+            color = Navy,
+            letterSpacing = 1.sp
         )
     }
 }
@@ -383,31 +385,77 @@ internal fun AnimatedLevelDisplay(
 internal fun ObjectiveCard(
     targetPiece: Int,
     boardSize: Int,
-    modifier: Modifier = Modifier,
-    backgroundColor: Color
+    progress: Float,
+    theme: GameTheme,
+    modifier: Modifier = Modifier
 ) {
+    // La barra usa escala logarítmica: duplicar la ficha mayor siempre se siente como un avance parejo
+    val animated by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 120f),
+        label = "ObjectiveProgress"
+    )
     Surface(
         modifier = modifier,
-        color = Color(0xFF3D405B).copy(alpha = 0.05f),
-        shape = MaterialTheme.shapes.medium
+        color = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 4.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            modifier = Modifier.padding(start = 10.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Flag,
-                contentDescription = stringResource(R.string.objective_title),
-                modifier = Modifier.size(18.dp),
-                tint = Color(0xFFE07A5F)
-            )
-            Spacer(Modifier.width(6.dp))
+            // Mini ficha con la meta
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(getTileColor(targetPiece, theme)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(0f to Color.White.copy(alpha = 0.30f), 0.5f to Color.Transparent)
+                    )
+                )
+                Text(
+                    text = "$targetPiece",
+                    fontSize = if (targetPiece >= 1000) 12.sp else 15.sp,
+                    fontWeight = FontWeight.Black,
+                    color = getTileTextColor(targetPiece)
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = stringResource(R.string.objective_title).uppercase(),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Navy.copy(alpha = 0.45f),
+                    letterSpacing = 2.sp
+                )
+                Spacer(Modifier.height(5.dp))
+                Box(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(Navy.copy(alpha = 0.08f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(animated.coerceAtLeast(0.03f))
+                            .background(Brush.horizontalGradient(listOf(SageLight, Gold)), CircleShape)
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
             Text(
-                text = stringResource(R.string.goal_label, targetPiece, boardSize),
+                text = "${boardSize}×$boardSize",
                 fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF3D405B).copy(alpha = 0.7f),
-                letterSpacing = 0.5.sp
+                fontWeight = FontWeight.Black,
+                color = Navy.copy(alpha = 0.55f)
             )
         }
     }
@@ -419,32 +467,40 @@ internal fun StatCard(
     value: String,
     label: String,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    animateValue: Boolean = true
 ) {
-    Column(
+    Surface(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        color = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 4.dp
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(15.dp)
-            )
-            Spacer(Modifier.width(6.dp))
-            BouncingText(
-                text = value,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF3D405B)
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(5.dp))
+                if (animateValue) {
+                    BouncingText(text = value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
+                } else {
+                    Text(text = value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
+                }
+            }
+            Text(
+                text = label.uppercase(),
+                fontSize = 9.sp,
+                color = Navy.copy(alpha = 0.45f),
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.5.sp
             )
         }
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            color = Color(0xFF3D405B).copy(alpha = 0.5f),
-            fontWeight = FontWeight.Medium
-        )
     }
 }
