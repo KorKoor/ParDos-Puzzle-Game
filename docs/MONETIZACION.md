@@ -80,8 +80,17 @@ La oferta de la tienda y la del menú son **la misma y no cambian a mitad del d�
 
 ## 4. Cómo probar
 - Depuración: anuncios de prueba de Google; las ofertas y los topes diarios se guardan en `pardos_ads` (SharedPreferences).
-- Forzar que toque un intersticial: borrar `pardos_ads` (`adb shell run-as com.korkoor.pardos.debug rm shared_prefs/pardos_ads.xml`) pone la antigüedad a 0 → hay que esperar 20 min; para probarlo ya, bajar temporalmente `AdPolicy.MIN_INSTALL_AGE_MS`.
+- Forzar que toque un intersticial: con la app cerrada, dejar `shared_prefs/pardos_ads.xml` con `first_seen` muy antiguo y `wins_since_ad` en 3 (`adb push` a /data/local/tmp y `run-as … cp`), abrir un nivel de campaña ≥ 8 (`--ei debug_level 12`) y ganarlo (`adb shell am broadcast -a com.korkoor.pardos.DEBUG --es do win -p com.korkoor.pardos.debug`; en niveles de "x2" hay que mandarlo dos veces).
 - Formulario de consentimiento (UE): añadir `ConsentDebugSettings` con `DEBUG_GEOGRAPHY_EEA` y el ID del dispositivo (el SDK lo imprime en logcat).
+
+### Lista de comprobación en el teléfono (lo último que se añadió sin poder probarlo en el aparato)
+Se probó en el teléfono: resumen de victoria con DUPLICAR MONEDAS, intersticial tras SIGUIENTE, segunda oportunidad, gemas gratis de la tienda, carta extra de cofres (también con 5 cartas), ficha gratis, impulso del pase, tarjeta del menú, Ajustes → Privacidad, botón de silencio y estrellas en vivo. **Falta mirar** (solo se comprobó que compila y pasa las pruebas):
+1. **Regalo diario**: tras RECLAMAR aparece "DUPLICAR EL REGALO" y, al verlo, suma el mismo premio otra vez (una vez al día).
+2. **Deshacer con anuncio**: sin "Deshacer" en la mochila, tras una jugada el orbe de DESHACER muestra ▶ (corona con VIP); funciona 2 veces por nivel y no aparece en duelo ni en carrera.
+3. **Sonidos nuevos**: "ya casi" al acercarse a la meta, Limpiar (barrido + sacudida), Fusión manual (nota), corazón perdido en la Torre, tocar un nivel bloqueado, cambiar de pestaña, subir de nivel.
+4. **Récord personal**: repetir un nivel con menos jugadas enseña "★ ¡NUEVO RÉCORD!" en el resumen.
+5. **Oferta del día**: la de la tienda y la del menú son la misma; al comprar esa skin, la tarjeta del menú cambia a otra cosa y la oferta no se cambia por otra skin.
+6. **Reseña de Play**: solo sale en la versión instalada desde Play, tras una victoria con 3 estrellas en racha de 3 (o un jefe), con nivel ≥ 12 y ≥ 2 días de instalada.
 
 ## 5. Ideas para después (no hechas)
 - Pase "sin anuncios" más barato que el VIP (solo quita intersticiales).
