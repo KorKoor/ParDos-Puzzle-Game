@@ -109,7 +109,7 @@ internal class Prestige(
             albumComplete = CollectibleCatalog.isAlbumComplete(owned), campaignLevel = best, campaignStars = stars,
             towerBest = s.int("tower_best"), playerLevel = ret.playerLevel, bestWinStreak = s.int("pm_best_win_streak"),
             bestDayStreak = maxOf(ret.bestStreak, ret.streak), bossesDefeated = s.int("pm_bosses"),
-            kindsWon = s.strSet("pm_kinds").size, dailyDone = s.int("pm_daily"), friends = 0, flowPeaks = s.int("pm_flow"),
+            kindsWon = s.strSet("pm_kinds").size, dailyDone = s.int("pm_daily"), friends = s.strSet("friend_ids").size, flowPeaks = s.int("pm_flow"),
             platinum = platinum
         )
     }

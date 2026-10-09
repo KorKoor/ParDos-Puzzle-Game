@@ -429,4 +429,30 @@ class MetaSessionTest {
         val broken = code.dropLast(3) + "xyz"
         fails(b.importBackup(broken))
     }
+
+    @Test fun friendCardsRoundTripRankAndUpdateInPlace() {
+        val a = fresh()
+        a.setProfileName("Luna")
+        a.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 1000, maxTile = 64, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0)
+        val codeA = a.friendCode()
+        assertTrue(codeA.startsWith("PF1-"))
+        val b = fresh()
+        b.setProfileName("Sol")
+        ok(b.addFriend("Mira mi tarjeta: $codeA gracias"))
+        fails(b.addFriend(b.friendCode()))
+        fails(b.addFriend("PF1-AAAAAAAA-1-1-1-1-1-1-1-1-1-X-00"))
+        fails(b.addFriend("nada"))
+        val list = jsonObject(b.friendsJson())
+        assertEquals(1, list.int("count"))
+        assertEquals(2, list.list("rows").size)
+        assertTrue(list.list("rows").any { (it as Map<*, *>)["name"] == "Luna" })
+        // la misma persona con una tarjeta nueva reemplaza la anterior
+        a.onWin(level = 2, daily = false, stars = 3, moves = 10, timeMs = 1000, maxTile = 64, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0)
+        val again = ok(b.addFriend(a.friendCode()))
+        assertEquals(true, again["updated"])
+        assertEquals(1, jsonObject(b.friendsJson()).int("count"))
+        val friendId = (jsonObject(b.friendsJson()).list("rows").first { (it as Map<*, *>)["me"] == false } as Map<*, *>)["id"] as String
+        ok(b.removeFriend(friendId))
+        assertEquals(0, jsonObject(b.friendsJson()).int("count"))
+    }
 }

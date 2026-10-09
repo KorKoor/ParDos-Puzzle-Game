@@ -4,6 +4,7 @@ import SwiftUI
 struct HomeView: View {
     @EnvironmentObject var model: AppModel
     @State private var now = Date()
+    @State private var askSkip = false
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -39,6 +40,18 @@ struct HomeView: View {
             .padding(.bottom, 20)
         }
         .onReceive(timer) { value in now = value }
+        .alert(isPresented: $askSkip) {
+            let cost = model.state?.freeChest.skipCost ?? 1
+            return Alert(
+                title: Text("Cofre gratis"),
+                message: Text("Faltan " + formatClock(ms: model.freeChestRemaining(now: now)) + ". Puedes esperar o saltar la espera por " + String(cost) + (cost == 1 ? " gema." : " gemas.")),
+                primaryButton: .default(Text("Saltar · " + String(cost) + " \u{1F48E}")) {
+                    model.skipChestWithGems()
+                    model.claimFreeChest()
+                },
+                secondaryButton: .cancel(Text("Esperar"))
+            )
+        }
     }
 
     // MARK: Perfil
@@ -206,7 +219,7 @@ struct HomeView: View {
                         title: "Cofre gratis", detail: chestReady ? "¡Listo!" : formatClock(ms: remaining), hot: chestReady,
                         icon: AnyView(ChestIcon(type: state?.freeChest.type ?? "COMMON", size: 40))
                     ) {
-                        if chestReady { model.claimFreeChest() } else { model.showToast("Falta \(formatClock(ms: remaining)) para el próximo cofre") }
+                        if chestReady { model.claimFreeChest() } else { askSkip = true }
                     }
                     TodayTile(
                         title: "Ruleta", detail: freeSpins > 0 ? "1 giro gratis" : "Vuelve mañana", hot: freeSpins > 0,

@@ -780,6 +780,71 @@ class MetaSession {
         }
     }
 
+    // ------------------------------------------------------------------ amigos sin cuenta (tarjetas)
+
+    private fun playerId(): String {
+        if (!store.has("player_id")) store.setStr("player_id", com.korkoor.pardos.domain.social.FriendCode.generate())
+        return store.str("player_id")
+    }
+
+    private fun myCard() = com.korkoor.pardos.domain.social.FriendCard(
+        playerId(), profileName, wallet.avatarId, wallet.bannerId, ret.playerLevel, prestige.score(unlockedLevel),
+        totalStars, col.owned.size, store.int("tower_best"), ret.league.ordinal, clock.today
+    )
+
+    /** Tu tarjeta de amigo, lista para compartir. */
+    fun friendCode(): String = com.korkoor.pardos.domain.social.FriendCards.encode(myCard())
+
+    fun friendInviteText(): String = com.korkoor.pardos.domain.social.FriendCards.inviteText(friendCode())
+
+    /** Agrega (o actualiza) a un amigo a partir de su tarjeta pegada. */
+    fun addFriend(text: String): String {
+        val card = com.korkoor.pardos.domain.social.FriendCards.decode(text) ?: return no("No encontré una tarjeta de amigo válida")
+        if (card.id == playerId()) return no("Esa es tu propia tarjeta")
+        val ids = store.strSet("friend_ids")
+        val known = card.id in ids
+        if (!known && ids.size >= com.korkoor.pardos.domain.social.FriendCards.MAX_FRIENDS) return no("Ya tienes 100 amigos")
+        store.addToStrSet("friend_ids", card.id)
+        store.setStr("friend_" + card.id, com.korkoor.pardos.domain.social.FriendCards.encode(card))
+        afterChange()
+        return ok("name" to card.name, "updated" to known)
+    }
+
+    fun removeFriend(id: String): String {
+        store.setStrSet("friend_ids", store.strSet("friend_ids") - id)
+        store.remove("friend_$id")
+        return ok()
+    }
+
+    /** Lista de amigos ordenada por prestigio, contigo dentro, y los rivales de arriba y de abajo. */
+    fun friendsJson(): String {
+        val me = myCard()
+        val cards = store.strSet("friend_ids").mapNotNull { id ->
+            com.korkoor.pardos.domain.social.FriendCards.decode(store.str("friend_$id"))
+        }
+        val myEntry = com.korkoor.pardos.domain.prestige.RankEntry(me.id, me.name, me.prestige, isMe = true)
+        val others = cards.map { com.korkoor.pardos.domain.prestige.RankEntry(it.id, it.name, it.prestige) }
+        val (sorted, rivalry) = com.korkoor.pardos.domain.prestige.Rivals.rank(myEntry, others)
+        val byId = (cards + me).associateBy { it.id }
+        val leagues = com.korkoor.pardos.domain.retention.League.entries
+        val rows = sorted.mapIndexedNotNull { index, entry ->
+            val c = byId[entry.uid] ?: return@mapIndexedNotNull null
+            robj(
+                "id" to c.id, "name" to c.name, "avatar" to c.avatar, "banner" to c.banner, "level" to c.level,
+                "prestige" to c.prestige, "stars" to c.stars, "pieces" to c.pieces, "tower" to c.tower,
+                "league" to leagues[c.league.coerceIn(0, leagues.size - 1)].displayName,
+                "daysAgo" to (clock.today - c.day).coerceAtLeast(0), "me" to (c.id == me.id), "position" to index + 1
+            )
+        }
+        return obj(
+            "rows" to rows, "count" to cards.size, "max" to com.korkoor.pardos.domain.social.FriendCards.MAX_FRIENDS,
+            "position" to rivalry.position,
+            "above" to rivalry.above?.let { Raw(obj("name" to it.name, "gap" to rivalry.gapToAbove)) },
+            "below" to rivalry.below?.let { Raw(obj("name" to it.name, "gap" to rivalry.gapToBelow)) },
+            "code" to friendCode()
+        )
+    }
+
     // ------------------------------------------------------------------ Studio (tu propia skin)
 
     private fun studioConfigFrom(finish: String, hue: Int, hue2: Int, tone: String, background: String, particles: String) =

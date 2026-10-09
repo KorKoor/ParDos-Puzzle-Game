@@ -93,6 +93,8 @@ struct RootView: View {
             RemoteSheet()
         case .backup:
             BackupSheet()
+        case .friends:
+            FriendsSheet()
         }
     }
 }

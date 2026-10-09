@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Pregunta (después de la primera victoria) si quiere avisos, explicando qué se le va a avisar.
 struct NotifPrimerView: View {
@@ -63,6 +64,7 @@ extension AppModel {
             if let list = decodeJSON([ReminderInfo].self, self.meta.reminders()) {
                 Notifier.shared.schedule(list)
             }
+            UIApplication.shared.applicationIconBadgeNumber = self.state?.badges ?? 0
         }
     }
 

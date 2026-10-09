@@ -17,6 +17,7 @@ Crear en App Store Connect → *Monetización → Compras dentro de la app*, con
 | `gems_huge` | Tesoro | Consumible | $49.99 | 3.600 gemas (primera compra x2) |
 | `gems_vault` | Bóveda | Consumible | $99.99 | 8.000 gemas (primera compra x2) |
 | `starter_pack` | Pack inicial | No consumible | $2.99 | 300 gemas, 3 cofres raros, skin Cerezo, efecto Corazones |
+| `skin_studio` | Studio: diseña tu skin | No consumible | $3.99 | editor de fichas: acabado, colores, fondo y partículas |
 | `season_pass` | Pase premium | Consumible (cada temporada) | $4.99 | vía premium del pase del mes |
 | `vip_forever` | VIP para siempre | No consumible | $6.99 | +20 % monedas, 5 gemas diarias |
 | `piggy_break` | Romper la hucha | Consumible | $2.99 | las gemas guardadas en la hucha |
@@ -29,8 +30,13 @@ Crear en App Store Connect → *Monetización → Compras dentro de la app*, con
 - **Los mismos IDs que en Google Play** para los cinco packs que ya existen, así el perfil en la nube sigue valiendo.
 - Los importes son referencia en dólares; la tienda real mostrará el precio local que devuelve StoreKit.
 
+## StoreKit
+
+`iosApp/ParDos/StoreManager.swift` ya usa StoreKit 2: pide los productos de arriba, cobra, entrega y muestra el precio en la moneda local. Si la App Store no devuelve productos (el `.ipa` de Sideloadly), la app cae sola a las compras de prueba. Hay botón «Restaurar compras» en la tienda.
+
 ## Estado de la versión de prueba
 
-El `.ipa` que se instala con Sideloadly **no tiene StoreKit**: los botones de precio "compran" gratis para poder ver la tienda
-llena. Para cobrar de verdad hace falta una cuenta de desarrollador de pago, crear estos productos y conectar StoreKit 2
-(la lógica de entrega ya está en `MetaSession.testBuyProduct`: se cambia por la confirmación de la tienda).
+El `.ipa` que se instala con Sideloadly **no puede cobrar** (una cuenta gratuita no tiene compras dentro de la app): los botones de
+precio "compran" gratis para poder ver la tienda llena. Para cobrar de verdad hace falta una cuenta de desarrollador de pago y crear
+estos productos en App Store Connect; el código de StoreKit 2 ya está
+(la entrega ya está conectada: `MetaSession.testBuyProduct` se llama cuando StoreKit confirma el pago).

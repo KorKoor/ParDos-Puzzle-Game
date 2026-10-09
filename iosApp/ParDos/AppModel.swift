@@ -47,6 +47,7 @@ enum Sheet: Identifiable {
     case studio
     case remote
     case backup
+    case friends
 
     var id: String {
         switch self {
@@ -64,6 +65,7 @@ enum Sheet: Identifiable {
         case .studio: return "studio"
         case .remote: return "remote"
         case .backup: return "backup"
+        case .friends: return "friends"
         }
     }
 }
@@ -376,6 +378,7 @@ final class AppModel: ObservableObject {
 
     /// Al volver a la app (otro día) se vuelve a mirar la racha y el regalo.
     func appBecameActive() {
+        UIApplication.shared.applicationIconBadgeNumber = 0
         if localDay() != lastDailyDay {
             refreshDaily()
             openToday()
@@ -385,6 +388,14 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Avisos
+
+    /// Pasa de una hoja a otra (primero se cierra la actual para que iOS no se confunda).
+    func switchSheet(_ next: Sheet) {
+        sheet = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+            self?.sheet = next
+        }
+    }
 
     func dismissCelebration() {
         if !queue.isEmpty { queue.removeFirst() }

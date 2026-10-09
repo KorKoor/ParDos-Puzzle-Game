@@ -56,6 +56,12 @@ class ContractDumpTest {
         dump("prestigeEvents", m.takePrestigeEvents())
         dump("reminders", m.reminders())
         dump("runs", m.recentRuns())
+        val friend = MetaSession()
+        friend.tick(day, day * 86_400_000L, 600)
+        friend.setProfileName("Sol")
+        m.addFriend(friend.friendCode())
+        dump("friends", m.friendsJson())
+        dump("friendAdd", m.addFriend(friend.friendCode()))
         dump("tables", m.tablesInfo())
         val seed = m.remoteNewSeed()
         val created = jsonObject(m.remoteFinishCreator(seed, 321, "Luna"))
@@ -78,6 +84,34 @@ class ContractDumpTest {
         dump("openComeback", m3.openApp())
         m3.tick(day + 40, (day + 40) * 86_400_000L, 600)
         dump("openComeback2", m3.openApp())
+
+        // racha perdida por poco: ofrece recuperarla
+        val m4 = MetaSession()
+        m4.tick(day, day * 86_400_000L, 600)
+        for (i in 0 until 5) { m4.tick(day + i, (day + i) * 86_400_000L, 600); m4.openApp() }
+        m4.tick(day + 7, (day + 7) * 86_400_000L, 600)
+        dump("openRepair", m4.openApp())
+        dump("stateRepair", m4.state())
+
+        // fiesta de Halloween activa (eventos, skin de evento, voz de temporada)
+        val halloween = com.korkoor.pardos.domain.retention.Civil.toEpochDay(2026, 10, 28)
+        val m5 = MetaSession()
+        m5.tick(halloween, halloween * 86_400_000L, 700)
+        m5.openApp()
+        m5.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 1000, maxTile = 64, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 2)
+        dump("stateHalloween", m5.state())
+        dump("remindersHalloween", m5.reminders())
+
+        // liga: una semana buena y cierre de semana
+        val m6 = MetaSession()
+        m6.tick(day, day * 86_400_000L, 600)
+        m6.openApp()
+        for (n in 1..10) m6.onWin(level = n, daily = false, stars = 3, moves = 10, timeMs = 1000, maxTile = 64, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0)
+        m6.tick(day + 8, (day + 8) * 86_400_000L, 600)
+        m6.openApp()
+        dump("stateLeague", m6.state())
+        dump("prestigeLate", m6.prestigeState())
+        dump("achListLate", m6.achievementsList())
 
         val g = GameSession(5L)
         g.tutorialEnabled = true

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Imagen 3D de la carpeta de recursos (los mismos iconos que en Android).
 struct SpriteImage: View {
@@ -38,7 +39,7 @@ struct SeasonBackdrop: View {
     private let names = ["ico_pumpkin", "ico_ghost", "ico_bat", "ico_candy", "ico_skull", "ico_lollipop"]
 
     var body: some View {
-        if Theme.halloween {
+        if Theme.halloween && !UIAccessibility.isReduceMotionEnabled {
             TimelineView(.animation) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
@@ -90,7 +91,7 @@ struct HalloweenGarland: View {
     ]
 
     var body: some View {
-        if Theme.halloween {
+        if Theme.halloween && !UIAccessibility.isReduceMotionEnabled {
             TimelineView(.animation) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
@@ -136,6 +137,14 @@ struct ConfettiView: View {
     ]
 
     var body: some View {
+        if UIAccessibility.isReduceMotionEnabled {
+            EmptyView()
+        } else {
+            animated
+        }
+    }
+
+    private var animated: some View {
         TimelineView(.animation) { timeline in
             Canvas { context, size in
                 let t = timeline.date.timeIntervalSinceReferenceDate

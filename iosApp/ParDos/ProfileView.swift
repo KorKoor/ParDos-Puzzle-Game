@@ -108,9 +108,15 @@ struct ProfileView: View {
     // MARK: Logros y prestigio
 
     private func progressButtons(_ state: MetaState) -> some View {
-        HStack(spacing: 10) {
-            bigTile("trophy.fill", Theme.gold, "Logros", "82 por conseguir") { model.sheet = .achievements }
-            bigTile("crown.fill", Color(hex: 0x8E6BD6), "Prestigio", "\(state.rank) · \(state.prestige) pts") { model.sheet = .prestige }
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                bigTile("trophy.fill", Theme.gold, "Logros", "82 por conseguir") { model.sheet = .achievements }
+                bigTile("crown.fill", Color(hex: 0x8E6BD6), "Prestigio", "\(state.rank) · \(state.prestige) pts") { model.sheet = .prestige }
+            }
+            HStack(spacing: 10) {
+                bigTile("person.2.fill", Theme.energy, "Amigos", "Ranking con tarjetas") { model.sheet = .friends }
+                bigTile("chart.bar.fill", Color(hex: 0x4E8FA6), "Récords", "Tus mejores marcas") { model.sheet = .records }
+            }
         }
     }
 

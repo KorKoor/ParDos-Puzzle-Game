@@ -30,7 +30,7 @@ MAPPING = {
     "assist": "AssistInfo", "towerStart": "TowerInfo", "towerNext": "TowerInfo", "towerWin": "TowerWinInfo", "towerLose": "TowerLossInfo",
     "raceStage": "RaceStageInfo", "raceFinish": "RaceEndInfo", "duelConfig": "DuelConfigInfo", "duelResult": "DuelResultInfo",
     "records": "RecordsInfo", "achCheck": "AchCheckResult", "achList": "AchListData", "prestige": "PrestigeData",
-    "prestigeEvents": "[PrestigeEventInfo]", "reminders": "[ReminderInfo]", "runs": "[RunInfo]", "tables": "TablesInfo", "remoteCreate": "RemoteCreateInfo", "remoteDecode": "RemoteChallengeInfo", "remoteChallenged": "RemoteResultInfo", "remoteHistory": "RemoteHistoryData", "studioState": "StudioStateData", "studioPreview": "SkinItem",
+    "prestigeEvents": "[PrestigeEventInfo]", "reminders": "[ReminderInfo]", "runs": "[RunInfo]", "friends": "FriendsData", "friendAdd": "FriendAddResult", "openRepair": "OpenAppResult", "stateRepair": "MetaState", "stateHalloween": "MetaState", "remindersHalloween": "[ReminderInfo]", "stateLeague": "MetaState", "prestigeLate": "PrestigeData", "achListLate": "AchListData", "tables": "TablesInfo", "remoteCreate": "RemoteCreateInfo", "remoteDecode": "RemoteChallengeInfo", "remoteChallenged": "RemoteResultInfo", "remoteHistory": "RemoteHistoryData", "studioState": "StudioStateData", "studioPreview": "SkinItem",
 }
 
 

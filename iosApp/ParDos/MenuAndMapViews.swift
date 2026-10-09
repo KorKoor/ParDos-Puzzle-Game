@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Mapa de niveles
 
@@ -371,7 +372,7 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
             VStack(spacing: 0) {
-                Button(action: { model.sheet = .backup }) {
+                Button(action: { model.switchSheet(.backup) }) {
                     HStack(spacing: 12) {
                         Image(systemName: "externaldrive.fill").frame(width: 24).foregroundColor(Theme.accent)
                         Text("Copia de seguridad").font(.system(size: 16, weight: .bold, design: .rounded)).foregroundColor(Theme.ink)

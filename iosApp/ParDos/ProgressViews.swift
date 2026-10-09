@@ -280,7 +280,7 @@ struct PrestigeSheet: View {
                     .font(.system(size: 16, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
                 Spacer()
-                Button(action: { model.sheet = .achievements }) {
+                Button(action: { model.switchSheet(.achievements) }) {
                     Text("Ver logros")
                         .font(.system(size: 12, weight: .heavy))
                         .foregroundColor(Theme.accent)

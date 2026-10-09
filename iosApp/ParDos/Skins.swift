@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Cómo se ven las fichas y el fondo de la partida con la skin que lleva puesta el jugador (los mismos datos que en Android).
 struct BoardStyle {
@@ -91,7 +92,7 @@ struct ParticlesView: View {
     let tint: Color
 
     var body: some View {
-        if kind == "NONE" {
+        if kind == "NONE" || UIAccessibility.isReduceMotionEnabled {
             EmptyView()
         } else {
             TimelineView(.animation) { timeline in
