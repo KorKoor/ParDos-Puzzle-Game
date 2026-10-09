@@ -183,7 +183,25 @@ struct GameView: View {
 // MARK: - Meta, reglas y marcadores
 
 struct GoalCard: View {
+    @EnvironmentObject var model: AppModel
     let snap: BoardSnap
+
+    /// Los peldaños de una escalera (por ejemplo 16-32-64-128), sacados del texto de la meta.
+    private var rungs: [Int] {
+        if snap.kind != "LADDER" { return [] }
+        var out: [Int] = []
+        var current = ""
+        for ch in snap.goal {
+            if ch.isNumber {
+                current.append(ch)
+            } else {
+                if let n = Int(current), n > 1 { out.append(n) }
+                current = ""
+            }
+        }
+        if let n = Int(current), n > 1 { out.append(n) }
+        return out
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -205,6 +223,19 @@ struct GoalCard: View {
                 }
             }
             .frame(height: 8)
+            if !rungs.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(0..<rungs.count, id: \.self) { i in
+                        let have = snap.tiles.contains(where: { $0.v == rungs[i] })
+                        Text("\(rungs[i])")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .foregroundColor(have ? model.boardStyle.text(rungs[i]) : Theme.ink.opacity(0.4))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(have ? model.boardStyle.fill(rungs[i]) : Theme.ink.opacity(0.07)))
+                    }
+                }
+            }
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))

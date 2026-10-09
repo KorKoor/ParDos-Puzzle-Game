@@ -9,6 +9,9 @@ struct MainShell: View {
             ZStack(alignment: .top) {
                 tabContent
                 HalloweenGarland()
+                if model.state == nil {
+                    StateErrorCard()
+                }
             }
             TabBarView()
         }
@@ -86,5 +89,45 @@ struct TabBarView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+/// Si por algún motivo no se puede leer el progreso, en vez de dejar la pantalla vacía se explica y se puede reintentar.
+struct StateErrorCard: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 36))
+                .foregroundColor(Theme.energy)
+            Text("No pude leer tu progreso")
+                .font(.system(size: 18, weight: .black, design: .rounded))
+                .foregroundColor(Theme.ink)
+            Text("Prueba otra vez. Si sigue igual, abre Ajustes → Diagnóstico y mándame lo que dice.")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(Theme.ink.opacity(0.6))
+                .multilineTextAlignment(.center)
+            HStack(spacing: 10) {
+                Button(action: { model.refreshState() }) {
+                    Text("Reintentar")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(Capsule().fill(Theme.accent))
+                }
+                Button(action: { model.sheet = .settings }) {
+                    Text("Ajustes")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(Capsule().fill(Color.white))
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: 320)
+        .card(radius: 24)
+        .padding(.top, 120)
     }
 }

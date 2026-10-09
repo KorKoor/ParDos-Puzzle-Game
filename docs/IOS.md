@@ -22,7 +22,8 @@ misiones, pase, liga, logros, prestigio). Los dos tienen pruebas en Windows y ha
 | Perfil | 150 avatares y 60 banners (se componen con emojis y degradados), títulos, 82 logros, prestigio (8 rangos, ~75 hitos, Platino), récords |
 | Ambiente | Noche de brujas en octubre, partículas y fondos de cada skin, efectos de fusión, sonidos y música, vibración, avisos del teléfono (notificaciones locales) |
 | Más | copia de seguridad en texto (importante con Sideloadly), VoiceOver, avisos del teléfono, StoreKit 2 listo para la App Store, iPad, segunda oportunidad con gemas, perfil inicial, novedades |
-| No está | amigos, ranking e intercambios en línea (necesitan Firebase/Google), anuncios, inglés |
+| Amigos | **sin cuenta**: compartes una tarjeta (código `PF1-…`) por WhatsApp, quien la pega te agrega y se arma un ranking por prestigio con rival de arriba y de abajo |
+| No está | amigos/ranking/intercambios en línea con Firebase y Google (necesitan decidir cómo conectar iOS al mismo proyecto), anuncios, inglés |
 
 Es una **versión de prueba**: sirve para sentir el juego y la economía en iPhone, no para publicar.
 

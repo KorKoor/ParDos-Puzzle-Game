@@ -5,28 +5,75 @@ struct AlbumView: View {
     @EnvironmentObject var model: AppModel
     @State private var selected: String?
 
+    @State private var onlyMissing = false
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 14) {
-                header
-                if let album = model.album {
-                    summary(album)
-                    if !album.perks.isEmpty { perks(album) }
-                    sellRow(album)
-                    ForEach(model.albumCatalog.series) { series in
-                        SeriesSection(series: series, album: album) { id in selected = id }
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 14) {
+                    header
+                    if let album = model.album {
+                        summary(album)
+                        if !album.perks.isEmpty { perks(album) }
+                        sellRow(album)
+                        controls(proxy)
+                        ForEach(model.albumCatalog.series) { series in
+                            if !onlyMissing || !isComplete(series, album) {
+                                SeriesSection(series: series, album: album) { id in selected = id }
+                                    .id(series.id)
+                            }
+                        }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 26)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 26)
-            .padding(.bottom, 24)
         }
         .sheet(item: Binding(get: { selected.map { PieceKey(id: $0) } }, set: { selected = $0?.id })) { key in
             PieceDetail(pieceID: key.id)
                 .environmentObject(model)
         }
         .onAppear { model.refreshState() }
+    }
+
+    private func isComplete(_ series: AlbumSeries, _ album: AlbumStateData) -> Bool {
+        let list = model.albumCatalog.pieces.filter { $0.series == series.id }
+        return list.allSatisfy { (album.copies[$0.id] ?? 0) > 0 }
+    }
+
+    private func controls(_ proxy: ScrollViewProxy) -> some View {
+        HStack(spacing: 10) {
+            Menu {
+                ForEach(model.albumCatalog.series) { series in
+                    Button(series.glyph + " " + series.name) {
+                        withAnimation { proxy.scrollTo(series.id, anchor: .top) }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "list.bullet")
+                    Text("Ir a una serie")
+                }
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(Theme.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(Color.white))
+            }
+            Button(action: { onlyMissing.toggle() }) {
+                HStack(spacing: 4) {
+                    Image(systemName: onlyMissing ? "checkmark.circle.fill" : "circle")
+                    Text("Solo las que me faltan")
+                }
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(onlyMissing ? .white : Theme.ink)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(onlyMissing ? Theme.accent : Color.white))
+            }
+            Spacer()
+        }
     }
 
     private var header: some View {
