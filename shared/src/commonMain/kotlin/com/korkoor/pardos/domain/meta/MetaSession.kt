@@ -185,7 +185,7 @@ class MetaSession {
             "chapterChest" to chapterChest,
             "newSkins" to bonus.newSkins.map { it.id },
             "teaser" to teaser?.let { Raw(obj("level" to it.nextLevel, "title" to it.title, "boss" to it.isBoss, "toChest" to it.levelsToChest)) },
-            "nextGoal" to ret.nextGoal()?.let { Raw(obj("title" to it.title, "detail" to it.detail, "progress" to it.progress.toDouble())) }
+            "nextGoal" to ret.nextGoal()?.let { Raw(obj("title" to it.title, "detail" to it.detail, "progress" to it.progress.toDouble(), "kind" to it.kind.name)) }
         )
     }
 
@@ -198,7 +198,7 @@ class MetaSession {
         ret.updateMission(MissionType.REACH_BLOCK, maxTile)
         ret.onTileReached(maxTile)
         ret.addWeekly(com.korkoor.pardos.domain.retention.WeeklyType.MERGE_PAIRS, merges)
-        return ok("winStreak" to store.int("win_streak"), "nextGoal" to ret.nextGoal()?.let { Raw(obj("title" to it.title, "detail" to it.detail, "progress" to it.progress.toDouble())) })
+        return ok("winStreak" to store.int("win_streak"), "nextGoal" to ret.nextGoal()?.let { Raw(obj("title" to it.title, "detail" to it.detail, "progress" to it.progress.toDouble(), "kind" to it.kind.name)) })
     }
 
     // ------------------------------------------------------------------ al abrir la app
@@ -237,7 +237,7 @@ class MetaSession {
     }
 
     fun wheelSlices(): String = arr(DailyWheel.slices.map {
-        obj("kind" to it.kind.name, "amount" to it.amount, "chest" to it.chest?.name, "label" to it.label, "weight" to it.weight)
+        robj("kind" to it.kind.name, "amount" to it.amount, "chest" to it.chest?.name, "label" to it.label, "weight" to it.weight)
     })
 
     // ------------------------------------------------------------------ cofres y álbum
@@ -554,7 +554,7 @@ class MetaSession {
     /** Paquetes de gemas con su bono, para enseñar en la tienda (la versión de prueba no cobra). */
     fun gemPacks(): String = arr(com.korkoor.pardos.domain.shop.ShopCatalog.products
         .filter { it.kind == com.korkoor.pardos.domain.shop.ProductKind.GEMS }
-        .map { obj("id" to it.id, "gems" to it.gems, "usdCents" to it.usdCents, "bonus" to GemPacks.bonusPercent(it), "first" to !store.bool("purchased_${it.id}")) })
+        .map { robj("id" to it.id, "gems" to it.gems, "usdCents" to it.usdCents, "bonus" to GemPacks.bonusPercent(it), "first" to !store.bool("purchased_${it.id}")) })
 
     /** Simula la compra de un pack de gemas (versión de prueba, sin cobro). */
     fun testBuyGemPack(id: String): String {

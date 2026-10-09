@@ -73,7 +73,10 @@ jobs:
 
       - name: Pruebas de la sesión de juego y del motor (las mismas que en Android)
         continue-on-error: true   # un fallo de pruebas no impide probar el .ipa; se ve en el resumen
-        run: bash ./gradlew :shared:testDebugUnitTest --tests "*GameSessionTest" --tests "*GameEngine*" --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
+        run: bash ./gradlew :shared:testDebugUnitTest --tests "*GameSessionTest" --tests "*MetaSessionTest" --tests "*ContractDumpTest" --tests "*GameEngine*" --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
+
+      - name: Comprobar que Swift puede leer lo que entrega Kotlin (si no, la app saldría vacía)
+        run: python3 iosApp/tools/check_swift_contract.py
 
       - name: Compilar la lógica del juego para iPhone (Kotlin → Shared.xcframework)
         run: bash ./gradlew :shared:assembleSharedReleaseXCFramework --no-daemon -Dorg.gradle.jvmargs=-Xmx4g

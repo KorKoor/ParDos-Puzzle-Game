@@ -29,6 +29,12 @@ class MetaSessionTest {
         assertEquals(32, album.list("series").size)
         jsonObject(m.economyInfo())
         jsonArray(m.gemPacks())
+        // cada elemento de una lista tiene que ser un objeto (no un texto con JSON dentro)
+        listOf(m.skinCatalog(), m.fxCatalog(), m.avatarCatalog(), m.bannerCatalog(), m.seasonTiers(), m.wheelSlices(), m.gemPacks()).forEach { json ->
+            assertTrue(jsonArray(json).all { it is Map<*, *> }, "los elementos deben ser objetos: ${json.take(80)}")
+        }
+        assertTrue(album.list("pieces").all { it is Map<*, *> })
+        assertTrue(album.list("series").all { it is Map<*, *> })
     }
 
     @Test fun freshStateHasEveryKeyTheSwiftAppReads() {

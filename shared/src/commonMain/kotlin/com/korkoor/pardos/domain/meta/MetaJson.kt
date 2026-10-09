@@ -6,6 +6,9 @@ internal class Raw(val json: String)
 internal fun obj(vararg pairs: Pair<String, Any?>): String =
     pairs.joinToString(",", "{", "}") { (k, v) -> "\"$k\":${jvalue(v)}" }
 
+/** Objeto JSON ya armado, para meterlo dentro de listas sin que se vuelva a escapar como texto. */
+internal fun robj(vararg pairs: Pair<String, Any?>): Raw = Raw(obj(*pairs))
+
 internal fun arr(items: Iterable<Any?>): String = items.joinToString(",", "[", "]") { jvalue(it) }
 
 internal fun jvalue(v: Any?): String = when (v) {

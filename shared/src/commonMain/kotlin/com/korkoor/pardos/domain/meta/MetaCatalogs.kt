@@ -19,7 +19,7 @@ internal object MetaCatalogs {
 
     fun skins(): String = arr(TileSkin.entries.map { skin ->
         val st = skin.style
-        obj(
+        robj(
             "id" to skin.id, "name" to skin.displayName, "rarity" to skin.rarity.name, "source" to skin.source.name,
             "coin" to skin.coinPrice, "gem" to skin.gemPrice, "exclusive" to skin.exclusive, "free" to skin.isFree,
             "finish" to st.finish.name, "palette" to argbList(st.tilePalette),
@@ -33,14 +33,14 @@ internal object MetaCatalogs {
     })
 
     fun fx(): String = arr(MergeFx.entries.map {
-        obj(
+        robj(
             "id" to it.id, "name" to it.displayName, "blurb" to it.blurb, "rarity" to it.rarity.name,
             "coin" to it.coinPrice, "gem" to it.gemPrice, "source" to it.source.name, "buyable" to it.buyable
         )
     })
 
     fun avatars(): String = arr(Avatars.all.map {
-        obj(
+        robj(
             "id" to it.id, "name" to it.name, "source" to it.source.name, "coin" to it.coinPrice,
             "animal" to it.animal?.name, "accessory" to it.accessory.name, "variant" to it.variant.name,
             "scene" to it.scene.name, "frame" to it.frame.name, "rarity" to it.rarity.name,
@@ -49,7 +49,7 @@ internal object MetaCatalogs {
     })
 
     fun banners(): String = arr(Banners.all.map {
-        obj(
+        robj(
             "id" to it.id, "name" to it.name, "source" to it.source.name, "pattern" to it.pattern.name,
             "top" to rgb(it.top), "bottom" to rgb(it.bottom), "accent" to rgb(it.accent), "ink" to rgb(it.ink),
             "coin" to it.coinPrice, "gem" to it.gemPrice, "rarity" to it.rarity.name, "rank" to it.unlockRank?.name,
@@ -59,14 +59,14 @@ internal object MetaCatalogs {
 
     fun album(): String {
         val series = Series.entries.map {
-            obj(
+            robj(
                 "id" to it.id, "name" to it.nameEs, "glyph" to it.glyph, "top" to rgb(it.top), "bottom" to rgb(it.bottom),
                 "accent" to rgb(it.accent), "motif" to it.motif.name, "perk" to it.perk.name, "perkLabel" to it.perk.labelEs,
                 "coins" to it.rewardCoins, "gems" to it.rewardGems
             )
         }
         val pieces = CollectibleCatalog.all.map { c ->
-            obj(
+            robj(
                 "id" to c.id, "series" to c.series.id, "rarity" to c.rarity.name, "glyph" to c.glyph, "name" to c.nameEs,
                 "desc" to c.descEs, "n" to c.number,
                 "perk" to c.perk?.let { it.label(false) }, "foilPerk" to c.perk?.let { it.label(true) },
@@ -83,7 +83,7 @@ internal object MetaCatalogs {
 
     /** Los 30 niveles del pase de la temporada [seasonId], con la vía gratis y la premium. */
     fun seasonTiers(seasonId: Int): String = arr((1..SeasonPass.TIERS).map { t ->
-        obj("tier" to t, "free" to rewardJson(SeasonPass.freeReward(t, seasonId)), "premium" to rewardJson(SeasonPass.premiumReward(t, seasonId)))
+        robj("tier" to t, "free" to rewardJson(SeasonPass.freeReward(t, seasonId)), "premium" to rewardJson(SeasonPass.premiumReward(t, seasonId)))
     })
 
     fun economy(): String = obj(
