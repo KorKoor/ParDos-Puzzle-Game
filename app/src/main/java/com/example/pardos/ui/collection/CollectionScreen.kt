@@ -885,11 +885,15 @@ private fun OpeningDialog(opening: Opening, onDone: () -> Unit) {
     var revealed by remember { mutableIntStateOf(0) }
     val haptic = LocalHapticFeedback.current
     LaunchedEffect(Unit) {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CHEST_SHAKE)
+        kotlinx.coroutines.delay(500L)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CHEST_OPEN)
         for (i in 1..drops.size) {
             val rarity = drops[i - 1].collectible.rarity
             // Suspense: las piezas buenas se hacen esperar un poco más
             kotlinx.coroutines.delay(if (rarity.ordinal >= Rarity.EPIC.ordinal) 950L else 550L)
             revealed = i
+            com.korkoor.pardos.audio.GameAudio.card(rarity.ordinal, drops[i - 1].isNew)
             haptic.performHapticFeedback(if (rarity.ordinal >= Rarity.RARE.ordinal) HapticFeedbackType.LongPress else HapticFeedbackType.TextHandleMove)
         }
     }

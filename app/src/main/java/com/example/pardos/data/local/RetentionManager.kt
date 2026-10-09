@@ -142,6 +142,7 @@ class RetentionManager(context: Context) {
         val count = prefs.getInt(K_CHEST_COUNT, 0)
         val type = FreeChest.typeFor(count)
         collection.addChests(type, 1)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.GIFT)
         _freeChestLast.value = now
         prefs.edit().putLong(K_CHEST_LAST, now).putInt(K_CHEST_COUNT, count + 1).apply()
         addSeasonPoints(SeasonPoints.FREE_CHEST)
@@ -260,6 +261,9 @@ class RetentionManager(context: Context) {
         _seasonClaimed.value = updated
         prefs.edit().putStringSet(K_SEASON_CLAIMED, updated).apply()
         grant(reward)
+        // lo especial (cofre, skin, avatar, banner, efecto) suena más grande que una moneda más
+        val special = reward.chest != null || reward.skin != null || reward.avatar != 0 || reward.banner != 0 || reward.fx != null
+        com.korkoor.pardos.audio.GameAudio.play(if (special) com.korkoor.pardos.audio.Sfx.REWARD_BIG else com.korkoor.pardos.audio.Sfx.SEASON_TIER)
         bump()
         return reward
     }
@@ -319,6 +323,7 @@ class RetentionManager(context: Context) {
         economy.addCoins(item.mission.coins)
         collection.addTokens(com.korkoor.pardos.domain.collection.TokenRules.WEEKLY_MISSION)
         addSeasonPoints(SeasonPoints.WEEKLY_MISSION)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MISSION_DONE)
         bump()
         return item.mission
     }
@@ -332,6 +337,7 @@ class RetentionManager(context: Context) {
         prefs.edit().putBoolean("wk_${week()}_bonus", true).apply()
         collection.addChests(WeeklyMissions.completionChest, 1)
         economy.addGems(WeeklyMissions.COMPLETION_GEMS)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REWARD_BIG)
         bump()
         return true
     }
@@ -403,10 +409,12 @@ class RetentionManager(context: Context) {
 
     /** Se llama al cobrar una misión diaria. [allClaimed] = ya cobró las tres. Devuelve true si hubo bonus del día. */
     fun onDailyMissionClaimed(allClaimed: Boolean): Boolean {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MISSION_DONE)
         addSeasonPoints(SeasonPoints.DAILY_MISSION)
         if (allClaimed && prefs.getInt(K_ALL_MISSIONS_DAY, -1) != today()) {
             prefs.edit().putInt(K_ALL_MISSIONS_DAY, today()).apply()
             collection.addChests(ChestType.COMMON, 1)
+            com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.REWARD_BIG, 350)
             collection.addTokens(com.korkoor.pardos.domain.collection.TokenRules.ALL_DAILY_MISSIONS)
             economy.addGems(Economy.DAILY_MISSIONS_BONUS_GEMS)
             addSeasonPoints(SeasonPoints.ALL_DAILY_MISSIONS)
@@ -496,6 +504,7 @@ class RetentionManager(context: Context) {
         economy.addGems(gems)
         _piggy.value = 0
         prefs.edit().putInt(K_PIGGY, 0).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.PIGGY)
         bump()
         return gems
     }

@@ -95,7 +95,11 @@ fun WheelScreen(onBack: () -> Unit) {
         if (spinning) {
             var last = (rotation.value / (360f / slices.size)).toInt()
             snapshotFlow { (rotation.value / (360f / slices.size)).toInt() }.collect { n ->
-                if (n != last) { last = n; haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove) }
+                if (n != last) {
+                    last = n
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                    com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.WHEEL_TICK, 1f, 0.92f + 0.16f * ((n % 5) / 4f))
+                }
             }
         }
     }
@@ -118,6 +122,11 @@ fun WheelScreen(onBack: () -> Unit) {
             while (target < now + 360f * 5) target += 360f
             rotation.animateTo(target, tween(4800, easing = CubicBezierEasing(0.12f, 0.62f, 0.08f, 1f)))
             retention.applyWheelPrize(slices[idx])
+            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.WHEEL_STOP)
+            when (slices[idx].kind) {
+                com.korkoor.pardos.domain.retention.WheelKind.CHEST, com.korkoor.pardos.domain.retention.WheelKind.GEMS -> com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.WHEEL_WIN, 220)
+                else -> com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.COINS, 220)
+            }
             prize = slices[idx]
             prizeCount++
             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)

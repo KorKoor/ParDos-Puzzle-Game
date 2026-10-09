@@ -170,7 +170,23 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
     drawOval(l.shirt, Offset(10f, 82f), Size(80f, 44f))
     drawOval(Color.White.copy(alpha = 0.18f), Offset(22f, 84f), Size(30f, 10f))
 
-    // ---- orejas y partes que van detrás de la cabeza
+    drawBackA(a, l)
+    drawBackB(a, l)
+    drawFrogEyes(a, l)
+    drawHead(a, l)
+    drawMarksA(a, l)
+    drawMarksB(a, l)
+    // ---- mejillas
+    drawCircle(Color(0xFFFF8FA3).copy(alpha = 0.5f), 5.6f, Offset(27f, 68f)); drawCircle(Color(0xFFFF8FA3).copy(alpha = 0.5f), 5.6f, Offset(73f, 68f))
+    drawEyes(a, l, blink)
+    drawMouthA(a, l)
+    drawMouthB(a, l)
+    drawUnicornHorn(a)
+    drawAccessoryA(def.accessory, l)
+    drawAccessoryB(def.accessory, l)
+}
+
+private fun DrawScope.drawBackA(a: AnimalKind, l: Look) {
     val earInk = l.dark
     when (a) {
         AnimalKind.FOX -> {
@@ -261,6 +277,13 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
                 Offset(17f, 52f), Offset(85f, 58f), Offset(17f, 68f)
             ).forEach { drawCircle(l.light, 13f, it); drawCircle(l.dark.copy(alpha = 0.06f), 13f, it, style = Stroke(1.2f)) }
         }
+        else -> Unit
+    }
+}
+
+private fun DrawScope.drawBackB(a: AnimalKind, l: Look) {
+    val earInk = l.dark
+    when (a) {
         AnimalKind.HEDGEHOG -> {
             val p = Path()
             for (i in 0..20) {
@@ -368,13 +391,18 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
             }
         }
         AnimalKind.FROG, AnimalKind.PENGUIN, AnimalKind.CHICK -> Unit
+        else -> Unit
     }
+}
+
+private fun DrawScope.drawFrogEyes(a: AnimalKind, l: Look) {
     if (a == AnimalKind.FROG) {
         // ojos saltones por encima de la cabeza
         drawCircle(l.head, 13f, Offset(33f, 35f)); drawCircle(l.head, 13f, Offset(67f, 35f))
     }
+}
 
-    // ---- cabeza
+private fun DrawScope.drawHead(a: AnimalKind, l: Look) {
     val headRect = Offset(17f, 29f)
     val headSize = Size(66f, 58f)
     val headBrush = Brush.verticalGradient(listOf(lerp(l.head, Color.White, 0.18f), l.head, lerp(l.head, l.dark, 0.12f)), 29f, 87f)
@@ -400,7 +428,9 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
     drawOval(Color.White.copy(alpha = 0.22f), Offset(27f, 32f), Size(26f, 11f))
     drawOval(l.dark.copy(alpha = 0.07f), Offset(26f, 78f), Size(48f, 11f))
 
-    // ---- marcas por animal (bajo los ojos)
+}
+
+private fun DrawScope.drawMarksA(a: AnimalKind, l: Look) {
     when (a) {
         AnimalKind.FOX -> {
             drawOval(l.light, Offset(14f, 58f), Size(40f, 28f)); drawOval(l.light, Offset(46f, 58f), Size(40f, 28f))
@@ -445,6 +475,12 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
             tri(Offset(17f, 56f), Offset(7f, 67f), Offset(23f, 73f), l.light); tri(Offset(83f, 56f), Offset(93f, 67f), Offset(77f, 73f), l.light)
             drawOval(l.light, Offset(33f, 60f), Size(34f, 27f))
         }
+        else -> Unit
+    }
+}
+
+private fun DrawScope.drawMarksB(a: AnimalKind, l: Look) {
+    when (a) {
         AnimalKind.SHEEP -> {
             drawCircle(l.light, 7.5f, Offset(41f, 32f)); drawCircle(l.light, 8f, Offset(52f, 30f)); drawCircle(l.light, 7f, Offset(61f, 33f))
         }
@@ -491,12 +527,11 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
             listOf(Offset(27f, 42f), Offset(73f, 44f), Offset(35f, 36f)).forEach { drawCircle(lerp(l.head, l.dark, 0.28f), 3.2f, it) }
         }
         AnimalKind.PHOENIX -> drawOval(l.light, Offset(30f, 56f), Size(40f, 31f))
+        else -> Unit
     }
+}
 
-    // ---- mejillas
-    drawCircle(Color(0xFFFF8FA3).copy(alpha = 0.5f), 5.6f, Offset(27f, 68f)); drawCircle(Color(0xFFFF8FA3).copy(alpha = 0.5f), 5.6f, Offset(73f, 68f))
-
-    // ---- ojos
+private fun DrawScope.drawEyes(a: AnimalKind, l: Look, blink: Boolean) {
     val ink = Color(0xFF2B2B3A)
     fun eye(cx: Float, cy: Float, r: Float, white: Boolean = false) {
         if (white) { drawCircle(Color.White, r * 1.7f, Offset(cx, cy)); drawCircle(ink.copy(alpha = 0.25f), r * 1.7f, Offset(cx, cy), style = Stroke(1.2f)) }
@@ -538,11 +573,10 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
         else -> { eye(37f, 57f, 4.4f); eye(63f, 57f, 4.4f) }
     }
 
-    // ---- nariz y boca
-    fun smile(cx: Float, cy: Float, w: Float, color: Color = l.dark) {
-        drawArc(color, 15f, 150f, false, Offset(cx - w, cy - 3f), Size(w, 7f), style = Stroke(1.9f, cap = StrokeCap.Round))
-        drawArc(color, 15f, 150f, false, Offset(cx, cy - 3f), Size(w, 7f), style = Stroke(1.9f, cap = StrokeCap.Round))
-    }
+}
+
+private fun DrawScope.drawMouthA(a: AnimalKind, l: Look) {
+    fun smile(cx: Float, cy: Float, w: Float, color: Color = l.dark) = smileAt(l, cx, cy, w, color)
     when (a) {
         AnimalKind.FOX, AnimalKind.RACCOON -> { drawOval(Color(0xFF2B2B3A), Offset(45f, 62f), Size(10f, 7.5f)); smile(50f, 71f, 5.5f, Color(0xFF2B2B3A)) }
         AnimalKind.CAT -> { drawOval(l.inner, Offset(46.5f, 63f), Size(7f, 5.5f)); smile(50f, 70f, 5.5f) ; for (s in listOf(-1f, 1f)) for (k in 0..2) drawLine(l.dark.copy(alpha = 0.5f), Offset(50f + s * 15f, 66f + k * 3f), Offset(50f + s * 30f, 62f + k * 6f), strokeWidth = 1.2f, cap = StrokeCap.Round) }
@@ -560,6 +594,13 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
         AnimalKind.TIGER -> { tri(Offset(44f, 62f), Offset(56f, 62f), Offset(50f, 69f), Color(0xFFE5576B)); smile(50f, 72f, 6f); for (sd in listOf(-1f, 1f)) for (k in 0..1) drawLine(l.dark.copy(alpha = 0.45f), Offset(50f + sd * 14f, 68f + k * 3f), Offset(50f + sd * 28f, 65f + k * 6f), strokeWidth = 1.2f, cap = StrokeCap.Round) }
         AnimalKind.LION -> { tri(Offset(44f, 62f), Offset(56f, 62f), Offset(50f, 69f), Color(0xFF5C3A21)); smile(50f, 72f, 6f) }
         AnimalKind.WOLF -> { drawOval(Color(0xFF2B2B3A), Offset(44.5f, 62f), Size(11f, 7.5f)); smile(50f, 73f, 5.5f, Color(0xFF2B2B3A)) }
+        else -> Unit
+    }
+}
+
+private fun DrawScope.drawMouthB(a: AnimalKind, l: Look) {
+    fun smile(cx: Float, cy: Float, w: Float, color: Color = l.dark) = smileAt(l, cx, cy, w, color)
+    when (a) {
         AnimalKind.SHEEP -> { drawOval(l.dark, Offset(46f, 63f), Size(8f, 5.5f)); smile(50f, 70f, 4.5f) }
         AnimalKind.HEDGEHOG -> { drawCircle(Color(0xFF2B2B3A), 4.2f, Offset(50f, 66f)); drawCircle(Color.White.copy(alpha = 0.5f), 1.2f, Offset(48.6f, 64.8f)); smile(50f, 74f, 4f) }
         AnimalKind.PIG -> smile(50f, 77f, 5f)
@@ -598,15 +639,19 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
             tri(Offset(43f, 62f), Offset(57f, 62f), Offset(50f, 76f), Color(0xFFFFB02E)); drawLine(Color(0xFFB87510), Offset(44f, 65f), Offset(56f, 65f), strokeWidth = 1.3f, cap = StrokeCap.Round)
         }
         AnimalKind.TURTLE -> { drawCircle(l.dark.copy(alpha = 0.7f), 1.5f, Offset(46f, 67f)); drawCircle(l.dark.copy(alpha = 0.7f), 1.5f, Offset(54f, 67f)); smile(50f, 73f, 7f) }
+        else -> Unit
     }
-    // cuerno del unicornio (delante de la cabeza)
+}
+
+private fun DrawScope.drawUnicornHorn(a: AnimalKind) {
     if (a == AnimalKind.UNICORN) {
         tri(Offset(43f, 34f), Offset(50f, 2f), Offset(57f, 34f), Color(0xFFFFD36E))
         listOf(12f, 20f, 27f).forEach { y -> drawLine(Color(0xFFE0A93B), Offset(46.5f + (y - 12f) * 0.1f, y + 2f), Offset(53.5f - (y - 12f) * 0.1f, y - 2f), strokeWidth = 1.8f) }
     }
+}
 
-    // ---- accesorios
-    when (def.accessory) {
+private fun DrawScope.drawAccessoryA(acc: Accessory, l: Look) {
+    when (acc) {
         Accessory.NONE -> Unit
         Accessory.CROWN -> {
             val crown = Path().apply { moveTo(33f, 29f); lineTo(30f, 12f); lineTo(41f, 21f); lineTo(50f, 8f); lineTo(59f, 21f); lineTo(70f, 12f); lineTo(67f, 29f); close() }
@@ -672,6 +717,12 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
                 drawCircle(cols[i % cols.size], 4.6f, Offset(fx, fy)); drawCircle(Color(0xFFFFD34A), 1.7f, Offset(fx, fy))
             }
         }
+        else -> Unit
+    }
+}
+
+private fun DrawScope.drawAccessoryB(acc: Accessory, l: Look) {
+    when (acc) {
         Accessory.WITCH -> {
             drawOval(Color(0xFF2D1B4E), Offset(11f, 30f), Size(78f, 15f))
             val cone = Path().apply { moveTo(27f, 36f); quadraticTo(42f, 22f, 52f, 3f); quadraticTo(66f, 6f, 73f, 36f); close() }
@@ -749,7 +800,13 @@ private fun DrawScope.drawAvatar(def: AvatarDef, blink: Boolean, time: Float = 0
             }
             drawCircle(Color(0xFFFFD34A), 3.4f, c)
         }
+        else -> Unit
     }
+}
+
+private fun DrawScope.smileAt(l: Look, cx: Float, cy: Float, w: Float, color: Color) {
+    drawArc(color, 15f, 150f, false, Offset(cx - w, cy - 3f), Size(w, 7f), style = Stroke(1.9f, cap = StrokeCap.Round))
+    drawArc(color, 15f, 150f, false, Offset(cx, cy - 3f), Size(w, 7f), style = Stroke(1.9f, cap = StrokeCap.Round))
 }
 
 

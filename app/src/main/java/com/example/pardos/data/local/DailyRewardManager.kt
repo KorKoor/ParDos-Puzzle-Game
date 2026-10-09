@@ -27,6 +27,7 @@ class DailyRewardManager(context: Context) {
         prefs.edit().putInt(KEY_CLAIMED_DAY, LocalDay.today()).apply()
         economy.addCoins(reward.coins)
         economy.addGems(reward.gems)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.DAILY)
         return reward
     }
 

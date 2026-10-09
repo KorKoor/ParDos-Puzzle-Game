@@ -114,7 +114,7 @@ val ScreenBackground: Brush get() = Brush.verticalGradient(listOf(Paper, Cream))
 @Composable
 fun PardosBackButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     JellyCard(
-        onClick = onClick,
+        onClick = { com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_BACK); onClick() },
         shape = CircleShape,
         lipHeight = 4.dp,
         modifier = modifier.size(50.dp)

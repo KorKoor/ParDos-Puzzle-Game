@@ -59,6 +59,16 @@ fun PrestigeToastHost() {
     LaunchedEffect(queue.size, current) {
         if (current == null && queue.isNotEmpty()) current = queue.removeAt(0)
     }
+    // Cada celebración suena a su tamaño
+    LaunchedEffect(current) {
+        when (val ev = current) {
+            is PrestigeEvent.RankUp -> { com.korkoor.pardos.audio.GameAudio.music.duck(0.3f, 3000); com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.RANK_UP) }
+            PrestigeEvent.PlatinumEarned -> { com.korkoor.pardos.audio.GameAudio.music.duck(0.25f, 4000); com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.PLATINUM) }
+            is PrestigeEvent.MilestoneDone, is PrestigeEvent.TitleUnlocked -> com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.ACHIEVEMENT)
+            is PrestigeEvent.Backfill -> com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REWARD_BIG)
+            null -> Unit
+        }
+    }
     when (val ev = current) {
         is PrestigeEvent.RankUp -> RankUpDialog(ev) { current = null }
         PrestigeEvent.PlatinumEarned -> PlatinumDialog { current = null }

@@ -33,8 +33,11 @@ private const val COOLDOWN_MS = 15 * 60 * 1000L // 15 minutos
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 🔊 GESTOR DE SONIDOS
-    private val soundManager = SoundManager(application)
+    // 🔊 El sonido vive en GameAudio (efectos y música); aquí solo se avisa de lo que pasa en el juego.
+    /** Pieza de música adaptativa de este nivel (zen, dusk, deep, boss o halloween). */
+    var musicSet by mutableStateOf("zen")
+        private set
+    private var audioMaxTile = 0
 
     // 1. ESTADOS DE COMPOSE
     var showLevelSummary by mutableStateOf(false)
@@ -95,6 +98,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
         lastSnapshot = null
         canUndo = false
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UNDO)
         return true
     }
 
@@ -110,6 +114,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val bonusMs = com.korkoor.pardos.domain.economy.Economy.EXTRA_TIME_SECONDS * 1000L
         // Se suma a las dos cifras: así el tiempo usado (máx - restante) no cambia
         _boardState.update { it.copy(elapsedTime = it.elapsedTime + bonusMs, maxTime = max + bonusMs) }
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.FREEZE)
         return true
     }
 
@@ -220,7 +225,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _boardState.update { it.copy(phase = 2, twist = ph.twist ?: it.twist, storm = ph.storm ?: it.storm) }
         val id = ++calloutSeq
         phaseBanner = PhaseBanner(ph.title, id)
-        soundManager.playBetterPop(combo = 12)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOSS_PHASE)
+        com.korkoor.pardos.audio.GameAudio.music.intensity(3)
         viewModelScope.launch { delay(2400); if (phaseBanner?.id == id) phaseBanner = null }
     }
     private val KEY_WIN_STREAK = "campaign_win_streak"
@@ -303,7 +309,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         com.korkoor.pardos.data.local.PrestigeManager(getApplication()).onLevelWon(
             activeSpec?.kind ?: com.korkoor.pardos.domain.level.LevelKind.ZEN, activeSpec?.isBoss == true, peakFlowTier, winStreak
         )
-        soundManager.playWin()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.TOWER_FLOOR)
+        com.korkoor.pardos.audio.GameAudio.music.duck(0.35f, 2400)
         viewModelScope.launch {
             delay(800)
             showLevelSummary = true
@@ -327,6 +334,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             prefs.edit().putInt(KEY_WIN_STREAK, winStreak).apply()
         }
         nearMissMessage = com.korkoor.pardos.domain.flow.NearMiss.message(s.goal, s.levelLimit, s.goalCount, s.tiles, s.score, s.goalStats, s.outOfMoves)
+        // "Casi": un suspiro suave después del sonido de derrota
+        if (nearMissMessage != null) com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.NEAR_MISS, 900)
     }
 
     // 🔥 TIEMPO REAL: Variable para guardar la hora exacta de inicio del sistema
@@ -443,29 +452,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         startNewGame(GameMode.CLASICO)
-        playMenuMusic()
-
-        // Activar/desactivar la música desde Ajustes tiene efecto al instante
-        viewModelScope.launch {
-            com.korkoor.pardos.data.local.SettingsManager(getApplication()).musicEnabled.drop(1).collect { on ->
-                if (on) soundManager.playMenuMusic(getApplication()) else soundManager.stopMenuMusic()
-            }
-        }
     }
 
-    // --- FUNCIONES DE SONIDO PÚBLICAS ---
-    fun playMenuMusic() {
-        soundManager.playMenuMusic(getApplication())
-    }
+    // La música depende de la pantalla y la dirige MainActivity (menú / partida); estas dos quedan por compatibilidad.
+    fun playMenuMusic() { }
 
-    fun stopMenuMusic() {
-        soundManager.stopMenuMusic()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        soundManager.release()
-    }
+    fun stopMenuMusic() { }
 
     // --- FUNCIONES DE APOYO ---
 
@@ -543,6 +535,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 if (state.maxTime != null) {
                     val next = (state.elapsedTime - delta).coerceAtLeast(0L)
+                    if (next in 1..10_000L && next / 1000L != state.elapsedTime / 1000L) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.TICK_WARN)
                     _boardState.update { it.copy(elapsedTime = next) }
                     if (next <= 0L) {
                         isGameStarted = false
@@ -571,7 +564,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (currentMode == GameMode.CARRERA) finishRace()
         if (currentMode == GameMode.DUELO) finishDuelRound()
 
-        soundManager.playGameOver()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.FAIL)
+        com.korkoor.pardos.audio.GameAudio.music.duck(0.3f, 2600)
+        com.korkoor.pardos.audio.GameAudio.music.intensity(0)
     }
 
     // ============================ DUELO LOCAL ============================
@@ -721,7 +716,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val newTime = rules.timeAfterStage(remaining, cleared)
         val gainedSec = ((newTime - remaining) / 1000L).toInt()
 
-        soundManager.playWin()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.GOAL_DONE)
+        com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.STAR_2, 220)
         missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
 
         isMoving = false
@@ -918,6 +914,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         lastStreakBonusPct = 0
         lastFlowBonusPct = 0
 
+        // Audio: pieza de música de este nivel (los jefes y la Noche de brujas tienen la suya) y contadores
+        musicSet = musicSetFor(spec, level)
+        com.korkoor.pardos.audio.GameAudio.music.switchGameSet(musicSet)
+        audioMaxTile = 0
+        if (spec?.isBoss == true) viewModelScope.launch { delay(500); com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOSS_INTRO) }
+
         // 6. ACTUALIZACIÓN DEL ESTADO DEL TABLERO
         _boardState.update {
             it.copy(
@@ -978,6 +980,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // Callejones: una dirección no se puede usar (se avisa y no se gasta jugada)
         if (!state.twist.allows(direction)) {
             val msg = "¡${state.twist.label}!"
+            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BLOCKED)
             blockedHint = msg
             viewModelScope.launch { delay(900); if (blockedHint == msg) blockedHint = null }
             return
@@ -996,10 +999,13 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Animaciones y Sonido
                 val mergesCount = (currentTiles.size - movedTiles.size).coerceAtLeast(0)
+                com.korkoor.pardos.audio.GameAudio.swipe(direction)
+                audioMaxTile = max(audioMaxTile, currentTiles.maxOfOrNull { it.value } ?: 0)
                 if (mergesCount > 0) {
                     onHapticFeedback(HapticFeedbackType.LongPress)
                     registerMerge()
-                    soundManager.playBetterPop(combo = _comboCount.value)
+                    // Cada fusión es una nota (más grave o más aguda según la ficha); las de una misma jugada forman un arpegio
+                    com.korkoor.pardos.audio.GameAudio.merges(movedTiles.filter { it.isMerged }.map { it.value }, _comboCount.value)
 
                     // 🔥 INTEGRACIÓN MISIONES: Contabiliza los pares combinados
                     missionManager.updateProgress(MissionType.MERGE_PAIRS, mergesCount)
@@ -1011,12 +1017,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 com.korkoor.pardos.domain.flow.FlowMeter.tierUp(flowStreak, newFlow)?.let { tier ->
                     flowCallout = FlowCallout(tier, ++calloutSeq)
                     onHapticFeedback(HapticFeedbackType.LongPress)
-                    soundManager.playBetterPop(combo = 8 + tier.ordinal * 2)
+                    com.korkoor.pardos.audio.GameAudio.flowTier(tier.ordinal)
                     val id = calloutSeq
                     viewModelScope.launch { delay(1300); if (flowCallout?.id == id) flowCallout = null }
                 }
+                // Se corta la racha: un soplido suave y la música vuelve a la calma
+                if (newFlow == 0 && flowStreak >= com.korkoor.pardos.domain.flow.FlowTier.WARM.minStreak) com.korkoor.pardos.audio.GameAudio.flowOut()
                 flowStreak = newFlow
                 com.korkoor.pardos.domain.flow.FlowMeter.tierOf(newFlow).let { if (it.ordinal > peakFlowTier.ordinal) peakFlowTier = it }
+                updateMusicIntensity(currentState.moveCount, currentState.phase)
                 if (assistMessage != null) assistMessage = null
 
                 delay(80)
@@ -1027,6 +1036,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     val newValue = pickNewTileValue(currentState.levelLimit)
                     gameEngine.spawnTileWithSpecificValue(finalTiles, newValue, 1)?.let { finalTiles.add(it) }
                 }
+                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.SPAWN)
 
                 // ✨ EVOLUCIÓN ESPONTÁNEA (Solo 4, 8, 16 de vez en cuando)
                 // Probabilidad del 15% para que ocurra
@@ -1040,13 +1050,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                             finalTiles[index] = luckyTile.copy(value = evolvedValue)
 
                             // Feedback visual y sonoro de la evolución
-                            soundManager.playBetterPop(combo = 5)
+                            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC, 0.55f, 1.15f)
                             addFloatingScore(evolvedValue, luckyTile.col, luckyTile.row)
                         }
                     }
                 }
 
                 val maxTileValue = finalTiles.maxOfOrNull { it.value } ?: 0
+                if (maxTileValue > audioMaxTile) {
+                    if (maxTileValue >= 128) com.korkoor.pardos.audio.GameAudio.milestone(maxTileValue)
+                    audioMaxTile = maxTileValue
+                }
+                // Pocas jugadas: un tic-tac y, en la última, el latido
+                currentState.moveLimit?.let { limit ->
+                    val left = limit - (currentState.moveCount + 1)
+                    if (left == 1) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.HEARTBEAT) else if (left in 2..3) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.TICK_WARN)
+                }
 
                 // 🔥 INTEGRACIÓN MISIONES: Actualiza el bloque de mayor valor conseguido
                 if (maxTileValue > 0) {
@@ -1079,6 +1098,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         )
                         blockedNow = (activeSpec?.stones.orEmpty() + stormStones.map { it.cell }).distinct()
                         if (blockedNow != currentState.blocked) {
+                            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.STORM_HIT)
                             gameEngine = GameEngine(boardSize = currentState.boardSize, random = rng, blocked = blockedNow.toSet())
                         }
                     }
@@ -1133,7 +1153,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                                 val newVal = luckyTile.value * 2
                                 tiles[index] = luckyTile.copy(value = newVal)
 
-                                soundManager.playBetterPop(combo = 10)
+                                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC, 0.8f)
                                 addFloatingScore(newVal, luckyTile.col, luckyTile.row)
 
                                 // 🔥 INTEGRACIÓN MISIONES: Si la ayuda divina crea un bloque alto, lo registramos
@@ -1143,8 +1163,33 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         current.copy(tiles = tiles)
                     }
                 }
+            } else {
+                // Ese deslizamiento no movió nada
+                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BLOCKED)
             }
         }
+    }
+
+    /** Sube o baja las capas de la música según el ritmo del tablero (calma → en racha → imparable → ¡FLOW!). */
+    private fun updateMusicIntensity(moves: Int, phase: Int) {
+        val tier = com.korkoor.pardos.domain.flow.FlowMeter.tierOf(flowStreak)
+        var lvl = when (tier) {
+            com.korkoor.pardos.domain.flow.FlowTier.CALM -> if (moves >= 3) 1 else 0
+            com.korkoor.pardos.domain.flow.FlowTier.WARM -> 2
+            else -> 3
+        }
+        if (phase >= 2) lvl = max(lvl, 2)
+        com.korkoor.pardos.audio.GameAudio.music.intensity(lvl)
+    }
+
+    /** Pieza de música: jefes y Noche de brujas tienen la suya; el resto rota entre zen, dusk y deep cada 3 capítulos. */
+    private fun musicSetFor(spec: LevelSpec?, level: Int): String {
+        if (spec?.isBoss == true) return "boss"
+        if (com.korkoor.pardos.ui.design.Season.halloween) return "halloween"
+        if (towerActive) return "deep"
+        if (spec == null || currentMode != GameMode.CLASICO) return "zen"
+        val chapter = (level - 1).coerceAtLeast(0) / com.korkoor.pardos.domain.level.LevelCatalog.LEVELS_PER_CHAPTER
+        return listOf("zen", "dusk", "deep")[(chapter / 3) % 3]
     }
 
     private fun stopTimer() {
@@ -1169,7 +1214,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             isGameOver = false
         )
         // 🔊 Al revivir
-        playMenuMusic()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REVIVE)
+        com.korkoor.pardos.audio.GameAudio.music.intensity(1)
     }
 
     fun activateSelectMode(type: String) {
@@ -1194,7 +1240,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     // Registramos que el tablero cambió para efectos visuales
                     state.copy(tiles = updatedTiles)
                 }
-                soundManager.playBetterPop(combo = 5) // Sonido de limpieza
+                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.HAMMER)
                 cancelSelectMode()
             }
 
@@ -1202,7 +1248,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 if (firstSelectedTileId == null) {
                     // Primer paso: Seleccionamos la ficha y le damos feedback al usuario
                     firstSelectedTileId = tileId
-                    // Podrías disparar una vibración ligera aquí
+                    com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_TICK, 1f, 1.2f)
                 } else {
                     val firstId = firstSelectedTileId!!
                     if (firstId == tileId) {
@@ -1227,7 +1273,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                                 // Añadimos puntuación flotante en la posición de la fusión
                                 addFloatingScore(newValue, t2.col, t2.row)
-                                soundManager.playBetterPop(combo = 10)
+                                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC)
                             }
 
                             state.copy(tiles = tiles, score = state.score + newValue)
@@ -1380,7 +1426,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 missionManager.updateProgress(MissionType.WIN_UNDER_TIME, finalTimeSecs)
             }
 
-            soundManager.playWin()
+            // Fanfarria (la de 3 estrellas y la del jefe son más grandes) y la música baja para que se oiga
+            val wonStars = _boardState.value.starsEarned
+            com.korkoor.pardos.audio.GameAudio.music.duck(0.28f, 3800)
+            com.korkoor.pardos.audio.GameAudio.music.intensity(1)
+            com.korkoor.pardos.audio.GameAudio.play(when { activeSpec?.isBoss == true -> com.korkoor.pardos.audio.Sfx.BOSS_WIN; wonStars >= 3 -> com.korkoor.pardos.audio.Sfx.WIN_BIG; else -> com.korkoor.pardos.audio.Sfx.WIN })
         }
 
         // --- LÓGICA DE REDIRECCIÓN ---
@@ -1456,7 +1506,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _boardState.update { it.copy(isGameOver = true) }
             registerLoss()
 
-            soundManager.playGameOver()
+            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.FAIL)
+            com.korkoor.pardos.audio.GameAudio.music.duck(0.3f, 2600)
+            com.korkoor.pardos.audio.GameAudio.music.intensity(0)
         }
     }
 
@@ -1547,6 +1599,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.edit().putBoolean(key, true).apply()
                 // 💰 El logro paga monedas (y gemas/cofre según su rareza)
                 rewardsManager.payAchievement(achievement.id)
+                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.ACHIEVEMENT)
                 viewModelScope.launch {
                     _unlockedAchievements.update { it + achievement.id }
                     activeAchievementPopup = achievement
@@ -1753,6 +1806,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun grantDoubleCoins() {
         if (coinsDoubled || lastCoinsEarned <= 0) return
         coinsDoubled = true
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COINS)
         val bonus = rewardsManager.doubleCoins(lastCoinsEarned)
         lastCoinsEarned += bonus
     }
@@ -1852,17 +1906,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         isGameStarted = false
         // Detenemos cualquier Job de timer pendiente
         timerJob?.cancel()
-        // Detenemos la música
-        soundManager.stopMenuMusic() // Usamos este método para pausar si SoundManager no tiene 'pause' explícito
     }
 
     fun resumeGame() {
         // Solo reanudamos si el juego NO ha terminado
         val state = _boardState.value
         if (state.isGameOver || state.isLevelCompleted) return
-
-        // Reactivamos la música (asumiendo que en modo juego usas la de menú o ambiente)
-        soundManager.playMenuMusic(getApplication())
 
         // Reactivamos el Timer si estábamos a mitad de partida
         // Heurística: Si hay tiempo transcurrido o fichas en el tablero, reanudamos

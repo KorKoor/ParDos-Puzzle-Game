@@ -310,8 +310,10 @@ private fun AnimatedStarsRow(stars: Int, currentTheme: GameTheme) {
             var startAnim by remember { mutableStateOf(false) }
 
             LaunchedEffect(Unit) {
-                delay(index * 200L)
+                delay(350L + index * 330L)
                 startAnim = true
+                // Cada estrella llena suena una nota más alta que la anterior
+                if (isFilled) com.korkoor.pardos.audio.GameAudio.play(when (index) { 0 -> com.korkoor.pardos.audio.Sfx.STAR_1; 1 -> com.korkoor.pardos.audio.Sfx.STAR_2; else -> com.korkoor.pardos.audio.Sfx.STAR_3 })
             }
 
             val scale by animateFloatAsState(
@@ -498,6 +500,20 @@ fun formatTime(ms: Long): String {
 @Composable
 private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit) {
     if (coins <= 0) return
+    // Las monedas suben contando, con un tic cada vez más agudo, y al final tintinean
+    var shown by remember { mutableIntStateOf(0) }
+    LaunchedEffect(coins) {
+        val from = shown.coerceAtMost(coins)
+        if (from == 0) delay(1250L)
+        val steps = 12
+        for (i in 1..steps) {
+            shown = from + (coins - from) * i / steps
+            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.XP_TICK, 1f, 0.9f + 0.05f * i)
+            delay(48)
+        }
+        shown = coins
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COIN)
+    }
     Spacer(modifier = Modifier.height(14.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Row(
@@ -514,7 +530,7 @@ private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "+$coins", fontSize = 16.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
+            Text(text = "+$shown", fontSize = 16.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
         }
         if (canDouble) {
             Spacer(modifier = Modifier.width(10.dp))

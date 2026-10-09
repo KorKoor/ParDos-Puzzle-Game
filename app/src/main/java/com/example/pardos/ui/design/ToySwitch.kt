@@ -47,6 +47,7 @@ fun ToySwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit, modifier: Mo
             .border(1.dp, Color.Black.copy(alpha = 0.08f), RoundedCornerShape(50))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, role = Role.Switch) {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                com.korkoor.pardos.audio.GameAudio.play(if (checked) com.korkoor.pardos.audio.Sfx.UI_OFF else com.korkoor.pardos.audio.Sfx.UI_ON)
                 onCheckedChange(!checked)
             },
         contentAlignment = Alignment.CenterStart

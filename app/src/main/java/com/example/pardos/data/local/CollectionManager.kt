@@ -157,6 +157,7 @@ class CollectionManager(context: Context) {
         val coins = SellRules.value(c, PerkRules.tenths(PerkKind.SELL, _owned.value, _foil.value)) * qty
         saveCopies(Copies.add(_copies.value, id, -qty))
         economy.addCoins(coins)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.SELL)
         return coins
     }
 
@@ -178,6 +179,7 @@ class CollectionManager(context: Context) {
         saveCopies(Copies.add(_copies.value, id, -qty))
         _shards.value = _shards.value + shards
         prefs.edit().putInt(KEY_SHARDS, _shards.value).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC, 0.7f)
         return shards
     }
 
@@ -190,6 +192,7 @@ class CollectionManager(context: Context) {
         _shards.value = newShards
         prefs.edit().putInt(KEY_SHARDS, newShards).apply()
         saveCopies(Copies.add(_copies.value, c.id))
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CARD_NEW)
         return true
     }
 
@@ -201,6 +204,7 @@ class CollectionManager(context: Context) {
         _foil.value = newFoil
         _shards.value = newShards
         prefs.edit().putStringSet(KEY_FOIL, newFoil).putInt(KEY_SHARDS, newShards).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.FOIL)
         return true
     }
 
@@ -216,6 +220,7 @@ class CollectionManager(context: Context) {
         val newShards = _shards.value + ShardShop.SHARDS_PER_PACK
         _shards.value = newShards
         prefs.edit().putInt(KEY_SHARDS, newShards).putInt(KEY_SHARD_DAY, today).putInt(KEY_SHARD_COUNT, bought + 1).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC)
         return true
     }
 
@@ -246,6 +251,7 @@ class CollectionManager(context: Context) {
         if (!economy.spendGems(TokenRules.GEMS_PER_TOKEN)) return false
         addTokens(1)
         prefs.edit().putInt(KEY_TOKEN_DAY, today).putInt(KEY_TOKEN_COUNT, bought + 1).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COIN)
         return true
     }
 
@@ -296,6 +302,7 @@ class CollectionManager(context: Context) {
         if (!economy.spendGems(Showcase.unlockCost(next))) return false
         _showcaseSlots.value = next
         prefs.edit().putInt(KEY_SHOWCASE_SLOTS, next).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.GEM)
         return true
     }
 
@@ -312,6 +319,7 @@ class CollectionManager(context: Context) {
         prefs.edit().putStringSet(KEY_CLAIMED_SERIES, updated).apply()
         economy.addCoins(s.rewardCoins)
         economy.addGems(s.rewardGems)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REWARD_BIG)
         return s.rewardCoins to s.rewardGems
     }
 
@@ -325,6 +333,7 @@ class CollectionManager(context: Context) {
         prefs.edit().putBoolean(KEY_ALBUM_CLAIMED, true).apply()
         economy.grantSkin(TileSkin.GOLD)
         economy.addGems(ALBUM_GEMS)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.PLATINUM)
         return true
     }
 

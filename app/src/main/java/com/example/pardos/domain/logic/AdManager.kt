@@ -62,6 +62,7 @@ object AdManager {
 
             rewardedAd?.show(activity) { _ ->
                 // El usuario obtuvo la recompensa
+                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.AD_REWARD)
                 onRewardEarned()
             }
         } else {

@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Los sonidos se cargan por nombre (GameAudio/AdaptiveMusic), así que el recorte de recursos no debe quitarlos. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@raw/*" />

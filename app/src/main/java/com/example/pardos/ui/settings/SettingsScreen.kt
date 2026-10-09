@@ -33,6 +33,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     val haptics by settings.hapticsEnabled.collectAsState()
     val notifications by settings.notificationsEnabled.collectAsState()
     val autoNext by settings.autoNextEnabled.collectAsState()
+    val sfxVol by settings.sfxVolume.collectAsState()
+    val musicVol by settings.musicVolume.collectAsState()
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
@@ -49,8 +51,15 @@ fun SettingsScreen(onBack: () -> Unit) {
             SectionLabel("Sonido y tacto")
             PardosCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(vertical = 6.dp)) {
-                    SettingRow(Icons.Rounded.VolumeUp, Sage, "Efectos de sonido", "Fusiones, victoria y derrota", sound) { settings.setSound(it) }
-                    SettingRow(Icons.Rounded.MusicNote, Violet, "Música", "La melodía del menú", music) { settings.setMusic(it) }
+                    SettingRow(Icons.Rounded.VolumeUp, Sage, "Efectos de sonido", "Fusiones, combos, menús y premios", sound) {
+                        settings.setSound(it)
+                        if (it) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_ON)
+                    }
+                    if (sound) VolumeRow(Sage, sfxVol, { settings.setSfxVolume(it) }) {
+                        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COIN)
+                    }
+                    SettingRow(Icons.Rounded.MusicNote, Violet, "Música", "Calma en el menú y más energía cuando entras en racha", music) { settings.setMusic(it) }
+                    if (music) VolumeRow(Violet, musicVol, { settings.setMusicVolume(it) }) { }
                     SettingRow(Icons.Rounded.Vibration, Terracotta, "Vibración", "Un toque suave al mover y fusionar", haptics) { settings.setHaptics(it) }
                 }
             }
@@ -86,6 +95,25 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/** Barra de volumen bajo un interruptor de sonido. */
+@Composable
+private fun VolumeRow(color: Color, value: Float, onChange: (Float) -> Unit, onFinished: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 74.dp, end = 20.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Rounded.VolumeDown, null, tint = color.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+        androidx.compose.material3.Slider(
+            value = value, onValueChange = onChange, onValueChangeFinished = onFinished,
+            modifier = Modifier.weight(1f).padding(horizontal = 6.dp),
+            colors = androidx.compose.material3.SliderDefaults.colors(
+                thumbColor = color, activeTrackColor = color, inactiveTrackColor = color.copy(alpha = 0.18f)
+            )
+        )
+        Icon(Icons.Rounded.VolumeUp, null, tint = color, modifier = Modifier.size(18.dp))
     }
 }
 

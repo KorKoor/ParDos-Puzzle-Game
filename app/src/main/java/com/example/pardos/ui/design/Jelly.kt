@@ -398,7 +398,10 @@ fun JellySurface(
 /** Aparición de diálogos y premios: crece desde un poco más pequeño con un rebote suave. */
 fun Modifier.popIn(startScale: Float = 0.86f): Modifier = composed {
     val progress = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { progress.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = 420f)) }
+    LaunchedEffect(Unit) {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_POPUP)
+        progress.animateTo(1f, spring(dampingRatio = 0.62f, stiffness = 420f))
+    }
     graphicsLayer {
         val sc = startScale + (1f - startScale) * progress.value
         scaleX = sc; scaleY = sc

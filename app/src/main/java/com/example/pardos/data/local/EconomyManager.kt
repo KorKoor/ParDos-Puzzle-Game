@@ -63,9 +63,16 @@ class EconomyManager(context: Context) {
     private fun skinInventory() = SkinInventory(_ownedSkins.value, _equippedSkin.value.id)
 
     /** Compra una skin con monedas o gemas según su precio. Devuelve el resultado para mostrar el motivo. */
+    /** Sonido de una compra lograda: confirmación y las monedas que se van. */
+    private fun boughtSound() {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_CONFIRM)
+        com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.COIN, 120)
+    }
+
     fun buySkin(skin: TileSkin, discountPercent: Int = 0): SkinInventory.Purchase {
         val result = skinInventory().buy(skin, _coins.value, _gems.value, discountPercent)
         if (result is SkinInventory.Purchase.Ok) {
+            boughtSound()
             _coins.value = result.coinsLeft
             _gems.value = result.gemsLeft
             _ownedSkins.value = result.inventory.owned
@@ -79,6 +86,7 @@ class EconomyManager(context: Context) {
     }
 
     fun equipSkin(skin: TileSkin) {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_ON)
         val inv = skinInventory().equip(skin)
         _equippedSkin.value = TileSkin.fromId(inv.equipped)
         prefs.edit().putString(KEY_EQUIPPED_SKIN, inv.equipped).apply()
@@ -110,6 +118,7 @@ class EconomyManager(context: Context) {
         if (!com.korkoor.pardos.domain.shop.CoinShop.canBuyStreakFreeze(_coins.value, _freezes.value)) return false
         if (!spendCoins(com.korkoor.pardos.domain.shop.CoinShop.STREAK_FREEZE_PRICE_COINS)) return false
         addStreakFreezes(1)
+        boughtSound()
         return true
     }
 
@@ -120,6 +129,7 @@ class EconomyManager(context: Context) {
         if (isChapterChestClaimed(chapter)) return null
         val reward = com.korkoor.pardos.domain.rewards.ChapterRewards.forChapter(chapter)
         prefs.edit().putBoolean("chapter_chest_$chapter", true).apply()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REWARD_BIG)
         addCoins(reward.coins)
         addGems(reward.gems)
         return reward
@@ -158,6 +168,7 @@ class EconomyManager(context: Context) {
     fun buyBanner(id: Int): com.korkoor.pardos.domain.shop.Banners.Purchase {
         val result = com.korkoor.pardos.domain.shop.Banners.buy(id, _ownedBanners.value, _coins.value, _gems.value)
         if (result is com.korkoor.pardos.domain.shop.Banners.Purchase.Ok) {
+            boughtSound()
             _coins.value = result.coinsLeft
             _gems.value = result.gemsLeft
             prefs.edit().putInt(KEY_COINS, _coins.value).putInt(KEY_GEMS, _gems.value).apply()
@@ -179,6 +190,7 @@ class EconomyManager(context: Context) {
     fun buyAvatar(id: Int): com.korkoor.pardos.domain.shop.Avatars.Purchase {
         val result = com.korkoor.pardos.domain.shop.Avatars.buy(id, _ownedAvatars.value, _coins.value)
         if (result is com.korkoor.pardos.domain.shop.Avatars.Purchase.Ok) {
+            boughtSound()
             _coins.value = result.coinsLeft
             prefs.edit().putInt(KEY_COINS, _coins.value).apply()
             grantAvatar(id)
@@ -194,6 +206,7 @@ class EconomyManager(context: Context) {
     fun buyExtraTimes(pack: Int = 3): Boolean {
         if (!spendCoins(com.korkoor.pardos.domain.economy.Economy.EXTRA_TIME_PRICE_COINS * pack)) return false
         addExtraTimes(pack)
+        boughtSound()
         return true
     }
 
@@ -236,6 +249,7 @@ class EconomyManager(context: Context) {
     fun buyFx(fx: com.korkoor.pardos.domain.shop.MergeFx, discountPercent: Int = 0): com.korkoor.pardos.domain.shop.MergeFxInventory.Purchase {
         val result = fxInventory().buy(fx, _coins.value, _gems.value, discountPercent)
         if (result is com.korkoor.pardos.domain.shop.MergeFxInventory.Purchase.Ok) {
+            boughtSound()
             _coins.value = result.coinsLeft
             _gems.value = result.gemsLeft
             _ownedFx.value = result.inventory.owned
@@ -250,6 +264,7 @@ class EconomyManager(context: Context) {
     }
 
     fun equipFx(fx: com.korkoor.pardos.domain.shop.MergeFx) {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_ON)
         val inv = fxInventory().equip(fx)
         _equippedFx.value = com.korkoor.pardos.domain.shop.MergeFx.fromId(inv.equipped)
         prefs.edit().putString(KEY_EQUIPPED_FX, inv.equipped).apply()
@@ -264,6 +279,7 @@ class EconomyManager(context: Context) {
         if (!spendGems(com.korkoor.pardos.domain.shop.CoinBoost.PRICE_GEMS)) return false
         _boostWins.value = com.korkoor.pardos.domain.shop.CoinBoost.addWins(left)
         prefs.edit().putInt(KEY_BOOST_WINS, _boostWins.value).apply()
+        boughtSound()
         return true
     }
 

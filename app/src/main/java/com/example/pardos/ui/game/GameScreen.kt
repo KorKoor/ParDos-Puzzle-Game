@@ -168,9 +168,6 @@ fun GameScreen(
     }
 
 
-    // 🔥 OPTIMIZACIÓN: Audio ultra rápido sin lag ni consumir mucha RAM
-    val audioManager = remember { GameAudioManager(context) }
-
     // 🔥 OPTIMIZACIÓN: Solo recalcula el gradiente si el tema cambia
     val bgGradient = remember(currentTheme) { Brush.verticalGradient(colors = currentTheme.colors) }
 
@@ -192,11 +189,6 @@ fun GameScreen(
     )
 
     LaunchedEffect(state.levelLimit) { themeViewModel.updateLevel(state.levelLimit) }
-
-    DisposableEffect(Unit) {
-        audioManager.initialize()
-        onDispose { audioManager.release() }
-    }
 
     BackHandler(enabled = !state.isLevelCompleted) {
         if (state.moveCount > 0) showExitDialog = true else onBackToMenu()
@@ -296,7 +288,7 @@ fun GameScreen(
                                         viewModel = viewModel,
                                         haptic = haptic,
                                         currentTheme = currentTheme,
-                                        onMoveSound = { audioManager.playMoveSound() },
+                                        onMoveSound = { },
                                         modifier = Modifier.fillMaxSize(),
                                         guide = guide
                                     )
@@ -427,7 +419,7 @@ fun GameScreen(
                                         viewModel = viewModel,
                                         haptic = haptic,
                                         currentTheme = currentTheme,
-                                        onMoveSound = { audioManager.playMoveSound() },
+                                        onMoveSound = { },
                                         modifier = Modifier.fillMaxSize(),
                                         guide = guide
                                     )

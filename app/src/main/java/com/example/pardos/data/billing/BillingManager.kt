@@ -146,6 +146,7 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
             return
         }
         if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) return
+        if (!silent) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.PURCHASE)
 
         purchase.products.forEach { productId ->
             val product = ShopCatalog.byId(productId) ?: return@forEach

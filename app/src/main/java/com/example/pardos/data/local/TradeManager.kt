@@ -95,6 +95,7 @@ class TradeManager(context: Context) {
         doc.set(data)
             .addOnSuccessListener {
                 saveOutgoing(outgoing() + TradeOutgoing(doc.id, friendUid, friendName, offer.give, offer.want, cost, now))
+                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.TRADE_SEND)
                 onResult(null)
             }
             .addOnFailureListener { e ->
@@ -131,7 +132,7 @@ class TradeManager(context: Context) {
         if (!collection.escrow(inbox.want)) { onResult("Necesitas una copia repetida de esa carta."); return }
         firestore.collection("trades").document(inbox.id)
             .update(mapOf("status" to "accepted", "resolvedAt" to System.currentTimeMillis()))
-            .addOnSuccessListener { collection.receive(inbox.give); onResult(null) }
+            .addOnSuccessListener { collection.receive(inbox.give); com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.TRADE_DONE); onResult(null) }
             .addOnFailureListener { e ->
                 Log.w(TAG, "No se pudo aceptar: ${e.message}")
                 collection.receive(inbox.want)
@@ -171,6 +172,7 @@ class TradeManager(context: Context) {
                         status == "accepted" -> {
                             collection.receive(o.want)
                             saveOutgoing(outgoing().filter { it.id != o.id })
+                            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.TRADE_DONE)
                             notes += "¡${o.toName} aceptó! Cambiaste $giveName por $wantName."
                         }
                         status == "declined" || status == "cancelled" -> { refund(o); notes += "${o.toName} no aceptó: recuperaste $giveName y tus fichas." }

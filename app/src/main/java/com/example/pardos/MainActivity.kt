@@ -9,6 +9,7 @@ import android.view.accessibility.AccessibilityManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import com.korkoor.pardos.audio.uiTapSounds
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.scaleIn
@@ -118,6 +119,8 @@ class MainActivity : ComponentActivity() {
 
         routeFromNotification = intent?.getStringExtra(com.korkoor.pardos.notifications.NotificationRoute.EXTRA)
         notificationManager = ZenNotificationManager(this)
+        // Sonido: efectos y música (se carga en segundo plano)
+        com.korkoor.pardos.audio.GameAudio.init(this)
         // El permiso de avisos ya no se pide al abrir: lo pide `NotificationPrimerDialog` tras la primera victoria
 
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
@@ -178,8 +181,8 @@ class MainActivity : ComponentActivity() {
                 DisposableEffect(lifecycleOwner) {
                     val observer = LifecycleEventObserver { _, event ->
                         when (event) {
-                            Lifecycle.Event.ON_PAUSE -> gameViewModel.pauseGame()
-                            Lifecycle.Event.ON_RESUME -> gameViewModel.resumeGame()
+                            Lifecycle.Event.ON_PAUSE -> { gameViewModel.pauseGame(); com.korkoor.pardos.audio.GameAudio.onAppPause() }
+                            Lifecycle.Event.ON_RESUME -> { gameViewModel.resumeGame(); com.korkoor.pardos.audio.GameAudio.onAppResume() }
                             else -> Unit
                         }
                     }
@@ -211,6 +214,25 @@ class MainActivity : ComponentActivity() {
                 }
 
                 var currentScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
+                // Sonido de navegación y música según la pantalla: menú (melodía) o partida (música por capas)
+                var lastScreen by remember { mutableStateOf<Screen>(Screen.Splash) }
+                LaunchedEffect(currentScreen) {
+                    val from = lastScreen
+                    lastScreen = currentScreen
+                    when (currentScreen) {
+                        Screen.Splash -> Unit
+                        Screen.Game, Screen.AccessibilityGame -> com.korkoor.pardos.audio.GameAudio.music.game(gameViewModel.musicSet)
+                        else -> com.korkoor.pardos.audio.GameAudio.music.menu()
+                    }
+                    if (from != Screen.Splash && currentScreen != Screen.Splash && from != currentScreen) {
+                        val depth = currentScreen.navDepth() - from.navDepth()
+                        when {
+                            currentScreen == Screen.Game || currentScreen == Screen.AccessibilityGame -> com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_WHOOSH)
+                            depth > 0 -> com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_OPEN)
+                            depth < 0 -> com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_CLOSE)
+                        }
+                    }
+                }
                 // La skin equipada trae su propia temática (fondo, texto, partículas)
                 val skinEconomy = remember { com.korkoor.pardos.data.local.EconomyManager(this@MainActivity) }
                 val equippedSkin by skinEconomy.equippedSkin.collectAsState()
@@ -233,7 +255,7 @@ class MainActivity : ComponentActivity() {
                 val savedRecords by gameViewModel.allRecords.collectAsState(initial = emptyList())
                 val unlockedIds by gameViewModel.unlockedAchievements.collectAsState()
 
-                Surface(modifier = Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize().uiTapSounds()) {
                     AnimatedContent(
                         targetState = currentScreen,
                         transitionSpec = {
