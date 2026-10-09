@@ -9,7 +9,7 @@ struct BoardView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            BoardCanvas(snap: snap, hint: hint, side: side)
+            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle)
                 .frame(width: side, height: side)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
@@ -34,6 +34,7 @@ struct BoardCanvas: View {
     let snap: BoardSnap
     let hint: GuideHint?
     let side: CGFloat
+    let style: BoardStyle
 
     private var gap: CGFloat { snap.size >= 5 ? 6 : 8 }
     private var cell: CGFloat { (side - gap * CGFloat(snap.size + 1)) / CGFloat(snap.size) }
@@ -44,7 +45,7 @@ struct BoardCanvas: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Theme.ink.opacity(0.10))
+                .fill((style.ink ?? Theme.ink).opacity(0.12))
             emptyCells
             stoneCells
             tileViews
@@ -56,7 +57,7 @@ struct BoardCanvas: View {
     private var emptyCells: some View {
         ForEach(0..<(snap.size * snap.size), id: \.self) { index in
             RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
-                .fill(Color.white.opacity(0.55))
+                .fill((style.surface ?? Color.white).opacity(0.55))
                 .frame(width: cell, height: cell)
                 .position(x: x(index % snap.size), y: y(index / snap.size))
         }
@@ -78,7 +79,7 @@ struct BoardCanvas: View {
     private var tileViews: some View {
         ZStack {
             ForEach(snap.tiles) { tile in
-                TileView(tile: tile, size: cell)
+                TileView(tile: tile, size: cell, style: style)
                     .position(x: x(tile.c), y: y(tile.r))
                     .transition(.scale)
             }
@@ -117,22 +118,25 @@ struct BoardCanvas: View {
 struct TileView: View {
     let tile: TileSnap
     let size: CGFloat
+    let style: BoardStyle
     @State private var pop: CGFloat = 1
+
+    private var corner: CGFloat { size * 0.2 }
+    private var fillColor: Color { style.fill(tile.v) }
+    private var isNeon: Bool { style.finish == "NEON" }
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
-                .fill(tileColor(tile.v))
-            RoundedRectangle(cornerRadius: size * 0.2, style: .continuous)
-                .fill(LinearGradient(colors: [Color.white.opacity(0.30), Color.clear], startPoint: .top, endPoint: .center))
+            base
+            finishOverlay
             Text("\(tile.v)")
                 .font(.system(size: size * fontFactor, weight: .black, design: .rounded))
-                .foregroundColor(tileTextColor(tile.v))
+                .foregroundColor(isNeon ? fillColor : style.text(tile.v))
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
         }
         .frame(width: size, height: size)
-        .shadow(color: Color.black.opacity(0.12), radius: 0, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(style.finish == "FLAT" ? 0 : 0.12), radius: 0, x: 0, y: 3)
         .scaleEffect(pop)
         .onAppear {
             if tile.new {
@@ -143,6 +147,44 @@ struct TileView: View {
         .onChange(of: tile.v) { _ in
             pop = 1.18
             withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { pop = 1 }
+        }
+    }
+
+    @ViewBuilder
+    private var base: some View {
+        if isNeon {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(Color.black.opacity(0.6))
+                .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(fillColor, lineWidth: 3))
+                .shadow(color: fillColor.opacity(0.8), radius: 6, x: 0, y: 0)
+        } else if style.finish == "GLASS" {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(fillColor.opacity(0.62))
+                .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).stroke(Color.white.opacity(0.7), lineWidth: 1.5))
+        } else if style.finish == "METAL" {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(LinearGradient(colors: [fillColor.opacity(0.75), fillColor, fillColor.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        } else {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(fillColor)
+        }
+    }
+
+    @ViewBuilder
+    private var finishOverlay: some View {
+        if style.finish == "JELLY" || style.finish == "PORCELAIN" {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white.opacity(0.30), Color.clear], startPoint: .top, endPoint: .center))
+        } else if style.finish == "WOOD" {
+            VStack(spacing: size * 0.12) {
+                ForEach(0..<4, id: \.self) { _ in
+                    Capsule().fill(Color.black.opacity(0.07)).frame(height: 1.5)
+                }
+            }
+            .padding(.horizontal, size * 0.1)
+        } else if style.finish == "METAL" {
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.white.opacity(0.35), lineWidth: 1.5)
         }
     }
 

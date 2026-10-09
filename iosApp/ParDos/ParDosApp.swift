@@ -14,6 +14,7 @@ struct ParDosApp: App {
 
 struct RootView: View {
     @EnvironmentObject var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var splashDone = false
 
     var body: some View {
@@ -21,22 +22,24 @@ struct RootView: View {
             Theme.background.ignoresSafeArea()
             SeasonBackdrop()
             content
+            if let message = model.toast {
+                ToastView(text: message)
+                    .zIndex(30)
+            }
+            CelebrationOverlay()
             if !splashDone {
                 SplashView()
                     .transition(.opacity)
-                    .zIndex(10)
+                    .zIndex(40)
             }
         }
-        .sheet(item: $model.preview) { card in
-            LevelPreviewSheet(card: card)
+        .sheet(item: $model.sheet) { sheet in
+            sheetContent(sheet)
                 .environmentObject(model)
         }
-        .background(
-            Color.clear.sheet(isPresented: $model.showSettings) {
-                SettingsView()
-                    .environmentObject(model)
-            }
-        )
+        .onChange(of: scenePhase) { phase in
+            if phase == .active { model.appBecameActive() }
+        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
                 withAnimation(.easeOut(duration: 0.4)) {
@@ -49,12 +52,30 @@ struct RootView: View {
     @ViewBuilder
     private var content: some View {
         switch model.screen {
-        case .menu:
-            MenuView()
-        case .map:
-            MapView()
+        case .main:
+            MainShell()
         case .game:
             GameView()
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: Sheet) -> some View {
+        switch sheet {
+        case .level(let card):
+            LevelPreviewSheet(card: card)
+        case .season:
+            SeasonSheet()
+        case .missions:
+            MissionsSheet()
+        case .wheel:
+            WheelSheet()
+        case .league:
+            LeagueSheet()
+        case .settings:
+            SettingsView()
+        case .lowFunds:
+            LowFundsSheet()
         }
     }
 }

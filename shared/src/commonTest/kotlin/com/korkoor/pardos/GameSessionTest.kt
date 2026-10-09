@@ -181,7 +181,7 @@ class GameSessionTest {
         val snapshotKeys = listOf(
             "level", "daily", "title", "kind", "kindLabel", "rule", "tip", "goal", "size", "progress", "score", "moves", "movesLeft", "timeLeftMs",
             "status", "lostReason", "stars", "tiles", "stones", "storm", "twist", "twistHint", "blocked", "phase", "phaseTitle", "chips",
-            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo"
+            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs"
         )
         val st = session.state()
         snapshotKeys.forEach { assertTrue(it in st.keys, "falta '$it' en el estado") }
@@ -223,7 +223,7 @@ class GameSessionTest {
     /** Swift decodifica con `Int`: un número entero escrito como "3.0" haría fallar toda la lectura del estado. */
     @Test fun integerFieldsAreWrittenWithoutDecimals() {
         val session = GameSession(33L)
-        val intKeys = listOf("level", "size", "score", "moves", "stars", "phase", "movesLeft", "timeLeftMs", "coachDir", "coachDone", "coachNeeded")
+        val intKeys = listOf("level", "size", "score", "moves", "stars", "phase", "movesLeft", "timeLeftMs", "coachDir", "coachDone", "coachNeeded", "merges", "maxTile", "elapsedMs")
         for (level in listOf(1, 8, 14, 20, 60, 100)) {
             session.tutorialEnabled = level == 1
             session.start(level)

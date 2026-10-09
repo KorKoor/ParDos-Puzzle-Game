@@ -3,44 +3,256 @@ import UIKit
 import Shared
 
 enum AppScreen {
-    case menu
-    case map
+    case main
     case game
 }
 
-/// Estado de la app. La partida la lleva `GameSession` (Kotlin, la misma lógica que Android); aquí solo se guarda el
-/// progreso del jugador y se traduce lo que devuelve la sesión.
+enum MainTab: Int {
+    case home
+    case play
+    case shop
+    case album
+    case profile
+}
+
+/// Hojas que se abren desde cualquier pantalla.
+enum Sheet: Identifiable {
+    case level(LevelCard)
+    case season
+    case missions
+    case wheel
+    case league
+    case settings
+    case lowFunds
+
+    var id: String {
+        switch self {
+        case .level(let card): return "level\(card.id)"
+        case .season: return "season"
+        case .missions: return "missions"
+        case .wheel: return "wheel"
+        case .league: return "league"
+        case .settings: return "settings"
+        case .lowFunds: return "lowFunds"
+        }
+    }
+}
+
+/// Avisos a pantalla completa que se van mostrando de uno en uno (regalos, cofres, skins nuevas...).
+enum Celebration: Identifiable {
+    case dailyGift
+    case comeback(ComebackInfo)
+    case milestone(StreakMilestoneInfo)
+    case repair(RepairInfo)
+    case chest(String, [DropInfo])
+    case reveal(String)
+    case leagueResult(LeaguePending)
+    case info(String, String, String)
+
+    var id: String {
+        switch self {
+        case .dailyGift: return "gift"
+        case .comeback: return "comeback"
+        case .milestone(let m): return "milestone\(m.days)"
+        case .repair: return "repair"
+        case .chest(let type, let drops): return "chest\(type)\(drops.count)\(drops.first?.id ?? "")"
+        case .reveal(let skin): return "reveal\(skin)"
+        case .leagueResult(let p): return "league\(p.from)\(p.to)"
+        case .info(let title, _, _): return "info\(title)"
+        }
+    }
+}
+
+/// Estado de la app. La partida la lleva `GameSession` y todo lo demás (monedas, tienda, cofres, álbum, misiones, pase, liga)
+/// lo lleva `MetaSession`: las dos son Kotlin compartido con Android. Aquí solo se guarda el texto de estado y se traduce a vistas.
 final class AppModel: ObservableObject {
     private let session = GameSession()
+    private let meta = MetaSession()
     private let defaults = UserDefaults.standard
     private let sounds = SoundManager.shared
 
-    @Published var screen: AppScreen = .menu
+    @Published var screen: AppScreen = .main
+    @Published var tab: MainTab = .home
     @Published var snap: BoardSnap?
     @Published var hint: GuideHint?
-    @Published var preview: LevelCard?
+    @Published var sheet: Sheet?
     @Published var intro: LevelCard?
     @Published var toast: String?
     @Published var dailyCard: LevelCard?
-    @Published var showSettings = false
+    @Published var reward: WinReward?
+    @Published var loss: LossInfo?
+    @Published var queue: [Celebration] = []
+
+    @Published var state: MetaState?
+    @Published var album: AlbumStateData?
+    private(set) var stateAt = Date()
+
+    // Catálogos (no cambian mientras la app está abierta)
+    private(set) var skins: [SkinItem] = []
+    private(set) var fxs: [FxItem] = []
+    private(set) var avatars: [AvatarItem] = []
+    private(set) var banners: [BannerItem] = []
+    private(set) var albumCatalog = AlbumCatalogData(series: [], pieces: [])
+    private(set) var tiers: [SeasonTierInfo] = []
+    private(set) var wheelSlices: [WheelSliceInfo] = []
+    private(set) var gemPacks: [GemPackInfo] = []
+    private(set) var eco: EconomyInfo?
 
     private var cards: [Int: LevelCard] = [:]
     private var idleSeconds: Double = 0
     private var lastPhase: Int = 1
-    private var recordedKey: String = ""
-    private var playing = false
+    private var rewardedKey: String = ""
+    private var usedHelp = false
     private var lastDailyDay: Int = 0
+    private var skinByID: [String: SkinItem] = [:]
+    private var pieceByID: [String: AlbumPiece] = [:]
+    private var avatarByID: [Int: AvatarItem] = [:]
+    private var bannerByID: [Int: BannerItem] = [:]
+    private var seriesByID: [String: AlbumSeries] = [:]
 
     init() {
+        loadCatalogs()
+        if let saved = defaults.string(forKey: "meta_state_v1") {
+            meta.load(state: saved)
+        }
+        tickClock()
+        migrateLegacyProgress()
         refreshDaily()
+        openToday()
+        refreshState()
         sounds.updateMusic(shouldPlay: true)
     }
 
-    // MARK: Ajustes
+    // MARK: Carga
 
-    var hapticsOn: Bool {
-        (defaults.object(forKey: "haptics_on") as? Bool) ?? true
+    private func loadCatalogs() {
+        skins = decodeJSON([SkinItem].self, meta.skinCatalog()) ?? []
+        fxs = decodeJSON([FxItem].self, meta.fxCatalog()) ?? []
+        avatars = decodeJSON([AvatarItem].self, meta.avatarCatalog()) ?? []
+        banners = decodeJSON([BannerItem].self, meta.bannerCatalog()) ?? []
+        albumCatalog = decodeJSON(AlbumCatalogData.self, meta.albumCatalog()) ?? AlbumCatalogData(series: [], pieces: [])
+        wheelSlices = decodeJSON([WheelSliceInfo].self, meta.wheelSlices()) ?? []
+        gemPacks = decodeJSON([GemPackInfo].self, meta.gemPacks()) ?? []
+        eco = decodeJSON(EconomyInfo.self, meta.economyInfo())
+        for skin in skins { skinByID[skin.id] = skin }
+        for piece in albumCatalog.pieces { pieceByID[piece.id] = piece }
+        for series in albumCatalog.series { seriesByID[series.id] = series }
+        for item in avatars { avatarByID[item.id] = item }
+        for item in banners { bannerByID[item.id] = item }
     }
+
+    /// El progreso de la primera versión (UserDefaults) pasa a la memoria compartida, una sola vez.
+    private func migrateLegacyProgress() {
+        if defaults.bool(forKey: "meta_migrated") { return }
+        let unlockedOld = defaults.integer(forKey: "unlocked")
+        if unlockedOld > 1 {
+            var level = 1
+            while level <= unlockedOld {
+                let stars = defaults.integer(forKey: "stars_\(level)")
+                let best = defaults.integer(forKey: "best_\(level)")
+                if stars > 0 {
+                    meta.importLevel(level: Int32(level), stars: Int32(stars), bestMoves: Int32(best))
+                }
+                level += 1
+            }
+            meta.importUnlocked(level: Int32(unlockedOld))
+        }
+        if defaults.bool(forKey: "tutorial_done") { meta.markTutorialDone() }
+        defaults.set(true, forKey: "meta_migrated")
+        persist()
+    }
+
+    // MARK: Reloj y guardado
+
+    func localDay() -> Int {
+        let seconds = Date().timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT())
+        return Int(floor(seconds / 86400.0))
+    }
+
+    private func minuteOfDay() -> Int {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
+    }
+
+    private func tickClock() {
+        let ms = Int64(Date().timeIntervalSince1970 * 1000.0)
+        meta.tick(epochDay: Int32(localDay()), nowMs: ms, minuteOfDay: Int32(minuteOfDay()))
+    }
+
+    private func persist() {
+        defaults.set(meta.save(), forKey: "meta_state_v1")
+    }
+
+    func refreshState() {
+        tickClock()
+        if let fresh = decodeJSON(MetaState.self, meta.state()) {
+            state = fresh
+            stateAt = Date()
+        }
+        album = decodeJSON(AlbumStateData.self, meta.albumState())
+        persist()
+    }
+
+    /// Ejecuta una acción de la memoria compartida, guarda y vuelve a leer el estado.
+    @discardableResult
+    private func act(_ block: (MetaSession) -> String) -> String {
+        tickClock()
+        let json = block(meta)
+        persist()
+        refreshState()
+        return json
+    }
+
+    /// Como `act`, pero devuelve si salió bien y avisa del motivo si no.
+    @discardableResult
+    func run(_ block: (MetaSession) -> String) -> Bool {
+        let json = act(block)
+        guard let result = decodeJSON(ActionResult.self, json) else { return false }
+        if !result.ok, let reason = result.reason {
+            showToast(reason)
+            sounds.play("game_over", volume: 0.4)
+        } else if result.ok {
+            buzz(.light)
+        }
+        return result.ok
+    }
+
+    // MARK: Atajos de lectura
+
+    var coins: Int { state?.coins ?? 0 }
+    var gems: Int { state?.gems ?? 0 }
+    var unlocked: Int { state?.unlocked ?? 1 }
+    var streak: Int { state?.streak ?? 0 }
+    var totalStars: Int { state?.totalStars ?? 0 }
+    var levelsWon: Int { state?.levelsWon ?? 0 }
+    var levelCount: Int { Int(session.levelCount()) }
+    var hapticsOn: Bool { (defaults.object(forKey: "haptics_on") as? Bool) ?? true }
+
+    func skin(_ id: String) -> SkinItem? { skinByID[id] }
+    func piece(_ id: String) -> AlbumPiece? { pieceByID[id] }
+    func series(_ id: String) -> AlbumSeries? { seriesByID[id] }
+    func avatar(_ id: Int) -> AvatarItem? { avatarByID[id] }
+    func banner(_ id: Int) -> BannerItem? { bannerByID[id] }
+
+    func owns(skin id: String) -> Bool { state?.ownedSkins.contains(id) ?? false }
+
+    var boardStyle: BoardStyle {
+        BoardStyle(skin: skinByID[state?.equippedSkin ?? "jelly"])
+    }
+
+    func stars(_ level: Int) -> Int { Int(meta.starsOf(level: Int32(level))) }
+    func best(_ level: Int) -> Int { Int(meta.bestMovesOf(level: Int32(level))) }
+
+    func chapterStars(_ chapter: Int) -> Int { Int(meta.chapterStars(chapter: Int32(chapter))) }
+
+    /// Milisegundos que faltan para el cofre gratis, contando el tiempo que pasó desde la última lectura.
+    func freeChestRemaining(now: Date) -> Int {
+        guard let info = state?.freeChest else { return 0 }
+        let passed = Int(now.timeIntervalSince(stateAt) * 1000.0)
+        return max(0, info.remainingMs - passed)
+    }
+
+    // MARK: Ajustes
 
     private func buzz(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         if hapticsOn {
@@ -48,100 +260,234 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// La música suena en el menú y el mapa, no durante la partida.
     func syncMusic() {
         sounds.updateMusic(shouldPlay: screen != .game)
     }
 
     func resetProgress() {
-        let prefixes = ["stars_", "best_", "daily_", "seen_", "streak_"]
+        let prefixes = ["stars_", "best_", "daily_", "seen_", "streak_", "meta_"]
         let exact = ["unlocked", "tutorial_done"]
         for key in defaults.dictionaryRepresentation().keys {
             if exact.contains(key) || prefixes.contains(where: { key.hasPrefix($0) }) {
                 defaults.removeObject(forKey: key)
             }
         }
-        objectWillChange.send()
+        meta.resetAll()
+        defaults.set(true, forKey: "meta_migrated")
+        persist()
+        refreshState()
+        refreshDaily()
     }
 
-    // MARK: Progreso guardado
+    // MARK: Al abrir la app
 
-    var levelCount: Int { Int(session.levelCount()) }
-
-    /// Último nivel desbloqueado.
-    var unlocked: Int {
-        let saved = defaults.integer(forKey: "unlocked")
-        return saved < 1 ? 1 : saved
-    }
-
-    func stars(_ level: Int) -> Int { defaults.integer(forKey: "stars_\(level)") }
-
-    func best(_ level: Int) -> Int { defaults.integer(forKey: "best_\(level)") }
-
-    var totalStars: Int {
-        var total = 0
-        var level = 1
-        while level <= unlocked {
-            total += stars(level)
-            level += 1
+    private func openToday() {
+        let json = act { $0.openApp() }
+        guard let opened = decodeJSON(OpenAppResult.self, json) else { return }
+        var list: [Celebration] = []
+        if let gift = opened.comeback { list.append(.comeback(gift)) }
+        if let milestone = opened.milestone { list.append(.milestone(milestone)) }
+        if opened.repairLost > 0 {
+            list.append(.repair(RepairInfo(lost: opened.repairLost, cost: opened.repairCost)))
         }
-        return total
-    }
-
-    var levelsWon: Int {
-        var won = 0
-        var level = 1
-        while level <= unlocked {
-            if stars(level) > 0 { won += 1 }
-            level += 1
+        for skinID in opened.reveals { list.append(.reveal(skinID)) }
+        if opened.vipGems > 0 {
+            list.append(.info("¡VIP!", "Tus gemas de hoy: +\(opened.vipGems)", "diamond.fill"))
         }
-        return won
+        if state?.dailyReward.claimable ?? false { list.append(.dailyGift) }
+        queue.append(contentsOf: list)
     }
 
-    func chapterStars(_ chapter: Int) -> Int {
-        var total = 0
-        let first = chapter * Chapters.size + 1
-        for level in first..<(first + Chapters.size) {
-            total += stars(level)
+    /// Al volver a la app (otro día) se vuelve a mirar la racha y el regalo.
+    func appBecameActive() {
+        if localDay() != lastDailyDay {
+            refreshDaily()
+            openToday()
+        } else {
+            refreshState()
         }
-        return total
     }
 
-    // MARK: Racha y reto diario
+    // MARK: Avisos
 
-    /// Día local contado desde 1970 (el mismo que usa Android para el reto diario).
-    func localDay() -> Int {
-        let seconds = Date().timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT())
-        return Int(floor(seconds / 86400.0))
+    func dismissCelebration() {
+        if !queue.isEmpty { queue.removeFirst() }
     }
 
-    /// Días seguidos jugando (0 si ya se rompió).
-    var streak: Int {
-        let last = defaults.integer(forKey: "streak_last")
-        let today = localDay()
-        if last == today || last == today - 1 {
-            return defaults.integer(forKey: "streak_count")
+    func push(_ celebration: Celebration) {
+        queue.append(celebration)
+    }
+
+    func showToast(_ text: String) {
+        toast = text
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
+            if self?.toast == text { self?.toast = nil }
         }
-        return 0
     }
 
-    private func bumpStreak() {
-        let today = localDay()
-        let last = defaults.integer(forKey: "streak_last")
-        if last == today { return }
-        let next = (last == today - 1) ? defaults.integer(forKey: "streak_count") + 1 : 1
-        defaults.set(next, forKey: "streak_count")
-        defaults.set(today, forKey: "streak_last")
+    // MARK: Racha, regalo y cofres
+
+    func claimDailyGift() {
+        let json = act { $0.claimDailyReward() }
+        if let result = decodeJSON(DailyGiftResult.self, json), result.ok {
+            sounds.play("win", volume: 0.7)
+            buzz(.medium)
+        }
     }
 
-    var dailyDone: Bool { defaults.bool(forKey: "daily_done_\(localDay())") }
+    func repairStreak() { run { $0.repairStreak() } }
+    func declineRepair() { act { $0.declineRepair() } }
 
-    var dailyStars: Int { defaults.integer(forKey: "daily_stars_\(localDay())") }
+    func claimFreeChest() {
+        let json = act { $0.claimFreeChest() }
+        if let result = decodeJSON(ActionResult.self, json), result.ok {
+            sounds.play("better_pop")
+            buzz(.medium)
+            showToast("¡Cofre gratis en tu inventario!")
+        }
+    }
 
-    func refreshDaily() {
-        let day = localDay()
-        lastDailyDay = day
-        dailyCard = decodeJSON(LevelCard.self, session.dailyInfo(epochDay: Int32(day)))
+    func skipChestWithGems() { run { $0.skipFreeChestWithGems() } }
+
+    func openChest(_ type: String) {
+        let json = act { $0.openChest(type: type, seed: Int64(Date().timeIntervalSince1970 * 1000.0)) }
+        guard let result = decodeJSON(ChestOpenResult.self, json) else { return }
+        if result.ok, let drops = result.drops {
+            sounds.play("win", volume: 0.8)
+            buzz(.heavy)
+            push(.chest(type, drops))
+            for skinID in result.reveals ?? [] { push(.reveal(skinID)) }
+        } else if let reason = result.reason {
+            showToast(reason)
+        }
+    }
+
+    func buyChest(_ type: String, gems withGems: Bool) { run { $0.buyChest(type: type, withGems: withGems) } }
+
+    /// Gira la ruleta. Devuelve la casilla ganadora (el premio ya está entregado).
+    func spinWheel() -> Int? {
+        let json = act { $0.spinWheel(seed: Int64(Date().timeIntervalSince1970 * 1000.0)) }
+        guard let result = decodeJSON(WheelResult.self, json), result.ok else { return nil }
+        return result.index
+    }
+
+    // MARK: Misiones, pase y liga
+
+    func claimMission(_ id: Int) {
+        let json = act { $0.claimMission(id: Int32(id)) }
+        guard let result = decodeJSON(MissionClaimResult.self, json), result.ok else { return }
+        sounds.play("better_pop")
+        buzz(.medium)
+        if result.allDone ?? false {
+            push(.info("¡Día perfecto!", "Cobraste las tres misiones: cofre, gemas y ficha de intercambio.", "checkmark.seal.fill"))
+        }
+    }
+
+    func claimWeekly(_ id: String) { run { $0.claimWeekly(id: id) } }
+    func claimWeeklyBonus() { run { $0.claimWeeklyBonus() } }
+
+    func claimTier(_ tier: Int, premium: Bool) {
+        let json = act { $0.claimTier(tier: Int32(tier), premium: premium) }
+        if let result = decodeJSON(TierClaimResult.self, json), result.ok {
+            sounds.play("better_pop")
+            buzz(.medium)
+        }
+    }
+
+    func claimAllTiers() { run { $0.claimAllTiers() } }
+    func buySeasonTier() { run { $0.buySeasonTier() } }
+
+    /// Pase premium de la temporada: la versión de prueba no cobra, lo abre directamente.
+    func unlockPremium() {
+        act { m in
+            m.unlockSeasonPremium()
+            return "{\"ok\":true}"
+        }
+        showToast("Pase premium activado (versión de prueba)")
+    }
+
+    func loadTiers() {
+        tiers = decodeJSON([SeasonTierInfo].self, meta.seasonTiers()) ?? []
+    }
+
+    func claimLeague() {
+        let json = act { $0.claimLeague() }
+        if let result = decodeJSON(ActionResult.self, json), result.ok {
+            sounds.play("win", volume: 0.7)
+        }
+    }
+
+    // MARK: Tienda
+
+    func buySkin(_ id: String, discount: Int = 0) { run { $0.buySkin(id: id, discount: Int32(discount)) } }
+    func equipSkin(_ id: String) { run { $0.equipSkin(id: id) } }
+    func buyFx(_ id: String) { run { $0.buyFx(id: id, discount: 0) } }
+    func equipFx(_ id: String) { run { $0.equipFx(id: id) } }
+    func buyAvatar(_ id: Int) { run { $0.buyAvatar(id: Int32(id)) } }
+    func buyBanner(_ id: Int) { run { $0.buyBanner(id: Int32(id)) } }
+    func buyUndos(_ pack: Int) { run { $0.buyUndos(pack: Int32(pack)) } }
+    func buyExtraTimes(_ pack: Int) { run { $0.buyExtraTimes(pack: Int32(pack)) } }
+    func buyFreeze() { run { $0.buyFreeze() } }
+    func buyBoost() { run { $0.buyCoinBoost() } }
+    func exchangeGems(_ gems: Int) { run { $0.exchangeGems(gems: Int32(gems)) } }
+    func buyDailyOffer() { run { $0.buyDailyOffer() } }
+    func buyEventSkin(_ eventID: String) { run { $0.buyEventSkin(eventId: eventID) } }
+    func testBuyGemPack(_ id: String) { run { $0.testBuyGemPack(id: id) } }
+
+    func setAvatar(_ id: Int) {
+        tickClock()
+        if meta.setAvatar(id: Int32(id)) {
+            persist()
+            refreshState()
+        } else {
+            showToast("Aún no tienes ese avatar")
+        }
+    }
+
+    func setBanner(_ id: Int) {
+        tickClock()
+        if meta.setBanner(id: Int32(id)) {
+            persist()
+            refreshState()
+        } else {
+            showToast("Aún no tienes ese banner")
+        }
+    }
+
+    func setName(_ name: String) {
+        meta.setProfileName(name: name)
+        persist()
+        refreshState()
+    }
+
+    // MARK: Álbum
+
+    func sellPiece(_ id: String, qty: Int = 1) { run { $0.sellPiece(id: id, qty: Int32(qty)) } }
+    func sellAll(_ rarity: String) { run { $0.sellAll(maxRarity: rarity) } }
+    func recyclePiece(_ id: String, qty: Int = 1) { run { $0.recyclePiece(id: id, qty: Int32(qty)) } }
+    func craftPiece(_ id: String) { run { $0.craftPiece(id: id) } }
+    func foilPiece(_ id: String) { run { $0.foilPiece(id: id) } }
+    func buyShardPack() { run { $0.buyShardPack() } }
+    func buyTradeToken() { run { $0.buyTradeToken() } }
+    func claimSeriesReward(_ id: String) { run { $0.claimSeriesReward(seriesId: id) } }
+    func claimAlbumReward() { run { $0.claimAlbumReward() } }
+    func unlockShowcaseSlot() { run { $0.unlockShowcaseSlot() } }
+
+    func setShowcase(_ ids: [String]) {
+        meta.setShowcase(ids: ids.joined(separator: ","))
+        persist()
+        refreshState()
+    }
+
+    func openSeriesPack(_ seriesID: String, gems withGems: Bool) {
+        let json = act { $0.openSeriesPack(seriesId: seriesID, withGems: withGems, seed: Int64(Date().timeIntervalSince1970 * 1000.0)) }
+        guard let result = decodeJSON(ChestOpenResult.self, json) else { return }
+        if result.ok, let drops = result.drops {
+            sounds.play("win", volume: 0.8)
+            push(.chest("SERIES", drops))
+        } else if let reason = result.reason {
+            showToast(reason)
+        }
     }
 
     // MARK: Niveles
@@ -154,13 +500,22 @@ final class AppModel: ObservableObject {
     }
 
     func openPreview(_ level: Int) {
-        preview = card(level)
+        if let card = card(level) { sheet = .level(card) }
     }
 
+    func refreshDaily() {
+        let day = localDay()
+        lastDailyDay = day
+        dailyCard = decodeJSON(LevelCard.self, session.dailyInfo(epochDay: Int32(day)))
+    }
+
+    var dailyDone: Bool { defaults.bool(forKey: "daily_done_\(localDay())") }
+    var dailyStars: Int { defaults.integer(forKey: "daily_stars_\(localDay())") }
+
     func start(_ level: Int) {
-        session.tutorialEnabled = level == 1 && !defaults.bool(forKey: "tutorial_done")
+        session.tutorialEnabled = level == 1 && !(state?.tutorialDone ?? false)
         session.start(level: Int32(level))
-        begin(introFor: card(level), key: levelKey(level))
+        begin(introFor: card(level), key: "level_\(level)")
     }
 
     func startDaily() {
@@ -170,16 +525,16 @@ final class AppModel: ObservableObject {
         begin(introFor: dailyCard, key: "daily_\(localDay())")
     }
 
-    private func levelKey(_ level: Int) -> String { "level_\(level)" }
-
     private func begin(introFor card: LevelCard?, key: String) {
-        preview = nil
+        sheet = nil
         hint = nil
         toast = nil
+        reward = nil
+        loss = nil
         idleSeconds = 0
         lastPhase = 1
-        recordedKey = ""
-        playing = true
+        rewardedKey = ""
+        usedHelp = false
         refresh(animated: false)
         intro = needsIntro(card) ? card : nil
         screen = .game
@@ -217,13 +572,16 @@ final class AppModel: ObservableObject {
     }
 
     func backToMap() {
-        screen = .map
+        tab = .play
+        screen = .main
         syncMusic()
     }
 
     func backToMenu() {
-        screen = .menu
+        tab = .home
+        screen = .main
         refreshDaily()
+        refreshState()
         syncMusic()
     }
 
@@ -249,15 +607,42 @@ final class AppModel: ObservableObject {
         lastPhase = now.phase
     }
 
+    /// Deshacer gasta uno de los "Deshacer" del inventario (se compran con monedas, como en Android).
     func undo() {
-        if session.undoMove() {
+        guard let current = snap, current.canUndo else { return }
+        if (state?.undos ?? 0) <= 0 {
+            sheet = .lowFunds
+            return
+        }
+        tickClock()
+        if meta.useUndo() && session.undoMove() {
+            usedHelp = true
             hint = nil
+            persist()
+            refreshState()
             refresh(animated: true)
+        }
+    }
+
+    func addExtraTime() {
+        guard let current = snap, current.status == "playing", current.timeLeftMs != nil else { return }
+        if (state?.extraTimes ?? 0) <= 0 {
+            sheet = .lowFunds
+            return
+        }
+        tickClock()
+        if meta.useExtraTime() {
+            _ = session.addExtraTime(ms: 20000)
+            usedHelp = true
+            persist()
+            refreshState()
+            refresh(animated: false)
         }
     }
 
     func showHint() {
         guard let current = snap, current.status == "playing" else { return }
+        usedHelp = true
         hint = decodeJSON(GuideHint.self, session.hint())
     }
 
@@ -286,38 +671,39 @@ final class AppModel: ObservableObject {
         }
         if before == "playing" && fresh.status != "playing" {
             sounds.play(fresh.status == "won" ? "win" : "game_over")
+            finish(fresh)
         }
-        record(fresh)
     }
 
-    /// Guarda estrellas y desbloquea el siguiente nivel la primera vez que se gana; marca el tutorial como hecho.
-    private func record(_ s: BoardSnap) {
-        if s.tutorialDone && !defaults.bool(forKey: "tutorial_done") {
-            defaults.set(true, forKey: "tutorial_done")
-        }
-        guard s.status == "won" else { return }
-        let key = s.daily ? "daily_\(localDay())" : levelKey(s.level)
-        guard recordedKey != key else { return }
-        recordedKey = key
-        bumpStreak()
-        if s.daily {
-            defaults.set(true, forKey: "daily_done_\(localDay())")
-            if s.stars > dailyStars { defaults.set(s.stars, forKey: "daily_stars_\(localDay())") }
+    /// Al terminar la partida se pagan los premios (una sola vez por partida).
+    private func finish(_ s: BoardSnap) {
+        let key = s.daily ? "daily_\(localDay())_\(s.moves)" : "level_\(s.level)_\(s.moves)_\(s.score)"
+        guard rewardedKey != key else { return }
+        rewardedKey = key
+        if s.status == "won" {
+            let json = act { m in
+                m.onWin(
+                    level: Int32(s.level), daily: s.daily, stars: Int32(s.stars), moves: Int32(s.moves),
+                    timeMs: Int64(s.elapsedMs), maxTile: Int32(s.maxTile), merges: Int32(s.merges), usedHelp: usedHelp
+                )
+            }
+            reward = decodeJSON(WinReward.self, json)
+            if s.tutorialDone { defaults.set(true, forKey: "tutorial_done") }
+            if s.daily {
+                defaults.set(true, forKey: "daily_done_\(localDay())")
+                if s.stars > dailyStars { defaults.set(s.stars, forKey: "daily_stars_\(localDay())") }
+            }
+            if hapticsOn {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+            if let won = reward {
+                for skinID in won.newSkins { push(.reveal(skinID)) }
+            }
         } else {
-            if s.stars > stars(s.level) { defaults.set(s.stars, forKey: "stars_\(s.level)") }
-            if best(s.level) == 0 || s.moves < best(s.level) { defaults.set(s.moves, forKey: "best_\(s.level)") }
-            if s.level + 1 > unlocked { defaults.set(s.level + 1, forKey: "unlocked") }
-            if s.level == 1 { defaults.set(true, forKey: "tutorial_done") }
-        }
-        if hapticsOn {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        }
-    }
-
-    private func showToast(_ text: String) {
-        toast = text
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
-            if self?.toast == text { self?.toast = nil }
+            let json = act { m in
+                m.onLoss(level: Int32(s.level), daily: s.daily, maxTile: Int32(s.maxTile), merges: Int32(s.merges))
+            }
+            loss = decodeJSON(LossInfo.self, json)
         }
     }
 }

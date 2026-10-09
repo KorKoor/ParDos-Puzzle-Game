@@ -8,10 +8,15 @@ struct GameView: View {
     private let clock = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        ZStack {
+        let style = model.boardStyle
+        return ZStack {
+            if style.changesTheme {
+                style.background.ignoresSafeArea()
+            }
+            ParticlesView(kind: style.particles, tint: style.particleTint)
             if let snap = model.snap {
                 VStack(spacing: 12) {
-                    topBar(snap)
+                    topBar(snap, style)
                     GoalCard(snap: snap)
                     RuleChips(snap: snap)
                     BoardView(snap: snap, hint: currentGuide(snap))
@@ -23,9 +28,6 @@ struct GameView: View {
                 .padding(.top, 6)
                 if snap.status != "playing" {
                     ResultOverlay(snap: snap)
-                }
-                if let message = model.toast {
-                    ToastView(text: message)
                 }
                 if let card = model.intro {
                     RuleIntroView(card: card) { model.dismissIntro() }
@@ -59,7 +61,7 @@ struct GameView: View {
         return model.hint
     }
 
-    private func topBar(_ snap: BoardSnap) -> some View {
+    private func topBar(_ snap: BoardSnap, _ style: BoardStyle) -> some View {
         HStack(spacing: 10) {
             Button(action: { leave(snap) }) {
                 Image(systemName: "chevron.left")
@@ -75,7 +77,7 @@ struct GameView: View {
                     .foregroundColor(kindColor(snap.kind))
                 Text(snap.daily ? "Reto de hoy" : "Nivel \(snap.level)")
                     .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                    .foregroundColor(style.ink ?? Theme.ink)
             }
             Spacer()
             Button(action: { model.restart() }) {
@@ -94,19 +96,30 @@ struct GameView: View {
         if let text = snap.coach, !text.isEmpty {
             CoachCard(text: text, done: snap.coachDone ?? 0, needed: snap.coachNeeded ?? 3)
         } else {
-            HStack(spacing: 12) {
-                actionButton("arrow.uturn.backward", "Deshacer", enabled: snap.canUndo) { model.undo() }
-                actionButton("lightbulb.fill", "Pista", enabled: snap.status == "playing") { model.showHint() }
+            HStack(spacing: 10) {
+                actionButton("arrow.uturn.backward", "Deshacer", count: model.state?.undos ?? 0, enabled: snap.canUndo) { model.undo() }
+                actionButton("lightbulb.fill", "Pista", count: nil, enabled: snap.status == "playing") { model.showHint() }
+                if snap.timeLeftMs != nil {
+                    actionButton("timer", "+20 s", count: model.state?.extraTimes ?? 0, enabled: snap.status == "playing") { model.addExtraTime() }
+                }
             }
             .padding(.horizontal, 16)
         }
     }
 
-    private func actionButton(_ symbol: String, _ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func actionButton(_ symbol: String, _ title: String, count: Int?, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: symbol)
-                Text(title).font(.system(size: 15, weight: .heavy, design: .rounded))
+                Text(title).font(.system(size: 14, weight: .heavy, design: .rounded))
+                if let count = count {
+                    Text("\(count)")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(count > 0 ? Theme.accent : Color.gray.opacity(0.6)))
+                }
             }
             .foregroundColor(enabled ? Theme.ink : Theme.ink.opacity(0.3))
             .frame(maxWidth: .infinity)
@@ -290,41 +303,171 @@ struct ResultOverlay: View {
         ZStack {
             Color.black.opacity(0.45).ignoresSafeArea()
             if won { ConfettiView() }
-            VStack(spacing: 16) {
-                Text(headline)
-                    .font(.system(size: 26, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
-                    .multilineTextAlignment(.center)
-                if won {
-                    HStack(spacing: 8) {
-                        ForEach(0..<3, id: \.self) { i in
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 38))
-                                .foregroundColor(i < snap.stars ? Theme.gold : Theme.ink.opacity(0.12))
-                        }
+            ScrollView(showsIndicators: false) {
+                card
+                    .padding(.vertical, 40)
+            }
+        }
+    }
+
+    private var card: some View {
+        VStack(spacing: 14) {
+            Text(headline)
+                .font(.system(size: 26, weight: .black, design: .rounded))
+                .foregroundColor(Theme.ink)
+                .multilineTextAlignment(.center)
+            if won {
+                HStack(spacing: 8) {
+                    ForEach(0..<3, id: \.self) { i in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 38))
+                            .foregroundColor(i < snap.stars ? Theme.gold : Theme.ink.opacity(0.12))
                     }
-                    Text("\(snap.moves) movimientos · \(snap.score) puntos")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(Theme.ink.opacity(0.6))
-                } else {
-                    Text("Prueba otro orden: cada jugada cuenta.")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(Theme.ink.opacity(0.6))
                 }
-                if won {
-                    bigButton(snap.daily ? "VOLVER AL MENÚ" : "SIGUIENTE", Theme.accent) { model.nextLevel() }
-                    smallButton(snap.daily ? "Jugar otra vez" : "Repetir nivel") { model.restart() }
-                } else {
-                    bigButton("REINTENTAR", Theme.accent) { model.restart() }
+                Text("\(snap.moves) movimientos · \(snap.score) puntos")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(Theme.ink.opacity(0.6))
+                if let reward = model.reward {
+                    rewardBox(reward)
                 }
-                if !snap.daily {
-                    smallButton("Volver al mapa") { model.backToMap() }
+            } else {
+                Text("Prueba otro orden: cada jugada cuenta.")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Theme.ink.opacity(0.6))
+                if let goal = model.loss?.nextGoal {
+                    goalLine(goal)
                 }
             }
-            .padding(24)
-            .frame(maxWidth: 340)
-            .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream))
-            .padding(24)
+            buttons
+        }
+        .padding(24)
+        .frame(maxWidth: 340)
+        .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream))
+        .padding(.horizontal, 24)
+    }
+
+    // MARK: Premios
+
+    private func eventText(_ value: Double) -> String {
+        if value == value.rounded() { return "×\(Int(value))" }
+        return "×" + String(format: "%.1f", value)
+    }
+
+    private func rewardBox(_ reward: WinReward) -> some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                CoinIcon(size: 30)
+                Text("+\(reward.coins)")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.ink)
+            }
+            VStack(spacing: 4) {
+                if reward.firstClear { line("Primera vez en este nivel", "+20") }
+                if reward.streakPct > 0 { line("Racha de \(reward.winStreak) victorias", "+\(reward.streakPct)%") }
+                if reward.albumPct > 0 { line("Bono del álbum", "+\(reward.albumPct)%") }
+                if reward.eventMult > 1.0 { line("Evento activo", eventText(reward.eventMult)) }
+                if reward.vipBonus { line("VIP", "+20%") }
+                if reward.boostActive { line("Impulso de monedas", "+50%") }
+                if reward.firstWinCoins > 0 { line("Primera victoria del día", "+\(reward.firstWinCoins)") }
+            }
+            HStack(spacing: 14) {
+                if reward.piggyGems > 0 { pill(AnyView(GemIcon(size: 16)), "+\(reward.piggyGems) hucha") }
+                if reward.seasonPoints > 0 { pill(AnyView(SpriteImage(name: "ico_crown", size: 18)), "+\(reward.seasonPoints) pase") }
+            }
+            if let milestone = reward.winMilestone {
+                Text("¡Racha de victorias! +\(milestone.gems) gemas" + (milestone.undos > 0 ? " y \(milestone.undos) deshacer" : ""))
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundColor(Theme.energy)
+                    .multilineTextAlignment(.center)
+            }
+            ForEach(0..<reward.levelRewards.count, id: \.self) { i in
+                Text(levelUpText(reward.levelRewards[i]))
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundColor(Theme.accent)
+                    .multilineTextAlignment(.center)
+            }
+            if let chest = reward.chapterChest {
+                HStack(spacing: 8) {
+                    ChestIcon(type: chest.chest, size: 34)
+                    Text("¡Cofre del capítulo \(chest.chapter)! +\(chest.coins) monedas, +\(chest.gems) gemas y un \(chestName(chest.chest).lowercased())")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundColor(Theme.ink)
+                }
+            }
+            if let goal = reward.nextGoal {
+                goalLine(goal)
+            }
+            if let teaser = reward.teaser {
+                Text(teaser.toChest > 0 ? "Siguiente: \(teaser.title) · \(teaser.toChest) niveles para el cofre" : "Siguiente: \(teaser.title)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Theme.ink.opacity(0.5))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.gold.opacity(0.13)))
+    }
+
+    private func levelUpText(_ lr: LevelRewardInfo) -> String {
+        var text = "¡Nivel de jugador \(lr.level)! +\(lr.coins) monedas"
+        if lr.gems > 0 { text += " +\(lr.gems) gemas" }
+        if lr.chest != nil { text += " + cofre" }
+        return text
+    }
+
+    private func line(_ text: String, _ value: String) -> some View {
+        HStack {
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(Theme.ink.opacity(0.6))
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .black, design: .rounded))
+                .foregroundColor(Theme.ink)
+        }
+    }
+
+    private func pill(_ icon: AnyView, _ text: String) -> some View {
+        HStack(spacing: 4) {
+            icon
+            Text(text)
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .foregroundColor(Theme.ink)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Color.white))
+    }
+
+    private func goalLine(_ goal: NextGoalInfo) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "flag.checkered").foregroundColor(Theme.accent)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(goal.title).font(.system(size: 12, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                Text(goal.detail).font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.55))
+            }
+            Spacer()
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white))
+    }
+
+    // MARK: Botones
+
+    private var buttons: some View {
+        VStack(spacing: 12) {
+            if won {
+                bigButton(snap.daily ? "VOLVER AL MENÚ" : "SIGUIENTE", Theme.accent) { model.nextLevel() }
+                smallButton(snap.daily ? "Jugar otra vez" : "Repetir nivel") { model.restart() }
+            } else {
+                bigButton("REINTENTAR", Theme.accent) { model.restart() }
+            }
+            if !snap.daily {
+                smallButton("Volver al mapa") { model.backToMap() }
+            } else if !won {
+                smallButton("Volver al menú") { model.backToMenu() }
+            }
         }
     }
 

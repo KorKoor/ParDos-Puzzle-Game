@@ -55,6 +55,9 @@ class GameSession(seed: Long) {
     private var blockedMessage = ""
     private var undo: Snapshot? = null
     private var daily = false
+    private var mergePairs = 0
+    private var peakTile = 0
+    private var extraTimeMs = 0L
 
     /** Si es `true`, el nivel 1 enseña con el guion del tutorial (la app lo apaga cuando ya se completó). */
     var tutorialEnabled: Boolean = false
@@ -117,6 +120,9 @@ class GameSession(seed: Long) {
         started = false
         blockedMessage = ""
         undo = null
+        mergePairs = 0
+        peakTile = 0
+        extraTimeMs = 0L
         engine = GameEngine(spec.boardSize, rng, spec.stoneSet)
         tiles = initialTiles()
     }
@@ -175,6 +181,8 @@ class GameSession(seed: Long) {
         val harvested = if (spec.goal == LevelGoal.HARVEST) moved.count { it.isMerged && it.value == spec.goalValue } else 0
         stats = stats.after(pairs, if (spec.goal == LevelGoal.COMBO) spec.goalValue else 0, harvested)
         tiles = finalTiles
+        mergePairs += pairs
+        peakTile = maxOf(peakTile, finalTiles.maxOfOrNull { it.value } ?: 0)
 
         // El reloj de los niveles contrarreloj regala segundos con las combinaciones
         timeLeftMs?.let { left ->
@@ -184,7 +192,7 @@ class GameSession(seed: Long) {
                 pairs >= 2 -> 4_000L
                 else -> 0L
             }
-            timeLeftMs = (left + bonus).coerceAtMost(spec.timeLimitMs ?: left)
+            timeLeftMs = (left + bonus).coerceAtMost((spec.timeLimitMs ?: left) + extraTimeMs)
         }
 
         val reached = LevelRules.isGoalReached(spec, tiles, score, stats)
@@ -219,7 +227,7 @@ class GameSession(seed: Long) {
 
     private fun win() {
         status = WON
-        val used = spec.timeLimitMs?.let { limit -> (limit - (timeLeftMs ?: limit)).coerceAtLeast(0L) } ?: elapsedMs
+        val used = spec.timeLimitMs?.let { limit -> (limit + extraTimeMs - (timeLeftMs ?: limit)).coerceAtLeast(0L) } ?: elapsedMs
         stars = LevelRules.stars(spec, moves, used)
     }
 
@@ -236,6 +244,15 @@ class GameSession(seed: Long) {
         stormStones = snap.stormStones; timeLeftMs = snap.timeLeftMs
         engine = GameEngine(spec.boardSize, rng, blockedNow())
         undo = null
+        return true
+    }
+
+    /** "Tiempo extra": regala milisegundos al reloj de un nivel con reloj. Devuelve `false` si no hay reloj o ya terminó. */
+    fun addExtraTime(ms: Int): Boolean {
+        val left = timeLeftMs ?: return false
+        if (status != PLAYING || ms <= 0) return false
+        timeLeftMs = left + ms
+        extraTimeMs += ms
         return true
     }
 
@@ -296,7 +313,8 @@ class GameSession(seed: Long) {
             "coach" to coach?.text, "coachKind" to coach?.kind?.name,
             "coachDir" to coachDir?.let { directionInt(it) }, "coachCells" to coach?.cells?.map { listOf(it.first, it.second) },
             "coachDone" to coach?.mergesDone, "coachNeeded" to coach?.mergesNeeded,
-            "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING)
+            "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
+            "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs
         )
     }
 

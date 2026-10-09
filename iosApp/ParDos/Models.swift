@@ -46,6 +46,9 @@ struct BoardSnap: Decodable {
     let coachNeeded: Int?
     let tutorialDone: Bool
     let canUndo: Bool
+    let merges: Int
+    let maxTile: Int
+    let elapsedMs: Int
 }
 
 struct GuideHint: Decodable {
@@ -69,7 +72,18 @@ struct LevelCard: Decodable, Identifiable {
     let threeStars: String
 }
 
+/// Errores de lectura de los datos compartidos (se enseñan en Ajustes → Diagnóstico para poder corregirlos rápido).
+var decodeDiagnostics: [String] = []
+
 func decodeJSON<T: Decodable>(_ type: T.Type, _ json: String) -> T? {
     guard let data = json.data(using: .utf8) else { return nil }
-    return try? JSONDecoder().decode(T.self, from: data)
+    do {
+        return try JSONDecoder().decode(T.self, from: data)
+    } catch {
+        let text = "\(T.self): \(error)"
+        if !decodeDiagnostics.contains(text) && decodeDiagnostics.count < 20 {
+            decodeDiagnostics.append(text)
+        }
+        return nil
+    }
 }

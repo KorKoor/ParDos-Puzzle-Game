@@ -1,174 +1,5 @@
 import SwiftUI
 
-// MARK: - Menú
-
-struct MenuView: View {
-    @EnvironmentObject var model: AppModel
-
-    var body: some View {
-        ZStack(alignment: .top) {
-            VStack(spacing: 16) {
-                topBar
-                Spacer(minLength: 0)
-                header
-                Spacer(minLength: 0)
-                playButton
-                dailyCard
-                mapButton
-                Spacer(minLength: 0)
-                Text("Versión de prueba para iPhone · la lógica del juego es la misma que en Android")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(Theme.ink.opacity(0.4))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 10)
-            }
-            .padding(.horizontal, 22)
-            HalloweenGarland()
-        }
-    }
-
-    private var topBar: some View {
-        HStack(spacing: 10) {
-            statChip(symbol: "star.fill", color: Theme.gold, text: "\(model.totalStars)")
-            statChip(symbol: "flame.fill", color: Theme.energy, text: "\(model.streak) \(model.streak == 1 ? "día" : "días")")
-            Spacer()
-            Button(action: { model.showSettings = true }) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(Theme.ink)
-                    .frame(width: 42, height: 42)
-                    .background(Circle().fill(Color.white))
-            }
-        }
-        .padding(.top, 6)
-    }
-
-    private func statChip(symbol: String, color: Color, text: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: symbol).foregroundColor(color)
-            Text(text)
-                .font(.system(size: 14, weight: .heavy, design: .rounded))
-                .foregroundColor(Theme.ink)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Capsule().fill(Color.white))
-    }
-
-    private var header: some View {
-        VStack(spacing: 10) {
-            Text("PARDOS")
-                .font(.system(size: 54, weight: .black, design: .rounded))
-                .kerning(8)
-                .foregroundColor(Theme.ink)
-            Text(Theme.halloween ? "SUMA… SI TE ATREVES" : "SUMA Y RELÁJATE")
-                .font(.system(size: 12, weight: .heavy))
-                .kerning(5)
-                .foregroundColor(Theme.ink.opacity(0.45))
-        }
-    }
-
-    private var playButton: some View {
-        Button(action: { model.start(model.unlocked) }) {
-            HStack(spacing: 14) {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 26, weight: .bold))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("JUGAR")
-                        .font(.system(size: 24, weight: .black, design: .rounded))
-                        .kerning(3)
-                    Text(Theme.halloween ? "Nivel \(model.unlocked) · ¡BUU!" : "Nivel \(model.unlocked)")
-                        .font(.system(size: 13, weight: .bold))
-                        .opacity(0.85)
-                }
-                Spacer()
-                menuSprites
-            }
-            .foregroundColor(.white)
-            .padding(.horizontal, 24)
-            .frame(height: 100)
-            .background(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(LinearGradient(colors: [Theme.accent, Theme.accentDark], startPoint: .top, endPoint: .bottom))
-            )
-            .shadow(color: Theme.accentDark.opacity(0.5), radius: 0, x: 0, y: 6)
-        }
-    }
-
-    @ViewBuilder
-    private var menuSprites: some View {
-        if Theme.halloween {
-            HStack(spacing: -6) {
-                FloatingSprite(name: "ico_ghost", size: 40, tilt: -8, phase: 0.2)
-                FloatingSprite(name: "ico_pumpkin", size: 50, tilt: 6, phase: 0.5)
-            }
-        } else {
-            FloatingSprite(name: "ico_star", size: 46, tilt: 8, phase: 0.3)
-        }
-    }
-
-    private var dailyCard: some View {
-        Button(action: { model.startDaily() }) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(kindColor(model.dailyCard?.kind ?? "ZEN"))
-                        .frame(width: 46, height: 46)
-                    Image(systemName: kindSymbol(model.dailyCard?.kind ?? "ZEN"))
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("RETO DIARIO")
-                        .font(.system(size: 10, weight: .heavy))
-                        .kerning(2)
-                        .foregroundColor(Theme.gold)
-                    Text(model.dailyCard?.kindLabel ?? "Reto")
-                        .font(.system(size: 17, weight: .black, design: .rounded))
-                        .foregroundColor(.white)
-                    Text(model.dailyCard?.goal ?? "")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(Color.white.opacity(0.7))
-                        .lineLimit(1)
-                }
-                Spacer()
-                if model.dailyDone {
-                    HStack(spacing: 2) {
-                        ForEach(0..<3, id: \.self) { i in
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 13))
-                                .foregroundColor(i < model.dailyStars ? Theme.gold : Color.white.opacity(0.2))
-                        }
-                    }
-                } else {
-                    Image(systemName: "chevron.right")
-                        .foregroundColor(Color.white.opacity(0.6))
-                }
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 74)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Theme.ink))
-            .shadow(color: Theme.ink.opacity(0.25), radius: 0, x: 0, y: 4)
-        }
-    }
-
-    private var mapButton: some View {
-        Button(action: { model.screen = .map }) {
-            HStack {
-                Image(systemName: "map.fill")
-                Text("Mapa de niveles")
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
-            }
-            .foregroundColor(Theme.ink)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color.white))
-            .shadow(color: Theme.ink.opacity(0.12), radius: 0, x: 0, y: 4)
-        }
-    }
-}
-
 // MARK: - Mapa de niveles
 
 struct MapView: View {
@@ -204,30 +35,27 @@ struct MapView: View {
     }
 
     private var topBar: some View {
-        HStack {
-            Button(action: { model.backToMenu() }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .bold))
+        VStack(spacing: 10) {
+            HStack {
+                Text("Campaña")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
-                    .frame(width: 44, height: 44)
-                    .background(Circle().fill(Color.white))
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill").foregroundColor(Theme.gold)
+                    Text("\(model.totalStars)")
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(Color.white))
             }
-            Text("Campaña")
-                .font(.system(size: 22, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
-            Spacer()
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill").foregroundColor(Theme.gold)
-                Text("\(model.totalStars)")
-                    .font(.system(size: 15, weight: .heavy, design: .rounded))
-                    .foregroundColor(Theme.ink)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(Color.white))
+            CurrencyBar()
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.top, 26)
+        .padding(.bottom, 6)
     }
 }
 
@@ -447,6 +275,8 @@ struct SettingsView: View {
             Text("Ajustes")
                 .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)
+            ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
             VStack(spacing: 0) {
                 toggleRow("speaker.wave.2.fill", "Sonidos", $soundOn)
                 Divider()
@@ -471,12 +301,27 @@ struct SettingsView: View {
             .padding(14)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            if !decodeDiagnostics.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("DIAGNÓSTICO")
+                        .font(.system(size: 10, weight: .heavy))
+                        .kerning(2)
+                        .foregroundColor(Color(hex: 0xB4413C))
+                    Text(decodeDiagnostics.joined(separator: "\n"))
+                        .font(.system(size: 9, design: .monospaced))
+                        .foregroundColor(Theme.ink.opacity(0.7))
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+            }
             Button(action: { confirmReset = true }) {
                 Text("Borrar mi progreso")
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
                     .foregroundColor(Color(hex: 0xB4413C))
             }
-            Spacer(minLength: 0)
+            }
+            }
         }
         .padding(.horizontal, 22)
         .background(Theme.cream.ignoresSafeArea())
