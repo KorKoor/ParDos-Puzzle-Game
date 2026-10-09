@@ -104,10 +104,15 @@ fun DailyRewardDialog(
     streak: Int,
     reward: Reward,
     onClaim: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Duplicar el regalo ya reclamado (null = no se ofrece). Con anuncio, o gratis con VIP. */
+    onDouble: (() -> Unit)? = null
 ) {
     val today = DailyRewards.dayInCycle(streak)
     var claimed by remember { mutableStateOf(false) }
+    var doubled by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val vip = remember { com.korkoor.pardos.data.local.EconomyManager(context) }.isVip.collectAsState().value
 
     Dialog(onDismissRequest = onDismiss) {
         JellyCard(
@@ -173,6 +178,30 @@ fun DailyRewardDialog(
                         color = if (claimed) Navy.copy(alpha = 0.6f) else Color.White,
                         letterSpacing = 1.5.sp
                     )
+                }
+
+                // Justo después de cobrar es cuando más apetece duplicarlo: un solo toque (o un anuncio corto)
+                if (claimed && onDouble != null) {
+                    Spacer(Modifier.height(12.dp))
+                    if (!doubled) {
+                        WatchAdButton(
+                            label = "DUPLICAR EL REGALO",
+                            sublabel = if (vip) "VIP: gratis, sin anuncio" else "+${reward.coins} ●" + (if (reward.gems > 0) " +${reward.gems} ◆" else "") + " viendo un anuncio corto",
+                            tag = "x2", color = Violet, pulse = true, adFree = vip, minHeight = 52.dp,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val grant = { onDouble(); doubled = true }
+                                if (vip) grant()
+                                else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                            }
+                        )
+                    } else {
+                        CozyText(
+                            text = "¡Duplicado! +${reward.coins} ●" + if (reward.gems > 0) " +${reward.gems} ◆" else "",
+                            fontSize = 13.sp, fontWeight = FontWeight.Black, color = Violet,
+                            modifier = Modifier.clip(RoundedCornerShape(50)).background(Violet.copy(alpha = 0.12f)).padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
                 }
             }
         }

@@ -159,7 +159,8 @@ fun MenuScreen(
                     dailyRewards.claim()
                     rewardClaimable = false
                 },
-                onDismiss = { showDailyReward = false }
+                onDismiss = { showDailyReward = false },
+                onDouble = if (dailyRewards.isDoubledToday()) null else ({ dailyRewards.claimDouble(pending) })
             )
         } else {
             showDailyReward = false

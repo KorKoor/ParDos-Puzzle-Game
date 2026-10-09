@@ -27,7 +27,7 @@ Récord personal al repetir un nivel (`new_best`, con su aviso "¡NUEVO RÉCORD!
 Un "tok" suave en **cualquier toque sobre algo pulsable** (modificador `Modifier.uiTapSounds()` aplicado una sola vez en `MainActivity`; si el botón ya tiene su propio sonido —comprar, reclamar, volver— el genérico se calla). Sonidos propios para: abrir/cerrar, interruptor on/off, pestañas, error, bloqueado, notificación, monedas contando, gemas, cofre (sacudida + apertura), cartas por rareza (común → legendaria), carta nueva, brillante (foil), vender, intercambiar, ruleta (tic/parada/premio), hucha, compra, anuncio con premio, regalo, subida de pase, subida de nivel/rango, platino, logros y misiones.
 
 ### Música adaptativa
-Cinco piezas en bucle (≈ 45 s cada una), cada una en **3 capas sincronizadas**:
+Cinco piezas en bucle (de 34 a 46 s cada una), cada una en **3 capas sincronizadas**:
 
 | Capa | Qué es | Cuándo entra |
 |---|---|---|

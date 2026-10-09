@@ -31,7 +31,24 @@ class DailyRewardManager(context: Context) {
         return reward
     }
 
+    /** Ya se duplicó el regalo de hoy. */
+    fun isDoubledToday(): Boolean = prefs.getInt(KEY_DOUBLED_DAY, 0) == LocalDay.today()
+
+    /**
+     * Duplica el regalo de hoy: el mismo premio otra vez. Solo después de reclamarlo y una sola vez al día.
+     * [reward] es el premio que se acaba de entregar (el que enseñaba el calendario).
+     */
+    fun claimDouble(reward: Reward): Boolean {
+        if (isClaimable() || isDoubledToday()) return false
+        prefs.edit().putInt(KEY_DOUBLED_DAY, LocalDay.today()).apply()
+        economy.addCoins(reward.coins)
+        economy.addGems(reward.gems)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COINS)
+        return true
+    }
+
     private companion object {
         const val KEY_CLAIMED_DAY = "daily_reward_claimed_day"
+        const val KEY_DOUBLED_DAY = "daily_reward_doubled_day"
     }
 }

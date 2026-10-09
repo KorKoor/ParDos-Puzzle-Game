@@ -13,6 +13,7 @@ Principio: **ganar dinero sin espantar a quien juega**. Los anuncios que el juga
 | Al abrir un cofre → **UNA CARTA MÁS** | una carta con las probabilidades de ese cofre (sin garantías) | 3 al día | sin anuncio, con el mismo tope |
 | Álbum → Intercambio → **FICHA GRATIS** | 1 ficha de intercambio | 2 al día | sin anuncio, con el mismo tope |
 | Pase de temporada → **IMPULSO DEL PASE** | 40 puntos de pase | 2 al día | sin anuncio, con el mismo tope |
+| Regalo diario (justo después de reclamarlo) → **DUPLICAR EL REGALO** | el mismo premio otra vez (monedas y gemas del día) | 1 al día | sin anuncio, con el mismo tope |
 | En la partida → **DESHACER** (cuando ya no te quedan, justo después de una jugada) | deshacer la última jugada, sin gastar tus "Deshacer" | 2 por nivel | sin anuncio, con el mismo tope |
 | Ruleta, cofre gratis, reparar racha, poderes manuales | (ya existían) | (los suyos) | gratis |
 
