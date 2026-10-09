@@ -43,7 +43,7 @@ Para ajustar la frecuencia basta cambiar esas constantes (`AdPolicy.WINS_BETWEEN
 - Los anuncios solo se piden cuando el consentimiento lo permite.
 
 ## 2. Compras dentro de la app
-Catálogo y precios de referencia: `docs/PLAY_PRODUCTOS.md` (8 productos).
+Catálogo y precios de referencia: `docs/PLAY_PRODUCTOS.md` (10 productos).
 
 | Producto | Qué recibe | Cómo se le enseña |
 |---|---|---|
@@ -68,14 +68,10 @@ La oferta de la tienda y la del menú son **la misma y no cambian a mitad del d�
 
 ## 3. Lo que tienes que hacer tú (consolas)
 
-1. **AdMob → Aplicaciones → ParDos → Bloques de anuncios → Añadir bloque de anuncios → Intersticial.** Copia su ID (`ca-app-pub-3851960142449906/XXXXXXXXXX`) y pégalo en `gradle.properties`:
-   ```
-   pardos.interstitialAdUnitId=ca-app-pub-3851960142449906/XXXXXXXXXX
-   ```
-   Mientras esté vacío, la versión de lanzamiento **no muestra intersticiales** (la de depuración usa los de prueba de Google).
+1. ~~AdMob → bloque Intersticial~~ **Hecho (2026-10-09):** el bloque `ca-app-pub-3851960142449906/5429498561` ya está en `gradle.properties` (`pardos.interstitialAdUnitId=`), así que la versión de lanzamiento ya muestra intersticiales (la de depuración sigue usando los de prueba de Google). El ID de la app de AdMob (`ca-app-pub-3851960142449906~8749596168`) ya estaba en el bloque `release` de `app/build.gradle.kts`.
 2. **AdMob → Privacidad y mensajes → Mensaje de consentimiento (GDPR)** y, si quieres, **Opciones de privacidad de EE. UU.**: crea el mensaje para la app y publícalo. Sin mensaje publicado, el formulario no aparece (en la UE no se mostrarán anuncios personalizados).
 3. **Play Console → Contenido de la app → Seguridad de los datos**: ya declaraba "ID de publicidad → compartido con AdMob". No cambia; solo conviene revisar que diga "anuncios" (no solo "con premio").
-4. **Play Console → Productos** (si aún no): crear los 8 productos de `docs/PLAY_PRODUCTOS.md` con los mismos IDs.
+4. **Play Console → Productos** (si aún no): crear los 10 productos de `docs/PLAY_PRODUCTOS.md` con los mismos IDs.
 5. Antes de publicar: probar en un dispositivo con la versión `release` instalada desde la pista interna, **sin tocar nunca los anuncios reales** (AdMob puede suspender la cuenta por clics propios). En depuración se usan siempre los anuncios de prueba.
 
 ## 4. Cómo probar

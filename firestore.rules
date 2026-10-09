@@ -1,19 +1,18 @@
 rules_version = '2';
 
-// ParDos — reglas de Firestore (propuesta v3)
+// ParDos — reglas de Firestore (v3)
 //
-// ESTADO: este archivo está PREPARADO pero NO publicado. Las reglas activas hoy son
-// `allow read, write: if true` en `users` y `user_progression` (cualquiera con la clave pública
-// del proyecto puede leer, modificar o BORRAR todos los perfiles).
-//
-// Cómo publicarlo (desde la carpeta del proyecto, con el CLI de Firebase iniciado en tu cuenta):
+// Publicarlas (desde la carpeta del proyecto, con el CLI de Firebase iniciado en tu cuenta):
 //   firebase deploy --only firestore:rules --project pardos-b9b21
 // Para volver atrás: Firebase Console > Firestore > Reglas > Historial > restaurar la versión anterior.
+// Hasta ahora solo estaban publicadas las reglas abiertas de `users` y `user_progression`.
 //
-// Qué cambia:
+// Qué hacen:
 //  - `players/{uid}` (cuentas de Google, app v3): solo el dueño escribe; cualquier jugador con sesión
 //    puede leer el perfil público (necesario para amigos y ranking). Las consultas deben llevar `limit(10)` o menos
 //    (la app ya lo hace): así nadie puede barrer la colección y gastar la cuota de lecturas.
+//  - `trades/{id}` (intercambio de cartas repetidas entre amigos, v3): la crea el remitente, solo el destinatario
+//    acepta o rechaza, solo el remitente cancela, y solo se puede cambiar el estado. Nadie puede borrarlas.
 //  - `users` y `user_progression` (app publicada SIN cuenta): se mantienen abiertas para no romper a
 //    quienes aún no actualizan, pero se PROHÍBE BORRAR. Cuando casi todos estén en la v3, se cierran.
 service cloud.firestore {
