@@ -86,6 +86,10 @@ struct RootView: View {
             AchievementsSheet()
         case .prestige:
             PrestigeSheet()
+        case .studio:
+            StudioSheet()
+        case .remote:
+            RemoteSheet()
         }
     }
 }

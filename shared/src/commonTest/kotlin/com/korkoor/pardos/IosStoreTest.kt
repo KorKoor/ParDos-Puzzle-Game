@@ -60,6 +60,6 @@ class IosStoreTest {
         assertEquals(false, jsonObject(m.testBuyProduct("nada"))["ok"])
         val store = jsonObject(m.storeProducts())
         assertEquals(7, store.list("packs").size)
-        assertEquals(4, store.list("specials").size)
+        assertEquals(5, store.list("specials").size)
     }
 }

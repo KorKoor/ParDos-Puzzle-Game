@@ -62,6 +62,7 @@ object IosStore {
     val specials: List<Special> = listOf(
         Special(ShopCatalog.STARTER_PACK, "Pack inicial", "300 gemas, 3 cofres raros, skin Cerezo y efecto Corazones. Una sola vez.", 299, false),
         Special(ShopCatalog.SEASON_PASS, "Pase premium", "La vía premium de la temporada: más premios y la skin exclusiva del mes.", 499, true),
+        Special(ShopCatalog.SKIN_STUDIO, "Studio", "Diseña tus propias fichas: acabado, colores, fondo y partículas. Una sola vez.", 399, false),
         Special(ShopCatalog.VIP_FOREVER, "VIP para siempre", "+20% de monedas, 5 gemas cada día y poderes sin esperas de pago. Una sola vez.", 699, false),
         Special(ShopCatalog.PIGGY_BREAK, "Romper la hucha", "Recibe de golpe todas las gemas que guardó tu hucha.", 299, true)
     )

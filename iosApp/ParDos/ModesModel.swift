@@ -260,7 +260,7 @@ extension AppModel {
         switch mode {
         case .campaign, .tower: return "CLASICO"
         case .daily, .race: return "DESAFIO"
-        case .duel: return "DUELO"
+        case .duel, .remote: return "DUELO"
         case .custom: return customTimed ? "DESAFIO" : "ZEN"
         }
     }
@@ -343,5 +343,19 @@ extension AppModel {
             hint = nil
             refresh(animated: true)
         }
+    }
+}
+
+// MARK: - Compartir
+
+extension AppModel {
+    func shareText(_ snap: BoardSnap) -> String {
+        tickClock()
+        let name = snap.daily ? "Reto diario" : "Campaña nivel " + String(snap.level)
+        let day: Int32 = snap.daily ? Int32(localDay()) : -1
+        return meta.shareVictory(
+            modeName: name, stars: Int32(snap.stars), targetTile: Int32(snap.maxTile), moves: Int32(snap.moves),
+            timeMs: Int64(snap.elapsedMs), dailyDay: day
+        )
     }
 }

@@ -55,6 +55,14 @@ class ContractDumpTest {
         dump("prestige", m.prestigeState())
         dump("prestigeEvents", m.takePrestigeEvents())
         dump("reminders", m.reminders())
+        val seed = m.remoteNewSeed()
+        val created = jsonObject(m.remoteFinishCreator(seed, 321, "Luna"))
+        dump("remoteCreate", m.remoteFinishCreator(seed, 321, "Luna"))
+        dump("remoteDecode", m.remoteDecode(created["text"] as String))
+        dump("remoteChallenged", m.remoteFinishChallenged(seed, 321, "LUNA", 400))
+        dump("remoteHistory", m.remoteHistory())
+        dump("studioState", m.studioState())
+        dump("studioPreview", m.studioPreview("GLASS", 100, 200, "PASTEL", "LIGHT", "SNOW"))
 
         // regreso tras ausencia larga y racha perdida por poco
         val m2 = MetaSession()

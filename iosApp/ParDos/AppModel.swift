@@ -14,6 +14,7 @@ enum PlayMode {
     case race
     case duel
     case custom
+    case remote
 }
 
 enum DuelPhase {
@@ -43,6 +44,8 @@ enum Sheet: Identifiable {
     case records
     case achievements
     case prestige
+    case studio
+    case remote
 
     var id: String {
         switch self {
@@ -57,6 +60,8 @@ enum Sheet: Identifiable {
         case .records: return "records"
         case .achievements: return "achievements"
         case .prestige: return "prestige"
+        case .studio: return "studio"
+        case .remote: return "remote"
         }
     }
 }
@@ -128,6 +133,11 @@ final class AppModel: ObservableObject {
     @Published var firstPick: String?
     @Published var lastClean: Date?
     @Published var lastMerge: Date?
+    @Published var remoteChallenge: RemoteChallengeInfo?
+    @Published var remoteCreate: RemoteCreateInfo?
+    @Published var remoteResult: RemoteResultInfo?
+    var remoteRole = "CREATOR"
+    var remoteSeed: Int64 = 1
     var raceMerges = 0
     var raceMaxTile = 0
     var duelSeed: Int64 = 0
@@ -140,7 +150,7 @@ final class AppModel: ObservableObject {
     private(set) var stateAt = Date()
 
     // Catálogos (no cambian mientras la app está abierta)
-    private(set) var skins: [SkinItem] = []
+    var skins: [SkinItem] = []
     private(set) var fxs: [FxItem] = []
     private(set) var avatars: [AvatarItem] = []
     private(set) var banners: [BannerItem] = []
@@ -627,6 +637,7 @@ final class AppModel: ObservableObject {
         case .race: startRace()
         case .duel: startDuelRound()
         case .custom: startCustom(size: customSize, target: customTarget, timed: customTimed)
+        case .remote: restartRemote()
         case .daily: startDaily()
         case .campaign: start(current.level)
         }
@@ -764,6 +775,7 @@ final class AppModel: ObservableObject {
         case .race: finishRace(s)
         case .duel: finishDuel(s)
         case .custom: finishCustom(s)
+        case .remote: finishRemote(s)
         default: finishCampaign(s)
         }
     }

@@ -130,6 +130,7 @@ struct ModeResultOverlay: View {
         case .tower: towerContent
         case .race: raceContent
         case .duel: duelContent
+        case .remote: RemoteResultContent()
         default: customContent
         }
     }
@@ -290,6 +291,7 @@ struct ModesSection: View {
                     modeCard("Torre infinita", "Piso a piso con 3 corazones", "building.2.fill", Color(hex: 0x8E6BD6)) { model.startTower() }
                     modeCard("Carrera", "Etapas contra el reloj", "flag.checkered", Theme.gold) { model.startRace() }
                     modeCard("Duelo", "Dos jugadores, un teléfono", "person.2.fill", Theme.energy) { model.startDuel() }
+                    modeCard("A distancia", "Reta a un amigo con un código", "paperplane.fill", Color(hex: 0xE0568B)) { model.sheet = .remote }
                     modeCard("Libre", "Tu tablero, tu meta", "slider.horizontal.3", Color(hex: 0x2A9D8F)) { model.sheet = .custom }
                     modeCard("Récords", "Tus mejores marcas", "trophy.fill", Color(hex: 0x4E8FA6)) { model.sheet = .records }
                 }

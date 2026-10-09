@@ -341,6 +341,13 @@ class MetaSessionTest {
         ok(m.equipTitle("default"))
     }
 
+    @Test fun shareTextHasStarsAndNoPlayStoreLink() {
+        val m = fresh()
+        val text = m.shareVictory("Campaña", 3, 64, 18, 45_000, -1)
+        assertTrue(text.contains("ParDos") && text.contains("18 mov") && !text.contains("play.google"))
+        assertTrue(m.shareVictory("x", 2, 32, 10, 1000, 20_800).contains("Reto diario"))
+    }
+
     @Test fun remindersAreAPlanWithRealTextsAndPositiveDelays() {
         val m = fresh()
         m.openApp()
@@ -357,5 +364,39 @@ class MetaSessionTest {
         assertTrue(!m.shouldAskNotifications(granted = true, enabled = true))
         m.noteNotificationAsked()
         assertTrue(!m.shouldAskNotifications(granted = false, enabled = true), "no se insiste el mismo día")
+    }
+
+    @Test fun studioNeedsThePurchaseThenSavesAndPreviews() {
+        val m = fresh()
+        fails(m.saveStudio("NEON", 200, 285, "VIVID", "DARK", "STARS"))
+        val preview = jsonObject(m.studioPreview("GLASS", 100, 200, "PASTEL", "LIGHT", "SNOW"))
+        assertEquals("studio_preview", preview["id"])
+        assertEquals(12, preview.list("palette").size)
+        ok(m.testBuyProduct("skin_studio"))
+        ok(m.saveStudio("NEON", 200, 285, "VIVID", "DARK", "STARS"))
+        val state = jsonObject(m.studioState())
+        assertEquals(true, state["owned"])
+        assertEquals("NEON", state.map("config")["finish"])
+        assertEquals(8, state.list("presets").size)
+        val saved = m.save()
+        val again = MetaSession().also { it.load(saved); it.tick(day, day * 86_400_000L, noon) }
+        assertEquals("NEON", jsonObject(again.studioState()).map("config")["finish"])
+    }
+
+    @Test fun remoteDuelCodesRoundTripAndPayOnlyTheFirstTime() {
+        val m = fresh()
+        val seed = m.remoteNewSeed()
+        assertTrue(seed > 0)
+        val created = ok(m.remoteFinishCreator(seed, 250, "Carlos G"))
+        val decoded = ok(m.remoteDecode(created["text"] as String))
+        assertEquals(250, decoded.int("score"))
+        assertEquals(false, decoded["played"])
+        val first = ok(m.remoteFinishChallenged(seed, 250, "CARLOS_G", 300))
+        assertEquals("WIN", first["outcome"])
+        assertTrue(first.int("coins") > 0)
+        val second = ok(m.remoteFinishChallenged(seed, 250, "CARLOS_G", 300))
+        assertEquals(0, second.int("coins"), "el mismo código no paga dos veces")
+        assertEquals(1, jsonObject(m.remoteHistory()).int("wins"))
+        fails(m.remoteDecode("hola, no hay código aquí"))
     }
 }

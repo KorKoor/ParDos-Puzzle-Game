@@ -17,10 +17,13 @@ internal object MetaCatalogs {
 
     private fun argbList(list: List<Long>?): Any? = list?.map { rgb(it) }
 
-    fun skins(): String = arr(TileSkin.entries.map { skin ->
-        val st = skin.style
-        robj(
-            "id" to skin.id, "name" to skin.displayName, "rarity" to skin.rarity.name, "source" to skin.source.name,
+    fun skins(): String = arr(TileSkin.entries.map { skin -> skinObject(skin, skin.style) })
+
+    /** Una skin como objeto JSON; [style] permite enseñar una vista previa de Studio sin guardarla. */
+    fun skinObject(skin: TileSkin, style: com.korkoor.pardos.domain.shop.SkinStyle, idOverride: String? = null): Raw {
+        val st = style
+        return robj(
+            "id" to (idOverride ?: skin.id), "name" to skin.displayName, "rarity" to skin.rarity.name, "source" to skin.source.name,
             "coin" to skin.coinPrice, "gem" to skin.gemPrice, "exclusive" to skin.exclusive, "free" to skin.isFree,
             "finish" to st.finish.name, "palette" to argbList(st.tilePalette),
             "darkText" to rgb(st.darkText), "lightText" to rgb(st.lightText), "lightFrom" to st.lightTextFromPower,
@@ -30,7 +33,7 @@ internal object MetaCatalogs {
             "hint" to if (skin.source == com.korkoor.pardos.domain.shop.SkinSource.HIDDEN) HiddenSkins.hint(skin) else null,
             "event" to EventSkins.eventFor(skin)?.let { EventSkins.eventName(it) }
         )
-    })
+    }
 
     fun fx(): String = arr(MergeFx.entries.map {
         robj(

@@ -7,7 +7,7 @@ struct AlbumView: View {
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: 14) {
+            LazyVStack(spacing: 14) {
                 header
                 if let album = model.album {
                     summary(album)

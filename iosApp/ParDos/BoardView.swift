@@ -9,7 +9,7 @@ struct BoardView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle, selecting: model.selectMode != nil, picked: model.firstPick, fx: model.state?.equippedFx ?? "classic", onTap: { id in model.tapTile(id) })
+            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle, selecting: model.selectMode != nil, fx: model.state?.equippedFx ?? "classic", picked: model.firstPick, onTap: { id in model.tapTile(id) })
                 .frame(width: side, height: side)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())

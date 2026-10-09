@@ -30,7 +30,7 @@ MAPPING = {
     "assist": "AssistInfo", "towerStart": "TowerInfo", "towerNext": "TowerInfo", "towerWin": "TowerWinInfo", "towerLose": "TowerLossInfo",
     "raceStage": "RaceStageInfo", "raceFinish": "RaceEndInfo", "duelConfig": "DuelConfigInfo", "duelResult": "DuelResultInfo",
     "records": "RecordsInfo", "achCheck": "AchCheckResult", "achList": "AchListData", "prestige": "PrestigeData",
-    "prestigeEvents": "[PrestigeEventInfo]", "reminders": "[ReminderInfo]",
+    "prestigeEvents": "[PrestigeEventInfo]", "reminders": "[ReminderInfo]", "remoteCreate": "RemoteCreateInfo", "remoteDecode": "RemoteChallengeInfo", "remoteChallenged": "RemoteResultInfo", "remoteHistory": "RemoteHistoryData", "studioState": "StudioStateData", "studioPreview": "SkinItem",
 }
 
 
@@ -86,7 +86,7 @@ def check(structs, typ, value, path, errors):
             for i, v in enumerate(value[:50]):
                 check(structs, inner, v, f"{path}[{i}]", errors)
         return
-    if typ == "Int":
+    if typ in ("Int", "Int64", "Int32"):
         if isinstance(value, bool) or not isinstance(value, int):
             errors.append(f"{path}: Int pero llegó {value!r}")
     elif typ == "Double":

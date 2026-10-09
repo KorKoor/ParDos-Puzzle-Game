@@ -150,6 +150,7 @@ struct ShopView: View {
         let list = filteredSkins(state)
         return VStack(spacing: 10) {
             SectionTitle(text: "Skins de fichas", detail: "\(state.ownedSkins.count)/\(model.skins.count)")
+            studioCard(state)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(SkinFilter.allCases, id: \.self) { item in
@@ -172,9 +173,38 @@ struct ShopView: View {
         }
     }
 
+    private func studioCard(_ state: MetaState) -> some View {
+        let owned = state.ownedSkins.contains("studio")
+        let price = model.store?.specials.first(where: { $0.id == "skin_studio" })?.price ?? "$3.99"
+        return Button(action: { model.sheet = .studio }) {
+            HStack(spacing: 12) {
+                Image(systemName: "paintpalette.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 46, height: 46)
+                    .background(Circle().fill(LinearGradient(colors: [Theme.energy, Theme.accent], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Studio · diseña tu skin").font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                    Text(owned ? "Abre el editor y cambia colores, acabado y fondo" : "Acabado, colores, fondo y partículas a tu gusto")
+                        .font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
+                }
+                Spacer()
+                Text(owned ? "EDITAR" : price)
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Theme.accent))
+            }
+            .padding(12)
+            .card()
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
     private func filteredSkins(_ state: MetaState) -> [SkinItem] {
         switch filter {
-        case .all: return model.skins.filter { $0.id != "studio" }
+        case .all: return model.skins.filter { $0.id != "studio" || state.ownedSkins.contains("studio") }
         case .shop: return model.skins.filter { $0.source == "SHOP" && $0.id != "studio" }
         case .special: return model.skins.filter { $0.source == "EVENT" || $0.source == "HIDDEN" }
         case .mine: return model.skins.filter { state.ownedSkins.contains($0.id) }

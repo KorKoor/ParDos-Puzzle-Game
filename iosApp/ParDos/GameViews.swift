@@ -119,6 +119,7 @@ struct GameView: View {
         case .race: return "CARRERA · \(model.raceCleared) SUPERADAS"
         case .duel: return "DUELO LOCAL"
         case .custom: return "PARTIDA LIBRE"
+        case .remote: return "DUELO A DISTANCIA"
         case .campaign: return snap.kindLabel.uppercased()
         }
     }
@@ -130,6 +131,7 @@ struct GameView: View {
         case .race: return "Etapa \(model.raceStage?.n ?? 1)"
         case .duel: return "Jugador \(model.duelPlayer)"
         case .custom: return "\(snap.size)×\(snap.size) · \(snap.goal)"
+        case .remote: return snap.label.isEmpty ? "Reto" : snap.label.capitalized
         case .campaign: return "Nivel \(snap.level)"
         }
     }
@@ -333,6 +335,7 @@ struct ToastView: View {
 struct ResultOverlay: View {
     @EnvironmentObject var model: AppModel
     let snap: BoardSnap
+    @State private var sharing: ShareItem?
 
     private var won: Bool { snap.status == "won" }
 
@@ -353,6 +356,9 @@ struct ResultOverlay: View {
                 card
                     .padding(.vertical, 40)
             }
+        }
+        .sheet(item: $sharing) { item in
+            ShareSheet(text: item.text)
         }
     }
 
@@ -509,6 +515,7 @@ struct ResultOverlay: View {
             if won {
                 bigButton(snap.daily ? "VOLVER AL MENÚ" : "SIGUIENTE", Theme.accent) { model.nextLevel() }
                 smallButton(snap.daily ? "Jugar otra vez" : "Repetir nivel") { model.restart() }
+                smallButton("Compartir resultado") { sharing = ShareItem(text: model.shareText(snap)) }
             } else {
                 bigButton("REINTENTAR", Theme.accent) { model.restart() }
             }

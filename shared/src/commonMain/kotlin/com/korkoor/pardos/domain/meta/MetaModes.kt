@@ -1,6 +1,7 @@
 package com.korkoor.pardos.domain.meta
 
 import com.korkoor.pardos.domain.collection.AlbumBonus
+import com.korkoor.pardos.domain.economy.Economy
 import com.korkoor.pardos.domain.events.EventCalendar
 import com.korkoor.pardos.domain.flow.AssistPolicy
 import com.korkoor.pardos.domain.logic.DuelRules
@@ -160,6 +161,74 @@ internal class Modes(
         ret.updateMission(MissionType.REACH_BLOCK, maxTile)
         ret.onTileReached(maxTile)
         ret.addWeekly(WeeklyType.MERGE_PAIRS, merges)
+    }
+
+    // ---------------- Duelo a distancia (por código, sin servidor) ----------------
+
+    private fun remotePlayed(): Set<String> = s.strSet("remote_played")
+
+    private fun remoteHistory(): List<com.korkoor.pardos.domain.logic.RemoteDuelRecord> =
+        com.korkoor.pardos.domain.logic.RemoteDuel.decodeHistory(s.str("remote_history").ifEmpty { null })
+
+    fun remoteNewSeed(): Long = com.korkoor.pardos.domain.logic.RemoteDuel.normalizeSeed(clock.nowMs * 1_000_003L + s.int("remote_seed_n"))
+
+    /** Lee un código dentro de cualquier texto pegado. */
+    fun remoteDecodeJson(text: String): String {
+        val c = com.korkoor.pardos.domain.logic.RemoteDuel.decode(text) ?: return obj("ok" to false, "reason" to "No encontré un código válido")
+        val code = com.korkoor.pardos.domain.logic.RemoteDuel.encode(c)
+        return obj(
+            "ok" to true, "seed" to c.seed, "score" to c.score, "name" to c.name,
+            "display" to com.korkoor.pardos.domain.logic.RemoteDuel.displayName(c.name), "played" to (code in remotePlayed())
+        )
+    }
+
+    /** Fin del reto propio: paga lo de lanzar (hasta 3 al día) y arma el mensaje para compartir. */
+    fun remoteFinishCreator(seed: Long, score: Int, name: String): String {
+        val today = clock.today
+        val count = if (s.int("remote_created_day", -1) == today) s.int("remote_created_count") else 0
+        val reward = com.korkoor.pardos.domain.logic.RemoteDuel.createReward(count)
+        wallet.addCoins(reward.coins)
+        s.setInt("remote_created_day", today)
+        s.setInt("remote_created_count", count + 1)
+        val challenge = com.korkoor.pardos.domain.logic.RemoteChallenge(seed, score, name)
+        val text = com.korkoor.pardos.domain.logic.RemoteDuel.shareText(challenge, "ParDos para iPhone y Android")
+        sideGame(won = false, merges = 0, maxTile = 0)
+        return obj("ok" to true, "coins" to reward.coins, "code" to com.korkoor.pardos.domain.logic.RemoteDuel.encode(challenge), "text" to text)
+    }
+
+    /** Fin de un reto recibido: cada código solo paga y cuenta la primera vez que se juega. */
+    fun remoteFinishChallenged(seed: Long, theirScore: Int, name: String, myScore: Int): String {
+        val challenge = com.korkoor.pardos.domain.logic.RemoteChallenge(seed, theirScore, name)
+        val code = com.korkoor.pardos.domain.logic.RemoteDuel.encode(challenge)
+        val outcome = com.korkoor.pardos.domain.logic.RemoteDuel.outcome(myScore, theirScore)
+        val first = code !in remotePlayed()
+        var coins = 0
+        var gems = 0
+        if (first) {
+            val reward = com.korkoor.pardos.domain.logic.RemoteDuel.rewardFor(outcome)
+            coins = reward.coins
+            gems = reward.gems
+            wallet.addCoins(coins)
+            wallet.addGems(gems)
+            val record = com.korkoor.pardos.domain.logic.RemoteDuelRecord(
+                com.korkoor.pardos.domain.logic.RemoteDuel.displayName(name), myScore, theirScore, outcome, clock.today
+            )
+            s.setStr("remote_history", com.korkoor.pardos.domain.logic.RemoteDuel.encodeHistory((listOf(record) + remoteHistory()).take(30)))
+            s.addToStrSet("remote_played", code)
+        }
+        sideGame(won = outcome == com.korkoor.pardos.domain.logic.RemoteOutcome.WIN, merges = 0, maxTile = 0)
+        return obj("ok" to true, "outcome" to outcome.name, "coins" to coins, "gems" to gems, "firstTime" to first, "mine" to myScore, "theirs" to theirScore)
+    }
+
+    fun remoteHistoryJson(): String {
+        val history = remoteHistory()
+        val st = com.korkoor.pardos.domain.logic.RemoteDuel.stats(history)
+        return obj(
+            "history" to history.map { robj("opponent" to it.opponent, "mine" to it.myScore, "theirs" to it.theirScore, "outcome" to it.outcome.name, "day" to it.day) },
+            "wins" to st.wins, "losses" to st.losses, "ties" to st.ties, "streak" to st.currentStreak, "best" to st.bestStreak,
+            "createdToday" to (if (s.int("remote_created_day", -1) == clock.today) s.int("remote_created_count") else 0),
+            "createLimit" to Economy.REMOTE_DUEL_CREATE_PER_DAY
+        )
     }
 
     fun recordsJson(): String = obj(

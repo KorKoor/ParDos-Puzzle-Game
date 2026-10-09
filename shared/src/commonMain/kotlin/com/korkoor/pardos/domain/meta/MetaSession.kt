@@ -60,7 +60,10 @@ class MetaSession {
 
     // ------------------------------------------------------------------ guardado y reloj
 
-    fun load(state: String) { store.import(state) }
+    fun load(state: String) {
+        store.import(state)
+        com.korkoor.pardos.domain.shop.StudioSkin.config = com.korkoor.pardos.domain.shop.StudioConfig.decode(store.str("studio_cfg").ifEmpty { null })
+    }
     fun save(): String = store.export()
 
     /** Fija el día local (desde 1970), los milisegundos y los minutos desde medianoche. Siempre antes de usar lo demás. */
@@ -252,6 +255,11 @@ class MetaSession {
         return ok("coins" to r.coins, "best" to r.best, "newRecord" to r.newRecord, "stages" to stages)
     }
 
+    fun remoteNewSeed(): Long = modes.remoteNewSeed()
+    fun remoteDecode(text: String): String = modes.remoteDecodeJson(text)
+    fun remoteFinishCreator(seed: Long, score: Int, name: String): String = modes.remoteFinishCreator(seed, score, name)
+    fun remoteFinishChallenged(seed: Long, theirScore: Int, name: String, myScore: Int): String = modes.remoteFinishChallenged(seed, theirScore, name, myScore)
+    fun remoteHistory(): String = modes.remoteHistoryJson()
     fun duelConfig(): String = modes.duelConfigJson()
     fun duelResult(score1: Int, score2: Int): String = modes.duelResultJson(score1, score2)
     fun customFinished(score: Int, won: Boolean, merges: Int, maxTile: Int) { modes.customFinished(score, won, merges, maxTile) }
@@ -539,6 +547,14 @@ class MetaSession {
 
     fun useUndo(): Boolean = wallet.useUndo()
 
+    /** Texto para compartir una victoria (el mismo formato que Android; sin enlace de Google Play). [dailyDay] = -1 si no es el reto diario. */
+    fun shareVictory(modeName: String, stars: Int, targetTile: Int, moves: Int, timeMs: Long, dailyDay: Int): String {
+        val text = com.korkoor.pardos.domain.social.ShareText.victory(
+            modeName, stars, targetTile, moves, timeMs, ret.streak, if (dailyDay >= 0) dailyDay else null
+        )
+        return text.substringBeforeLast("\n") + "\nParDos para iPhone"
+    }
+
     /** Paga la segunda oportunidad con gemas. */
     fun buyRevive(): String = if (wallet.spendGems(Economy.REVIVE_PRICE_GEMS)) ok() else no("No alcanzan las gemas")
 
@@ -714,6 +730,7 @@ class MetaSession {
             val owned = when (sp.id) {
                 com.korkoor.pardos.domain.shop.ShopCatalog.STARTER_PACK -> wallet.starterClaimed
                 com.korkoor.pardos.domain.shop.ShopCatalog.VIP_FOREVER -> wallet.vip
+                com.korkoor.pardos.domain.shop.ShopCatalog.SKIN_STUDIO -> TileSkin.STUDIO.id in wallet.ownedSkins
                 com.korkoor.pardos.domain.shop.ShopCatalog.SEASON_PASS -> ret.seasonPremium
                 else -> false
             }
@@ -742,6 +759,8 @@ class MetaSession {
         return when (id) {
             com.korkoor.pardos.domain.shop.ShopCatalog.STARTER_PACK ->
                 if (wallet.claimStarterPack(col)) ok("gems" to Economy.STARTER_GEMS) else no("Ya reclamaste el pack inicial")
+            com.korkoor.pardos.domain.shop.ShopCatalog.SKIN_STUDIO ->
+                if (TileSkin.STUDIO.id in wallet.ownedSkins) no("Ya tienes Studio") else { wallet.grantSkin(TileSkin.STUDIO); ok() }
             com.korkoor.pardos.domain.shop.ShopCatalog.VIP_FOREVER ->
                 if (wallet.vip) no("Ya eres VIP") else { wallet.setVip(true); ok() }
             com.korkoor.pardos.domain.shop.ShopCatalog.SEASON_PASS ->
@@ -752,6 +771,40 @@ class MetaSession {
             }
             else -> no("Producto desconocido")
         }
+    }
+
+    // ------------------------------------------------------------------ Studio (tu propia skin)
+
+    private fun studioConfigFrom(finish: String, hue: Int, hue2: Int, tone: String, background: String, particles: String) =
+        com.korkoor.pardos.domain.shop.StudioConfig.decode(listOf(finish, hue.toString(), hue2.toString(), tone, background, particles).joinToString("|"))
+
+    /** Configuración guardada y los puntos de partida. */
+    fun studioState(): String {
+        val c = com.korkoor.pardos.domain.shop.StudioSkin.config
+        fun cfg(c: com.korkoor.pardos.domain.shop.StudioConfig) = arrayOf<Pair<String, Any?>>(
+            "finish" to c.finish.name, "hue" to c.hue, "hue2" to c.hue2, "tone" to c.tone.name, "background" to c.background.name, "particles" to c.particles.name
+        )
+        return obj(
+            "owned" to (TileSkin.STUDIO.id in wallet.ownedSkins), "config" to Raw(obj(*cfg(c))),
+            "presets" to com.korkoor.pardos.domain.shop.StudioPresets.all.map { Raw(obj("name" to it.name, *cfg(it.config))) },
+            "finishes" to com.korkoor.pardos.domain.shop.TileFinish.entries.map { it.name },
+            "particleKinds" to com.korkoor.pardos.domain.shop.ParticleKind.entries.map { it.name }
+        )
+    }
+
+    /** Vista previa de una configuración (no se guarda): devuelve la skin como en el catálogo. */
+    fun studioPreview(finish: String, hue: Int, hue2: Int, tone: String, background: String, particles: String): String {
+        val c = studioConfigFrom(finish, hue, hue2, tone, background, particles)
+        return MetaCatalogs.skinObject(TileSkin.STUDIO, c.toStyle(), "studio_preview").json
+    }
+
+    /** Guarda la configuración de Studio (hace falta tener la skin). */
+    fun saveStudio(finish: String, hue: Int, hue2: Int, tone: String, background: String, particles: String): String {
+        if (TileSkin.STUDIO.id !in wallet.ownedSkins) return no("Primero consigue Studio")
+        val c = studioConfigFrom(finish, hue, hue2, tone, background, particles)
+        com.korkoor.pardos.domain.shop.StudioSkin.config = c
+        store.setStr("studio_cfg", c.encode())
+        return ok()
     }
 
     fun resetAll() { store.clear() }
