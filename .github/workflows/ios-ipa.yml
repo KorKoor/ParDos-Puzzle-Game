@@ -123,6 +123,24 @@ jobs:
           rm -rf Payload ParDos-unsigned.ipa
           mkdir Payload
           cp -R "$APP" Payload/
+          # Xcode deja marcadores vacíos de los frameworks estáticos de Google (GoogleMobileAds, etc.) en Frameworks/, y alguno sin Info.plist:
+          # el iPhone rechaza la instalación ("Info.plist missing"). La app ya los lleva dentro del ejecutable, así que se quitan los que
+          # el ejecutable no carga como librería dinámica. Si alguno SÍ se carga y le falta el Info.plist, se avisa y se detiene.
+          APPDIR="Payload/ParDos.app"
+          if [ -d "$APPDIR/Frameworks" ]; then
+            LIBS="$(otool -L "$APPDIR/ParDos")"
+            for fw in "$APPDIR"/Frameworks/*.framework; do
+              [ -d "$fw" ] || continue
+              name="$(basename "$fw" .framework)"
+              if echo "$LIBS" | grep -q "@rpath/$name.framework"; then
+                if [ ! -f "$fw/Info.plist" ]; then echo "::error::$name se carga como librería pero no tiene Info.plist"; exit 1; fi
+              else
+                echo "Quitando marcador vacío: $name"
+                rm -rf "$fw"
+              fi
+            done
+            rmdir "$APPDIR/Frameworks" 2>/dev/null || true
+          fi
           zip -qry ParDos-unsigned.ipa Payload
           ls -lh ParDos-unsigned.ipa
 
