@@ -71,5 +71,6 @@ targets:
       - framework: ../shared/build/XCFrameworks/release/Shared.xcframework
         embed: false
       - package: GoogleMobileAds
+      # FirebaseCore no es un producto suelto en el SDK de Firebase: viene dentro de FirebaseAuth (que se usará para la cuenta en línea)
       - package: Firebase
-        product: FirebaseCore
+        product: FirebaseAuth
