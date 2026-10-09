@@ -51,6 +51,10 @@ class AdPolicyTest {
         assertTrue(AdRewards.FREE_GEMS * AdRewards.FREE_GEMS_PER_DAY <= 20, "las gemas gratis diarias no regalan el juego")
     }
 
+    @Test fun anUndoForAnAdIsLimitedPerLevel() {
+        assertTrue(AdRewards.UNDO_ADS_PER_LEVEL in 1..3, "poco, para que no se pueda repetir cada jugada a voluntad")
+    }
+
     @Test fun continuingCostsGemsAsAnAlternativeToTheAd() {
         assertTrue(ContinueOffer.canPayWithGems(ContinueOffer.GEMS))
         assertFalse(ContinueOffer.canPayWithGems(ContinueOffer.GEMS - 1))

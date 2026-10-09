@@ -93,12 +93,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         private set
     val undoCount get() = economy.undos
 
+    /** Cuántos "Deshacer" a cambio de un anuncio se han usado en este nivel (tope: `AdRewards.UNDO_ADS_PER_LEVEL`). */
+    var adUndosUsed by mutableIntStateOf(0)
+        private set
+
+    /** En duelo y carrera no hay deshacer (sería ventaja), ni siquiera con anuncio. */
+    val adUndoAllowed: Boolean get() = currentMode != GameMode.DUELO && currentMode != GameMode.CARRERA
+
     /** Vuelve a la jugada anterior gastando un "Deshacer". No se permite en duelo ni en carrera (sería ventaja). */
-    fun undoLastMove(): Boolean {
+    fun undoLastMove(): Boolean = performUndo(spendStock = true)
+
+    /** Deshacer a cambio de un anuncio (gratis con VIP): no gasta tus "Deshacer", pero tiene tope por nivel. */
+    fun undoLastMoveFree(): Boolean {
+        if (adUndosUsed >= com.korkoor.pardos.domain.shop.AdRewards.UNDO_ADS_PER_LEVEL) return false
+        if (!performUndo(spendStock = false)) return false
+        adUndosUsed++
+        return true
+    }
+
+    private fun performUndo(spendStock: Boolean): Boolean {
         val snap = lastSnapshot ?: return false
-        if (currentMode == GameMode.DUELO || currentMode == GameMode.CARRERA) return false
+        if (!adUndoAllowed) return false
         if (isMoving || _boardState.value.isGameOver || _boardState.value.isLevelCompleted) return false
-        if (!economy.useUndo()) return false
+        if (spendStock && !economy.useUndo()) return false
         // En las tormentas se vuelve también a las piedras de esa jugada: así nunca queda una piedra sobre una ficha
         if (snap.blocked != _boardState.value.blocked) {
             gameEngine = GameEngine(boardSize = _boardState.value.boardSize, random = rng, blocked = snap.blocked.toSet())
@@ -940,6 +957,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         com.korkoor.pardos.audio.GameAudio.music.switchGameSet(musicSet)
         audioMaxTile = 0
         pingStage = 0
+        adUndosUsed = 0
         if (spec?.isBoss == true) viewModelScope.launch { delay(500); com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOSS_INTRO) }
 
         // 6. ACTUALIZACIÓN DEL ESTADO DEL TABLERO

@@ -74,8 +74,14 @@ fun PowerUpBar(
         verticalAlignment = Alignment.Top
     ) {
         // Deshacer (consumible comprable en la tienda): solo si hay una jugada que revertir
+        // Sin "Deshacer" en la mochila, justo después de una jugada, se puede deshacer a cambio de un anuncio (VIP: gratis; 2 por nivel)
+        val adUndo = undos == 0 && viewModel.canUndo && viewModel.adUndoAllowed &&
+            viewModel.adUndosUsed < com.korkoor.pardos.domain.shop.AdRewards.UNDO_ADS_PER_LEVEL
         if (undos > 0 || viewModel.canUndo) {
-            UndoButton(count = undos, enabled = viewModel.canUndo && undos > 0, labelColor = labelColor) { viewModel.undoLastMove() }
+            UndoButton(
+                count = undos, enabled = (viewModel.canUndo && undos > 0) || adUndo, labelColor = labelColor,
+                adBadge = if (adUndo) (if (isVip) Badge.CROWN else Badge.PLAY) else null
+            ) { if (undos > 0) viewModel.undoLastMove() else withAd { viewModel.undoLastMoveFree() } }
         }
         PowerUpButton(
             label = stringResource(R.string.clean_powerup),
@@ -154,10 +160,11 @@ private fun PowerUpButton(
 }
 
 @Composable
-private fun UndoButton(count: Int, enabled: Boolean, labelColor: Color, onClick: () -> Unit) {
+private fun UndoButton(count: Int, enabled: Boolean, labelColor: Color, adBadge: Badge? = null, onClick: () -> Unit) {
     PowerOrb(
         label = "DESHACER", glyph = PowerGlyph.UNDO, color = Color(0xFFE07A5F), ready = enabled,
-        countBadge = count, labelColor = labelColor, onClick = onClick, enabled = enabled, labelSize = 8
+        badge = adBadge, countBadge = if (adBadge == null) count else null,
+        labelColor = labelColor, onClick = onClick, enabled = enabled, labelSize = 8
     )
 }
 

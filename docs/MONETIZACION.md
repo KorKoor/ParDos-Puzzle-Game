@@ -13,6 +13,7 @@ Principio: **ganar dinero sin espantar a quien juega**. Los anuncios que el juga
 | Al abrir un cofre → **UNA CARTA MÁS** | una carta con las probabilidades de ese cofre (sin garantías) | 3 al día | sin anuncio, con el mismo tope |
 | Álbum → Intercambio → **FICHA GRATIS** | 1 ficha de intercambio | 2 al día | sin anuncio, con el mismo tope |
 | Pase de temporada → **IMPULSO DEL PASE** | 40 puntos de pase | 2 al día | sin anuncio, con el mismo tope |
+| En la partida → **DESHACER** (cuando ya no te quedan, justo después de una jugada) | deshacer la última jugada, sin gastar tus "Deshacer" | 2 por nivel | sin anuncio, con el mismo tope |
 | Ruleta, cofre gratis, reparar racha, poderes manuales | (ya existían) | (los suyos) | gratis |
 
 El VIP se salta el anuncio, **no el tope diario** (así la carta extra, la ficha y el impulso del pase no se pueden encadenar sin límite). Todos usan el mismo botón (`WatchAdButton`): muestra una ruedita mientras el anuncio se prepara y, si se toca antes de tiempo, avisa con un mensaje claro ("El anuncio todavía no está listo…") en vez de no hacer nada. Si no hay anuncio por falta de conexión o de oferta, se reintenta solo con espera creciente (4 s → 60 s).

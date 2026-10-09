@@ -58,6 +58,9 @@ object AdRewards {
     /** Fichas de intercambio. */
     const val TOKEN_PER_DAY = 2
 
+    /** "Deshacer" a cambio de un anuncio: cuántos por nivel (sin tope se podría repetir una jugada hasta que salga la ficha deseada). */
+    const val UNDO_ADS_PER_LEVEL = 2
+
     /** Puntos de temporada. */
     const val SEASON_BOOST_POINTS = 40
     const val SEASON_BOOST_PER_DAY = 2
