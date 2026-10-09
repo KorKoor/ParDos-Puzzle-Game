@@ -191,6 +191,10 @@ struct MetaState: Decodable {
     let title: String
     let rank: String
     let prestige: Int
+    let happyHour: HappyHourInfo?
+    let calendar: CalendarInfo?
+    let ads: AdsInfo?
+    let featured: FeaturedInfo?
 }
 
 // MARK: - Catálogos
@@ -471,6 +475,7 @@ struct WinReward: Decodable {
     let flowPct: Int
     let albumPct: Int
     let eventMult: Double
+    let happyExtra: Int?
     let vipBonus: Bool
     let boostActive: Bool
     let firstClear: Bool
@@ -763,4 +768,75 @@ struct PrestigeEventInfo: Decodable {
     let coins: Int?
     let gems: Int?
     let chest: String?
+}
+
+/// Hora feliz de hoy: fase (UPCOMING, ACTIVE o ENDED), ventana en minutos desde medianoche y minutos que faltan o que quedan.
+struct HappyHourInfo: Decodable {
+    let phase: String
+    let startMin: Int
+    let endMin: Int
+    let minutes: Int
+    let extraPct: Int
+    let extraToday: Int
+}
+
+struct CalendarCell: Decodable, Identifiable {
+    let day: Int
+    /// claimed, missed, recoverable, today, todayDone o future
+    let status: String
+    let coins: Int
+    let gems: Int
+    let chest: String?
+    let big: Bool
+
+    var id: Int { day }
+}
+
+/// Calendario de conexión del mes.
+struct CalendarInfo: Decodable {
+    let frozen: Bool
+    let year: Int?
+    let month: Int?
+    let daysInMonth: Int?
+    let today: Int?
+    let claimed: Int?
+    let claimable: Bool?
+    let recoverCost: Int?
+    let freeLeft: Int?
+    let nextBonusAt: Int?
+    let nextBonusChest: String?
+    let fullMonths: Int?
+    let cells: [CalendarCell]
+}
+
+struct CalendarClaimResult: Decodable {
+    let ok: Bool
+    let reason: String?
+    let day: Int?
+    let cost: Int?
+    let coins: Int?
+    let gems: Int?
+    let chest: String?
+    let bonusChest: String?
+    let big: Bool?
+}
+
+/// Premios por anuncio que quedan hoy.
+struct AdsInfo: Decodable {
+    let gems: Int
+    let gemsAmount: Int
+    let token: Int
+    let season: Int
+    let seasonPoints: Int
+    let wheel: Int
+    let doubleGift: Bool
+}
+
+/// Serie destacada de hoy: el primer cofre del día trae una carta extra de ella.
+struct FeaturedInfo: Decodable {
+    let series: String
+    let name: String
+    let owned: Int
+    let total: Int
+    let bonusReady: Bool
 }

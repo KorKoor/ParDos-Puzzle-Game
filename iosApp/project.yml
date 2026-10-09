@@ -4,9 +4,20 @@ name: ParDos
 
 options:
   bundleIdPrefix: com.korkoor
+  developmentLanguage: es
   deploymentTarget:
     iOS: "15.0"
   createIntermediateGroups: true
+
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    exactVersion: 10.14.0
+  # Firebase 10.29.0 es la última serie que convive con GoogleMobileAds 10.14.0 (este pide GoogleAppMeasurement < 11).
+  # Para pasar a Firebase 11 o más hay que subir antes GoogleMobileAds a 11+ (los nombres GAD* cambian).
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    exactVersion: 10.29.0
 
 settings:
   base:
@@ -31,6 +42,9 @@ targets:
         UILaunchScreen: {}
         UIRequiredDeviceCapabilities: [arm64]
         UIUserInterfaceStyle: Light
+        # Identificador de PRUEBA de Google (cambiar por el real de AdMob antes de publicar)
+        GADApplicationIdentifier: ca-app-pub-3940256099942544~1458002511
+        CFBundleLocalizations: [es, en]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
@@ -44,6 +58,7 @@ targets:
         PRODUCT_NAME: ParDos
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIconHalloween
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         # Sin firmar: Sideloadly firma el .ipa con tu Apple ID al instalarlo
         CODE_SIGNING_ALLOWED: "NO"
@@ -51,7 +66,10 @@ targets:
         CODE_SIGN_IDENTITY: ""
         ENABLE_BITCODE: "NO"
         # El runtime de Kotlin/Native (framework estático) necesita la librería de C++
-        OTHER_LDFLAGS: ["$(inherited)", "-lc++"]
+        OTHER_LDFLAGS: ["$(inherited)", "-lc++", "-ObjC"]
     dependencies:
       - framework: ../shared/build/XCFrameworks/release/Shared.xcframework
         embed: false
+      - package: GoogleMobileAds
+      - package: Firebase
+        product: FirebaseCore

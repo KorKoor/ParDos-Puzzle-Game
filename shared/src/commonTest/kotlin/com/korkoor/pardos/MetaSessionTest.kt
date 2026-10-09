@@ -105,11 +105,12 @@ class MetaSessionTest {
         fails(m.claimFreeChest())
         assertEquals(1, m.st().map("chests").int("COMMON"))
         val opened = ok(m.openChest("COMMON", 7L))
-        assertEquals(2, opened.list("drops").size)
+        // 2 cartas del cofre + 1 carta extra de la serie destacada (el primer cofre del dia)
+        assertEquals(3, opened.list("drops").size)
         assertEquals(0, m.st().map("chests").int("COMMON"))
         fails(m.openChest("COMMON", 7L))
         val album = jsonObject(m.albumState())
-        assertTrue(album.int("owned") in 1..2)
+        assertTrue(album.int("owned") in 1..3)
     }
 
     @Test fun wheelGivesOneFreeSpinPerDay() {

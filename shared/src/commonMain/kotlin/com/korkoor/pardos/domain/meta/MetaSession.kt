@@ -57,6 +57,10 @@ class MetaSession {
     private val modes = Modes(store, wallet, col, ret, clock)
     private val ach = Achievements(store, wallet, col)
     private val prestige = Prestige(store, wallet, col, ach, ret)
+    private val calendar = CalendarOps(store, wallet, col, clock)
+    private val happy = HappyHourOps(store, clock)
+    private val ads = AdOps(store, wallet, col, ret, clock)
+    private val featured = FeaturedOps(store, col, clock)
 
     // ------------------------------------------------------------------ guardado y reloj
 
@@ -84,7 +88,12 @@ class MetaSession {
     fun fxCatalog(): String = MetaCatalogs.fx()
     fun avatarCatalog(): String = MetaCatalogs.avatars()
     fun bannerCatalog(): String = MetaCatalogs.banners()
-    fun albumCatalog(): String = MetaCatalogs.album()
+    private var english = false
+
+    /** Idioma de los nombres que vienen de la lógica compartida ("en" = inglés; cualquier otro, español). */
+    fun setLanguage(code: String) { english = code.lowercase().startsWith("en") }
+
+    fun albumCatalog(): String = MetaCatalogs.album(english)
     fun economyInfo(): String = MetaCatalogs.economy()
     fun seasonTiers(): String = MetaCatalogs.seasonTiers(ret.seasonId)
 
@@ -147,7 +156,9 @@ class MetaSession {
         val eventMult = EventCalendar.coinMultiplier(clock.today)
         val albumPct = AlbumBonus.coinPercent(col.owned, col.foil)
         val withEvent = EventCalendar.apply(base, AlbumBonus.combine(eventMult, col.owned, col.foil))
-        val coins = wallet.applyWinBonuses(withEvent)
+        val withHappy = happy.apply(withEvent)
+        val happyExtra = withHappy - withEvent
+        val coins = wallet.applyWinBonuses(withHappy)
         wallet.addCoins(coins)
 
         val bonus = ret.onGameFinished(won = true, dailyChallenge = daily)
@@ -195,7 +206,7 @@ class MetaSession {
         val teaser = if (daily) null else com.korkoor.pardos.domain.flow.NextLevelTeaser.after(level)
         return ok(
             "coins" to coins, "rawCoins" to rawCoins, "streakPct" to streakPct, "flowPct" to flowPct, "albumPct" to albumPct,
-            "eventMult" to eventMult, "vipBonus" to wallet.vip, "boostActive" to (wallet.boostWins > 0),
+            "eventMult" to eventMult, "happyExtra" to happyExtra, "vipBonus" to wallet.vip, "boostActive" to (wallet.boostWins > 0),
             "firstClear" to firstClear, "firstWinCoins" to bonus.firstWinCoins, "piggyGems" to bonus.piggyGems,
             "seasonPoints" to bonus.seasonPoints, "newBest" to newBest, "stars" to st, "winStreak" to winStreak,
             "winMilestone" to milestone?.let { Raw(obj("gems" to it.gems, "undos" to it.undos)) },
@@ -336,7 +347,17 @@ class MetaSession {
         val plan = com.korkoor.pardos.domain.retention.ReminderPlanner.plan(input)
         val halloween = com.korkoor.pardos.domain.retention.SeasonalCopy.isHalloweenWindow(today)
         val finalPlan = com.korkoor.pardos.domain.retention.SeasonalCopy.apply(plan, halloween)
-        return arr(finalPlan.map { robj("key" to it.key, "id" to it.id, "title" to it.title, "body" to it.body, "delayMs" to it.delayMs) })
+        val extra = ArrayList<com.korkoor.pardos.domain.retention.Reminder>()
+        val hh = happy.state()
+        if (hh.phase == com.korkoor.pardos.domain.retention.HappyHour.Phase.UPCOMING && hh.minutes > 8) {
+            val length = hh.window.endMin - hh.window.startMin
+            extra.add(com.korkoor.pardos.domain.retention.Reminder("happy_hour", 91, "Hora feliz en 5 minutos", "Durante $length minutos ganas el doble de monedas en cada victoria.", (hh.minutes - 5) * 60_000L))
+        }
+        val eveningMin = 19 * 60
+        if (calendar.claimable() && clock.minute < eveningMin - 30) {
+            extra.add(com.korkoor.pardos.domain.retention.Reminder("calendar_day", 92, "Tu casilla de hoy te espera", "Cobra el premio del calendario antes de que acabe el día.", (eveningMin - clock.minute) * 60_000L))
+        }
+        return arr((finalPlan + extra).map { robj("key" to it.key, "id" to it.id, "title" to it.title, "body" to it.body, "delayMs" to it.delayMs) })
     }
 
     /** ¿Toca preguntar si quiere avisos? (después de la primera victoria, pocas veces y separadas). */
@@ -373,7 +394,37 @@ class MetaSession {
 
     fun claimDailyReward(): String {
         val r = ret.claimDailyReward() ?: return no("Ya lo reclamaste hoy")
+        ads.rememberGift(r.coins, r.gems)
         return ok("coins" to r.coins, "gems" to r.gems, "isChest" to r.isChest)
+    }
+
+    // ---- premios por anuncio (la app muestra el anuncio y después llama aquí; VIP llama directo) ----
+
+    fun adFreeGems(): String = if (ads.freeGems()) ok("gems" to com.korkoor.pardos.domain.shop.AdRewards.FREE_GEMS) else no("Hoy ya no quedan gemas gratis")
+    fun adToken(): String = if (ads.token()) ok() else no("Hoy ya no quedan fichas gratis")
+    fun adSeasonBoost(): String = if (ads.seasonBoost()) ok("points" to com.korkoor.pardos.domain.shop.AdRewards.SEASON_BOOST_POINTS) else no("Hoy ya no quedan impulsos")
+    fun adSkipFreeChest(): String = if (ret.skipFreeChestWithAd()) ok() else no("El cofre ya está listo")
+    fun adRepairStreak(): String = if (ret.repairStreakWithAd()) ok() else no("No hay racha que recuperar")
+    fun adDoubleGift(): String {
+        val r = ads.doubleGift() ?: return no("Hoy ya duplicaste el regalo")
+        return ok("coins" to r.first, "gems" to r.second)
+    }
+    fun adWheelSpin(seed: Long): String {
+        val i = ret.spinWheelWithAd(Random(seed)) ?: return no("No quedan giros")
+        return ok("index" to i)
+    }
+
+    /** Cobra la casilla de hoy del calendario del mes. */
+    fun calendarClaim(): String {
+        val g = calendar.claimToday() ?: return no("Hoy ya cobraste tu casilla")
+        return ok("day" to g.day, "coins" to g.prize.coins, "gems" to g.prize.gems, "chest" to g.prize.chest, "bonusChest" to g.bonusChest, "big" to g.prize.big)
+    }
+
+    /** Recupera una casilla perdida del mes (una gratis al mes y luego con gemas). */
+    fun calendarRecover(day: Int): String {
+        val cost = calendar.recoverCost()
+        val g = calendar.recover(day) ?: return no(if (cost > 0) "No alcanzan las gemas o ese día ya no se puede recuperar" else "Ese día ya no se puede recuperar")
+        return ok("day" to g.day, "cost" to cost, "coins" to g.prize.coins, "gems" to g.prize.gems, "chest" to g.prize.chest, "bonusChest" to g.bonusChest, "big" to g.prize.big)
     }
 
     fun claimFreeChest(): String {
@@ -398,9 +449,10 @@ class MetaSession {
         val t = ChestType.entries.firstOrNull { it.name == type } ?: return no("Cofre desconocido")
         val before = col.owned
         val res = col.openChest(t, Random(seed)) ?: return no("No tienes ese cofre")
+        val featuredDrop = featured.takeBonus(Random(seed + 17))
         ret.onChestOpened()
         // la serie o el álbum podrían haberse completado con este cofre
-        val drops = res.drops.map {
+        val drops = (res.drops + listOfNotNull(featuredDrop)).map {
             obj(
                 "id" to it.collectible.id, "new" to it.isNew, "shards" to it.shards, "bonus" to it.bonus,
                 "rarity" to it.collectible.rarity.name
@@ -685,7 +737,13 @@ class MetaSession {
             "offer" to Raw(offerJson(offer)),
             "events" to events, "eventSkins" to activeEventSkins,
             "nextGoal" to goal?.let { Raw(obj("title" to it.title, "detail" to it.detail, "progress" to it.progress.toDouble(), "kind" to it.kind.name)) },
-            "badges" to ret.pendingBadges() + (if (dr != null) 1 else 0),
+            "happyHour" to happy.json(), "calendar" to calendar.json(), "featured" to featured.json(),
+            "ads" to Raw(obj(
+                "gems" to ads.gemsLeft(), "gemsAmount" to com.korkoor.pardos.domain.shop.AdRewards.FREE_GEMS, "token" to ads.tokensLeft(),
+                "season" to ads.seasonLeft(), "seasonPoints" to com.korkoor.pardos.domain.shop.AdRewards.SEASON_BOOST_POINTS,
+                "wheel" to ret.wheelAllowance().adLeft, "doubleGift" to ads.canDoubleGift()
+            )),
+            "badges" to ret.pendingBadges() + (if (dr != null) 1 else 0) + (if (calendar.claimable()) 1 else 0),
             "repair" to (if (ret.pendingRepair() > 0) Raw(obj("lost" to ret.pendingRepair(), "cost" to ret.repairCost())) else null),
             "coinPercent" to AlbumBonus.coinPercent(col.owned, col.foil),
             "dayOfWeek" to EventCalendar.dayOfWeek(today),

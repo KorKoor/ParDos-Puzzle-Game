@@ -183,7 +183,7 @@ struct StudioSheet: View {
 
     private func section<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
+            Text(loc(title).uppercased())
                 .font(.system(size: 10, weight: .heavy))
                 .kerning(2)
                 .foregroundColor(Theme.ink.opacity(0.4))
@@ -194,7 +194,7 @@ struct StudioSheet: View {
 
     private func chip(_ title: String, _ on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 12, weight: .heavy, design: .rounded))
                 .foregroundColor(on ? .white : Theme.ink.opacity(0.6))
                 .padding(.horizontal, 12)

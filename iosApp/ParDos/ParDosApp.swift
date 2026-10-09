@@ -2,7 +2,20 @@ import SwiftUI
 
 @main
 struct ParDosApp: App {
+    // Para que Firebase se inicie al abrir la app
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
+
+    init() {
+        ArtLibrary.shared.preload()
+        _ = PowerMonitor.shared
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            AdManager.shared.start()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
+            AppIconManager.apply()
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -44,6 +57,7 @@ struct RootView: View {
             if phase == .background { model.rescheduleReminders() }
         }
         .onAppear {
+            GlobalTapSound.shared.install()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
                 withAnimation(.easeOut(duration: 0.4)) {
                     splashDone = true
@@ -95,6 +109,8 @@ struct RootView: View {
             BackupSheet()
         case .friends:
             FriendsSheet()
+        case .calendar:
+            CalendarSheet()
         }
     }
 }

@@ -68,7 +68,7 @@ struct BackupSheet: View {
                 .padding(14)
                 .card()
                 if let message = message {
-                    Text(message)
+                    Text(loc(message))
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(Theme.accent)
                         .multilineTextAlignment(.center)

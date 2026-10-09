@@ -64,6 +64,17 @@ struct WheelSheet: View {
                 spin(slices)
             }
             .padding(.horizontal, 40)
+            if freeLeft == 0, let left = model.state?.ads?.wheel, left > 0, !spinning {
+                WatchAdButton(
+                    title: "OTRO GIRO CON ANUNCIO",
+                    subtitle: "Ver un anuncio · quedan \(left) hoy",
+                    tag: "+1",
+                    color: Color(hex: 0x8E6BD6)
+                ) {
+                    spin(slices, ad: true)
+                }
+                .padding(.horizontal, 30)
+            }
             Text("1 giro gratis al día. Puede tocarte monedas, gemas, un cofre o puntos del pase.")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Theme.ink.opacity(0.45))
@@ -117,8 +128,8 @@ struct WheelSheet: View {
         }
     }
 
-    private func spin(_ slices: [WheelSliceInfo]) {
-        guard !spinning, let index = model.spinWheel(), index < slices.count else { return }
+    private func spin(_ slices: [WheelSliceInfo], ad: Bool = false) {
+        guard !spinning, let index = model.spinWheel(ad: ad), index < slices.count else { return }
         spinning = true
         resultText = ""
         let count = Double(max(1, slices.count))
@@ -205,6 +216,16 @@ struct SeasonSheet: View {
             Text("Quedan \(season.daysLeft) días · Nivel \(season.tier) de 30")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(Theme.ink.opacity(0.55))
+            if let ads = model.state?.ads, ads.season > 0 {
+                WatchAdButton(
+                    title: "IMPULSO DE TEMPORADA",
+                    subtitle: "Ver un anuncio · quedan \(ads.season) hoy",
+                    tag: "+\(ads.seasonPoints)",
+                    color: Color(hex: 0xE8772E)
+                ) {
+                    model.adSeasonBoost()
+                }
+            }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.1))
@@ -222,7 +243,7 @@ struct SeasonSheet: View {
                     model.claimAllTiers()
                 }
                 if season.tier < 30 {
-                    BigButton(title: "SUBIR · \(season.skipCost)💎", color: Theme.energy, enabled: model.gems >= season.skipCost) {
+                    BigButton(title: "SUBIR · \(season.skipCost) GEMAS", color: Theme.energy, enabled: model.gems >= season.skipCost) {
                         model.buySeasonTier()
                     }
                 }
@@ -333,7 +354,7 @@ struct LeagueSheet: View {
         default: title = "Te quedas en \(pending.to)"
         }
         return VStack(spacing: 8) {
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 17, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)
             Text("Semana pasada: \(pending.stars) estrellas")
@@ -408,7 +429,7 @@ struct LeagueSheet: View {
                         .font(.system(size: 14, weight: current ? .black : .bold, design: .rounded))
                         .foregroundColor(Theme.ink.opacity(current ? 1 : 0.55))
                     Spacer()
-                    Text("sube con \(row.1)★")
+                    Text("sube con \(row.1) estrellas")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Theme.ink.opacity(0.4))
                 }
@@ -449,7 +470,7 @@ struct LowFundsSheet: View {
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(Theme.accent.opacity(0.12)))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                Text(loc(title)).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                 Text("\(detail) · \(have)").font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
             }
             Spacer()

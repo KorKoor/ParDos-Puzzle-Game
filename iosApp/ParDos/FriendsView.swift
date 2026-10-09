@@ -87,7 +87,7 @@ struct FriendsSheet: View {
         }
         .background(Theme.cream.ignoresSafeArea())
         .sheet(item: $sharing) { item in
-            ShareSheet(text: item.text)
+            ShareSheet(text: item.text, image: item.image)
         }
         .onAppear { data = model.loadFriends() }
     }
@@ -104,7 +104,7 @@ struct FriendsSheet: View {
                 Spacer()
             }
             BigButton(title: "COMPARTIR MI TARJETA", color: Theme.energy) {
-                sharing = ShareItem(text: model.friendInvite())
+                sharing = ShareItem(text: model.friendInvite(), image: model.playerCardImage())
             }
         }
         .padding(14)
@@ -146,7 +146,7 @@ struct FriendsSheet: View {
                 Spacer()
             }
             if let message = message {
-                Text(message).font(.system(size: 12, weight: .bold)).foregroundColor(Theme.accent)
+                Text(loc(message)).font(.system(size: 12, weight: .bold)).foregroundColor(Theme.accent)
             }
         }
         .padding(14)
@@ -203,7 +203,7 @@ struct FriendsSheet: View {
                 Text(row.me ? row.name + " (tú)" : row.name)
                     .font(.system(size: 14, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
-                Text("Nivel \(row.level) · \(row.league) · \(row.stars)★ · \(row.pieces) piezas")
+                Text("Nivel \(row.level) · \(row.league) · \(row.stars) estrellas · \(row.pieces) piezas")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.5))
                 if !row.me && row.daysAgo > 0 {

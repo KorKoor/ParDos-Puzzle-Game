@@ -140,8 +140,8 @@ struct ShopView: View {
                 .frame(width: 38, height: 38)
                 .background(Circle().fill(Theme.accent.opacity(0.12)))
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
-                Text(detail).font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).lineLimit(2)
+                Text(loc(title)).font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                Text(loc(detail)).font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).lineLimit(2)
             }
             Spacer()
             priceButton(coin: gems ? 0 : price, gem: gems ? price : 0, enabled: gems ? model.gems >= price : model.coins >= price, action: action)
@@ -263,7 +263,7 @@ struct ShopView: View {
 
     private func smallButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 12, weight: .black, design: .rounded))
                 .foregroundColor(.white)
                 .padding(.horizontal, 14)

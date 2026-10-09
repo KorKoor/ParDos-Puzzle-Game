@@ -13,6 +13,7 @@ struct AlbumView: View {
                 LazyVStack(spacing: 14) {
                     header
                     if let album = model.album {
+                        if let featured = model.state?.featured { FeaturedSeriesCard(info: featured, jump: { id in selected = nil; withAnimation { proxy.scrollTo(id, anchor: .top) } }) }
                         summary(album)
                         if !album.perks.isEmpty { perks(album) }
                         sellRow(album)
@@ -46,7 +47,7 @@ struct AlbumView: View {
         HStack(spacing: 10) {
             Menu {
                 ForEach(model.albumCatalog.series) { series in
-                    Button(series.glyph + " " + series.name) {
+                    Button(series.name) {
                         withAnimation { proxy.scrollTo(series.id, anchor: .top) }
                     }
                 }
@@ -122,7 +123,7 @@ struct AlbumView: View {
             if album.albumClaimable {
                 BigButton(title: "¡ÁLBUM COMPLETO! COBRAR PREMIO", color: Theme.gold) { model.claimAlbumReward() }
             } else if album.albumClaimed {
-                Text("Álbum completo cobrado ✓ · skin Oro Real")
+                Text("Álbum completo cobrado · skin Oro Real")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(Theme.accent)
             } else {
@@ -229,7 +230,7 @@ struct SeriesSection: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle().fill(Color(hex: UInt32(series.top))).frame(width: 40, height: 40)
-                    Text(series.glyph).font(.system(size: 22))
+                    SeriesCrest(series: series, size: 30)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(series.name)
@@ -359,7 +360,7 @@ struct PieceDetail: View {
                         model.foilPiece(piece.id)
                     }
                 } else {
-                    Text("✨ Brillante")
+                    Text("Brillante")
                         .font(.system(size: 14, weight: .black, design: .rounded))
                         .foregroundColor(Theme.gold)
                 }

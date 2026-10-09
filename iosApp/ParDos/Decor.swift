@@ -36,11 +36,12 @@ struct FloatingSprite: View {
 
 /// Fondo de temporada: en Noche de brujas suben despacio calabazas, fantasmas, murciélagos y dulces, con telarañas en las esquinas.
 struct SeasonBackdrop: View {
+    @ObservedObject private var power = PowerMonitor.shared
     private let names = ["ico_pumpkin", "ico_ghost", "ico_bat", "ico_candy", "ico_skull", "ico_lollipop"]
 
     var body: some View {
-        if Theme.halloween && !UIAccessibility.isReduceMotionEnabled {
-            TimelineView(.animation) { timeline in
+        if Theme.halloween && power.decorativeMotion {
+            TimelineView(.animation(minimumInterval: power.frameInterval, paused: false)) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     drawSprites(context, size, t)
@@ -86,13 +87,14 @@ struct SeasonBackdrop: View {
 
 /// Cuerda de luces de colores que cuelga a lo ancho (solo en Noche de brujas).
 struct HalloweenGarland: View {
+    @ObservedObject private var power = PowerMonitor.shared
     private let colors: [Color] = [
         Color(hex: 0xFFB347), Color(hex: 0xB27BFF), Color(hex: 0xFF7A59), Color(hex: 0xFFE08A), Color(hex: 0x7DE0A6)
     ]
 
     var body: some View {
-        if Theme.halloween && !UIAccessibility.isReduceMotionEnabled {
-            TimelineView(.animation) { timeline in
+        if Theme.halloween && power.decorativeMotion {
+            TimelineView(.animation(minimumInterval: power.frameInterval, paused: false)) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     draw(context, size, t)
@@ -132,12 +134,13 @@ struct HalloweenGarland: View {
 
 /// Confeti que cae al ganar un nivel.
 struct ConfettiView: View {
+    @ObservedObject private var power = PowerMonitor.shared
     private let colors: [Color] = [
         Color(hex: 0xE8772E), Color(hex: 0x9B4FC9), Color(hex: 0xE0A93B), Color(hex: 0x6B9E86), Color(hex: 0xE07A5F), Color(hex: 0x4E8FA6)
     ]
 
     var body: some View {
-        if UIAccessibility.isReduceMotionEnabled {
+        if !power.decorativeMotion {
             EmptyView()
         } else {
             animated
@@ -145,7 +148,7 @@ struct ConfettiView: View {
     }
 
     private var animated: some View {
-        TimelineView(.animation) { timeline in
+        TimelineView(.animation(minimumInterval: power.frameInterval, paused: false)) { timeline in
             Canvas { context, size in
                 let t = timeline.date.timeIntervalSinceReferenceDate
                 draw(context, size, t)
@@ -269,7 +272,7 @@ struct RuleIntroView: View {
                     .font(.system(size: 26, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
                     .multilineTextAlignment(.center)
-                Text(card.rule)
+                Text(loc(card.rule))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.65))
                     .multilineTextAlignment(.center)

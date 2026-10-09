@@ -121,30 +121,79 @@ struct ChapterBanner: View {
     var body: some View {
         let theme = Chapters.theme(chapter)
         let stars = model.chapterStars(chapter)
-        return VStack(alignment: .leading, spacing: 4) {
-            Text("CAPÍTULO \(chapter + 1)")
-                .font(.system(size: 10, weight: .heavy))
-                .kerning(3)
-                .foregroundColor(Color.white.opacity(0.75))
-            Text(theme.name)
-                .font(.system(size: 22, weight: .black, design: .rounded))
-                .foregroundColor(.white)
-            HStack(spacing: 4) {
-                Image(systemName: "star.fill").font(.system(size: 11))
-                Text("\(stars)/\(Chapters.size * 3)")
-                    .font(.system(size: 12, weight: .heavy))
+        return HStack(spacing: 12) {
+            ArtView(id: theme.emblem)
+                .frame(width: 60, height: 60)
+                .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 3)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("CAPÍTULO \(chapter + 1)")
+                    .font(.system(size: 10, weight: .heavy))
+                    .kerning(3)
+                    .foregroundColor(Color.white.opacity(0.75))
+                Text(loc(theme.name))
+                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                HStack(spacing: 4) {
+                    Image(systemName: "star.fill").font(.system(size: 11))
+                    Text("\(stars)/\(Chapters.size * 3)")
+                        .font(.system(size: 12, weight: .heavy))
+                }
+                .foregroundColor(Color.white.opacity(0.85))
             }
-            .foregroundColor(Color.white.opacity(0.85))
+            Spacer(minLength: 0)
+            chestBadge
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(chestBadge, alignment: .trailing)
         .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(LinearGradient(colors: [theme.color, theme.color.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            ZStack(alignment: .bottomTrailing) {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(LinearGradient(colors: [theme.color, theme.color.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                ArtView(id: "prop.\(theme.scenery)_b")
+                    .frame(width: 104, height: 104)
+                    .opacity(0.92)
+                    .offset(x: -56, y: 8)
+                    .allowsHitTesting(false)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         )
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+    }
+}
+
+/// Camino que une cada nivel con el siguiente: una cinta suave con una línea punteada encima.
+struct MapRoad: View {
+    let level: Int
+    let tint: Color
+    let locked: Bool
+
+    private func sway(_ n: Int) -> CGFloat {
+        return n <= 0 ? 0 : CGFloat(sin(Double(n) * 0.85)) * 86
+    }
+
+    var body: some View {
+        let rowHeight: CGFloat = 92
+        let nodeY: CGFloat = 40
+        let prev = sway(level - 1)
+        let here = sway(level)
+        let next = sway(level + 1)
+        return Canvas { context, size in
+            let cx = size.width / 2
+            let p0 = CGPoint(x: cx + prev, y: nodeY - rowHeight)
+            let p1 = CGPoint(x: cx + here, y: nodeY)
+            let p2 = CGPoint(x: cx + next, y: nodeY + rowHeight)
+            var path = Path()
+            let start = CGPoint(x: (p0.x + p1.x) / 2, y: (p0.y + p1.y) / 2)
+            let end = CGPoint(x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2)
+            path.move(to: start)
+            path.addQuadCurve(to: end, control: p1)
+            let ribbon = tint.opacity(locked ? 0.10 : 0.22)
+            context.stroke(path, with: .color(ribbon), style: StrokeStyle(lineWidth: 16, lineCap: .butt, lineJoin: .round))
+            context.stroke(path, with: .color(Color.white.opacity(locked ? 0.35 : 0.75)), style: StrokeStyle(lineWidth: 2.6, lineCap: .butt, lineJoin: .round, dash: [2, 7]))
+        }
+        .allowsHitTesting(false)
     }
 }
 
@@ -163,7 +212,9 @@ struct LevelRow: View {
         let sway = CGFloat(sin(Double(level) * 0.85)) * 86
         let theme = Chapters.theme(Chapters.index(of: level))
         let tint = kind == "ZEN" ? theme.color : kindColor(kind)
-        let decoration = level % 3 == 0 ? theme.emoji : ""
+        let propId = Chapters.prop(level: level, theme: theme)
+        let propSide: CGFloat = sway >= 0 ? -1 : 1
+        let propX = propSide * (126 + CGFloat(level % 3) * 14)
         return Button(action: { if !locked { model.openPreview(level) } }) {
             VStack(spacing: 4) {
                 ZStack {
@@ -198,12 +249,22 @@ struct LevelRow: View {
             .offset(x: sway)
             .frame(height: 92)
             .frame(maxWidth: .infinity)
-            .background(theme.color.opacity(0.07))
+            .background(
+                ZStack {
+                    theme.color.opacity(0.07)
+                    MapRoad(level: level, tint: tint, locked: locked)
+                }
+            )
             .overlay(
-                Text(decoration)
-                    .font(.system(size: 30))
-                    .opacity(0.55)
-                    .offset(x: -sway * 1.3 + (level % 2 == 0 ? 20 : -20))
+                Group {
+                    if let propId = propId {
+                        ArtView(id: propId)
+                            .frame(width: 58, height: 58)
+                            .offset(x: propX, y: 12)
+                            .opacity(locked ? 0.55 : 1)
+                    }
+                }
+                .allowsHitTesting(false)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -272,7 +333,7 @@ struct LevelPreviewSheet: View {
                         .foregroundColor(i < model.stars(card.id) ? Theme.gold : Theme.ink.opacity(0.12))
                 }
             }
-            Text(card.rule)
+            Text(loc(card.rule))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(Theme.ink.opacity(0.65))
                 .multilineTextAlignment(.center)
@@ -333,7 +394,13 @@ struct SettingsView: View {
     @AppStorage("haptics_on") private var hapticsOn = true
     @AppStorage("notif_on") private var notifOn = true
     @AppStorage("auto_next") private var autoNext = true
+    @AppStorage("dpad_on") private var dpadOn = false
+    @State private var iconPref = AppIconManager.preference
     @State private var confirmReset = false
+    @State private var sfxLevel = Double(SoundManager.shared.sfxVolume)
+    @State private var musicLevel = Double(SoundManager.shared.musicVolume)
+    @State private var powerMode = PowerMonitor.shared.mode
+    @ObservedObject private var power = PowerMonitor.shared
 
     var body: some View {
         VStack(spacing: 14) {
@@ -353,9 +420,14 @@ struct SettingsView: View {
                 toggleRow("bell.fill", "Avisos", $notifOn)
                 Divider()
                 toggleRow("forward.fill", "Pasar solo al siguiente nivel", $autoNext)
+                Divider()
+                toggleRow("gamecontroller.fill", "Botones de dirección", $dpadOn)
             }
             .padding(.horizontal, 16)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            volumeCard
+            powerCard
+            iconCard
             VStack(spacing: 6) {
                 Text("TU PROGRESO")
                     .font(.system(size: 10, weight: .heavy))
@@ -388,6 +460,9 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 16)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            Text(ArtLibrary.shared.report())
+                .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                .foregroundColor(Theme.ink.opacity(0.35))
             if !decodeDiagnostics.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("DIAGNÓSTICO")
@@ -412,7 +487,13 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 22)
         .background(Theme.cream.ignoresSafeArea())
-        .onChange(of: musicOn) { _ in model.syncMusic() }
+        .onChange(of: musicOn) { _ in
+            SoundManager.shared.settingsChanged()
+            model.syncMusic()
+        }
+        .onChange(of: soundOn) { value in
+            if value { SoundManager.shared.play(.toggle_on) }
+        }
         .onChange(of: notifOn) { value in model.setNotifications(value) }
         .alert(isPresented: $confirmReset) {
             Alert(
@@ -424,13 +505,105 @@ struct SettingsView: View {
         }
     }
 
+    private var volumeCard: some View {
+        VStack(spacing: 4) {
+            sliderRow("speaker.wave.2.fill", "Volumen de sonidos", $sfxLevel) { value in
+                SoundManager.shared.sfxVolume = Float(value)
+            } onEnd: {
+                SoundManager.shared.play(.coin)
+            }
+            Divider()
+            sliderRow("music.note", "Volumen de música", $musicLevel) { value in
+                SoundManager.shared.musicVolume = Float(value)
+            } onEnd: {
+                SoundManager.shared.settingsChanged()
+            }
+        }
+        .padding(.horizontal, 16)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+    }
+
+    private var iconCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: "app.badge.fill").frame(width: 24).foregroundColor(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Icono de la app")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                    Text("Automático: el de Noche de brujas en octubre y el clásico el resto del año.")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.ink.opacity(0.55))
+                }
+            }
+            Picker("", selection: $iconPref) {
+                Text("Automático").tag("auto")
+                Text("Clásico").tag("classic")
+                Text("Halloween").tag("halloween")
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: iconPref) { value in
+                AppIconManager.setPreference(value)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+    }
+
+    private var powerCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                Image(systemName: "battery.100").frame(width: 24).foregroundColor(Theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Ahorro de energía")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                    Text("Ahora: \(power.label). Con ahorro hay menos animaciones y el teléfono se calienta menos.")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.ink.opacity(0.55))
+                }
+            }
+            Picker("", selection: $powerMode) {
+                Text("Automático").tag(0)
+                Text("Siempre").tag(1)
+                Text("Nunca").tag(2)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: powerMode) { value in
+                PowerMonitor.shared.setMode(value)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+    }
+
+    private func sliderRow(_ symbol: String, _ title: String, _ value: Binding<Double>, onChange: @escaping (Double) -> Void, onEnd: @escaping () -> Void) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol).frame(width: 24).foregroundColor(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(loc(title))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(Theme.ink)
+                Slider(value: value, in: 0...1, onEditingChanged: { editing in
+                    onChange(value.wrappedValue)
+                    if !editing { onEnd() }
+                })
+                .accentColor(Theme.accent)
+            }
+        }
+        .padding(.vertical, 10)
+        .onChange(of: value.wrappedValue) { newValue in
+            onChange(newValue)
+        }
+    }
+
     private func linkRow(_ symbol: String, _ title: String, _ url: String) -> some View {
         Button(action: {
             if let target = URL(string: url) { UIApplication.shared.open(target) }
         }) {
             HStack(spacing: 12) {
                 Image(systemName: symbol).frame(width: 24).foregroundColor(Theme.accent)
-                Text(title).font(.system(size: 16, weight: .bold, design: .rounded)).foregroundColor(Theme.ink)
+                Text(loc(title)).font(.system(size: 16, weight: .bold, design: .rounded)).foregroundColor(Theme.ink)
                 Spacer()
                 Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundColor(Theme.ink.opacity(0.3))
             }
@@ -444,7 +617,7 @@ struct SettingsView: View {
                 Image(systemName: symbol)
                     .frame(width: 24)
                     .foregroundColor(Theme.accent)
-                Text(title)
+                Text(loc(title))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.ink)
             }

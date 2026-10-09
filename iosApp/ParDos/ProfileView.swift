@@ -19,6 +19,8 @@ struct ProfileView: View {
     @State private var filter: OwnFilter = .mine
     @State private var nameDraft: String = ""
     @State private var editing = false
+    @State private var showCustomAvatar = false
+    @ObservedObject private var customAvatar = CustomAvatarStore.shared
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -47,7 +49,7 @@ struct ProfileView: View {
             BannerView(id: state.banner, height: 180)
                 .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             HStack(alignment: .bottom, spacing: 14) {
-                AvatarView(id: state.avatar, size: 84)
+                AvatarView(id: state.avatar, size: 84, mine: true)
                     .overlay(Circle().stroke(Color.white, lineWidth: 3))
                 VStack(alignment: .leading, spacing: 6) {
                     if editing {
@@ -129,8 +131,8 @@ struct ProfileView: View {
                     .frame(width: 42, height: 42)
                     .background(Circle().fill(color))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
-                    Text(detail).font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).lineLimit(1)
+                    Text(loc(title)).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                    Text(loc(detail)).font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
@@ -157,7 +159,7 @@ struct ProfileView: View {
         VStack(spacing: 4) {
             Image(systemName: symbol).font(.system(size: 16, weight: .bold)).foregroundColor(color)
             Text(value).font(.system(size: 18, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
-            Text(title).font(.system(size: 9, weight: .heavy)).foregroundColor(Theme.ink.opacity(0.45)).lineLimit(1)
+            Text(loc(title)).font(.system(size: 9, weight: .heavy)).foregroundColor(Theme.ink.opacity(0.45)).lineLimit(1)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -239,10 +241,45 @@ struct ProfileView: View {
                 }
             }
             if pick == .avatars {
+                customAvatarRow
                 avatarGrid(state)
             } else {
                 bannerGrid(state)
             }
+        }
+    }
+
+    /// Entrada para crear un avatar propio con un emoji o sticker de Apple, una foto o una imagen pegada.
+    private var customAvatarRow: some View {
+        Button(action: { showCustomAvatar = true }) {
+            HStack(spacing: 12) {
+                if customAvatar.hasContent {
+                    CustomAvatarFace(size: 46)
+                } else {
+                    Circle()
+                        .fill(Theme.accent.opacity(0.15))
+                        .frame(width: 46, height: 46)
+                        .overlay(Image(systemName: "face.smiling").font(.system(size: 22, weight: .bold)).foregroundColor(Theme.accent))
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Mi propio sticker")
+                        .font(.system(size: 14, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                    Text(customAvatar.active ? "Lo estás usando como avatar" : "Emoji, Memoji, foto o imagen, y con movimiento")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.ink.opacity(0.55))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Theme.ink.opacity(0.3))
+            }
+            .padding(12)
+            .card(radius: 18)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showCustomAvatar) {
+            CustomAvatarSheet(onClose: { showCustomAvatar = false })
         }
     }
 
@@ -309,7 +346,7 @@ struct ProfileView: View {
                     if owned { model.setBanner(item.id) } else if item.source == "SHOP" { model.buyBanner(item.id) } else { model.showToast(item.source == "SEASON" ? "Es un premio del pase de temporada" : "Se desbloquea con un rango de prestigio") }
                 }) {
                     ZStack(alignment: .bottomLeading) {
-                        BannerView(id: item.id, height: 64)
+                        BannerView(id: item.id, height: 64, animate: false)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .opacity(owned ? 1 : 0.55)
                         HStack(spacing: 4) {

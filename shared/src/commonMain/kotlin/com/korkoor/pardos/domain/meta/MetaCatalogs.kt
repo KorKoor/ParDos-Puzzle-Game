@@ -60,17 +60,17 @@ internal object MetaCatalogs {
         )
     })
 
-    fun album(): String {
+    fun album(english: Boolean = false): String {
         val series = Series.entries.map {
             robj(
-                "id" to it.id, "name" to it.nameEs, "glyph" to it.glyph, "top" to rgb(it.top), "bottom" to rgb(it.bottom),
+                "id" to it.id, "name" to (if (english) it.nameEn else it.nameEs), "glyph" to it.glyph, "top" to rgb(it.top), "bottom" to rgb(it.bottom),
                 "accent" to rgb(it.accent), "motif" to it.motif.name, "perk" to it.perk.name, "perkLabel" to it.perk.labelEs,
                 "coins" to it.rewardCoins, "gems" to it.rewardGems
             )
         }
         val pieces = CollectibleCatalog.all.map { c ->
             robj(
-                "id" to c.id, "series" to c.series.id, "rarity" to c.rarity.name, "glyph" to c.glyph, "name" to c.nameEs,
+                "id" to c.id, "series" to c.series.id, "rarity" to c.rarity.name, "glyph" to c.glyph, "name" to (if (english) c.nameEn else c.nameEs),
                 "desc" to c.descEs, "n" to c.number,
                 "perk" to c.perk?.let { it.label(false) }, "foilPerk" to c.perk?.let { it.label(true) },
                 "craft" to c.rarity.craftCost, "sell" to c.rarity.sellCoins, "foilCost" to c.rarity.craftCost * 2

@@ -56,7 +56,7 @@ struct PopupFrame<Content: View>: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)
                 .multilineTextAlignment(.center)
@@ -80,7 +80,7 @@ struct InfoPopup: View {
             Image(systemName: symbol)
                 .font(.system(size: 44, weight: .bold))
                 .foregroundColor(Theme.gold)
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(Theme.ink.opacity(0.7))
                 .multilineTextAlignment(.center)
@@ -93,6 +93,9 @@ struct InfoPopup: View {
 
 struct DailyGiftView: View {
     @EnvironmentObject var model: AppModel
+    @State private var claimedCoins: Int? = nil
+    @State private var claimedGems: Int = 0
+    @State private var doubled = false
 
     var body: some View {
         PopupFrame(title: "Regalo de hoy") {
@@ -123,9 +126,32 @@ struct DailyGiftView: View {
                             .foregroundColor(Theme.ink.opacity(0.55))
                     }
                 }
-                BigButton(title: "RECLAMAR") {
-                    model.claimDailyGift()
-                    model.dismissCelebration()
+                if let coins = claimedCoins {
+                    if doubled {
+                        Text("¡Duplicado! +\(coins) monedas" + (claimedGems > 0 ? " y +\(claimedGems) gemas" : ""))
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .foregroundColor(Theme.accent)
+                            .multilineTextAlignment(.center)
+                    } else if state.ads?.doubleGift ?? false {
+                        WatchAdButton(
+                            title: "DUPLICAR EL REGALO",
+                            subtitle: "+\(coins) monedas" + (claimedGems > 0 ? " y +\(claimedGems) gemas" : "") + " viendo un anuncio corto",
+                            tag: "x2",
+                            color: Color(hex: 0x8E6BD6)
+                        ) {
+                            model.adDoubleGift()
+                            doubled = true
+                        }
+                    }
+                    BigButton(title: "LISTO") {
+                        model.dismissCelebration()
+                    }
+                } else {
+                    BigButton(title: "RECLAMAR") {
+                        claimedCoins = state.dailyReward.coins
+                        claimedGems = state.dailyReward.gems
+                        model.claimDailyGift()
+                    }
                 }
             }
         }
@@ -223,6 +249,14 @@ struct RepairView: View {
             BigButton(title: "RECUPERAR · \(info.cost) GEMAS", color: Theme.energy, enabled: model.gems >= info.cost) {
                 model.repairStreak()
                 model.dismissCelebration()
+            }
+            WatchAdButton(
+                title: "RECUPERAR VIENDO UN ANUNCIO",
+                subtitle: "Gratis · sin gastar gemas",
+                tag: "GRATIS",
+                color: Color(hex: 0x8E6BD6)
+            ) {
+                model.adRepairStreak()
             }
             Button(action: {
                 model.declineRepair()
@@ -368,7 +402,7 @@ struct ChestOpenView: View {
     private var summary: some View {
         let fresh = drops.filter { $0.new }.count
         let text = fresh > 0 ? "\(fresh) \(fresh == 1 ? "pieza nueva" : "piezas nuevas") para tu álbum" : "Esta vez todo repetido: véndelas o recíclalas en el álbum"
-        return Text(text)
+        return Text(loc(text))
             .font(.system(size: 13, weight: .bold))
             .foregroundColor(Color.white.opacity(0.85))
             .multilineTextAlignment(.center)

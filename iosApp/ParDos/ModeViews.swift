@@ -30,7 +30,7 @@ struct PowerBar: View {
                     .foregroundColor(.white)
                     .frame(width: 38, height: 38)
                     .background(Circle().fill(color))
-                Text(title)
+                Text(loc(title))
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundColor(Theme.ink)
                 Text(detail ?? "listo")
@@ -56,7 +56,7 @@ struct SelectBanner: View {
             text = "Ahora toca otra igual"
         }
         return HStack {
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(.white)
             Spacer()
@@ -91,7 +91,7 @@ struct TowerHearts: View {
             }
             Spacer()
             if let label = info?.label {
-                Text(label)
+                Text(loc(label))
                     .font(.system(size: 12, weight: .heavy))
                     .kerning(1.5)
                     .foregroundColor((info?.boss ?? false) ? Color(hex: 0xB4413C) : Theme.ink.opacity(0.6))
@@ -136,14 +136,14 @@ struct ModeResultOverlay: View {
     }
 
     private func title(_ text: String) -> some View {
-        Text(text)
+        Text(loc(text))
             .font(.system(size: 26, weight: .black, design: .rounded))
             .foregroundColor(Theme.ink)
             .multilineTextAlignment(.center)
     }
 
     private func sub(_ text: String) -> some View {
-        Text(text)
+        Text(loc(text))
             .font(.system(size: 13, weight: .semibold))
             .foregroundColor(Theme.ink.opacity(0.6))
             .multilineTextAlignment(.center)
@@ -151,7 +151,7 @@ struct ModeResultOverlay: View {
 
     private func big(_ text: String, color: Color = Theme.accent, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 17, weight: .black, design: .rounded))
                 .kerning(1.5)
                 .foregroundColor(.white)
@@ -163,7 +163,7 @@ struct ModeResultOverlay: View {
 
     private func small(_ text: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(Theme.ink.opacity(0.6))
         }
@@ -311,10 +311,10 @@ struct ModesSection: View {
                     .foregroundColor(.white)
                     .frame(width: 42, height: 42)
                     .background(Circle().fill(color))
-                Text(title)
+                Text(loc(title))
                     .font(.system(size: 15, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
-                Text(detail)
+                Text(loc(detail))
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.5))
                     .lineLimit(2)
@@ -403,8 +403,8 @@ struct CustomGameSheet: View {
             VStack(spacing: 4) {
                 Image(systemName: symbol).font(.system(size: 18, weight: .bold)).foregroundColor(.white)
                     .frame(width: 38, height: 38).background(Circle().fill(color))
-                Text(title).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
-                Text(detail).font(.system(size: 9, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).multilineTextAlignment(.center)
+                Text(loc(title)).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                Text(loc(detail)).font(.system(size: 9, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
@@ -415,7 +415,7 @@ struct CustomGameSheet: View {
 
     private func row<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(spacing: 8) {
-            Text(title.uppercased())
+            Text(loc(title).uppercased())
                 .font(.system(size: 10, weight: .heavy))
                 .kerning(2)
                 .foregroundColor(Theme.ink.opacity(0.4))
@@ -490,7 +490,7 @@ struct RecordsSheet: View {
     private func line(_ symbol: String, _ title: String, _ value: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: symbol).foregroundColor(Theme.accent).frame(width: 26)
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundColor(Theme.ink)
             Spacer()

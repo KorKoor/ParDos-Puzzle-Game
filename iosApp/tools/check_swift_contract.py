@@ -21,7 +21,7 @@ RESULTS = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "shared" / "build" 
 MAPPING = {
     "state": "MetaState", "stateLate": "MetaState", "albumState": "AlbumStateData", "open": "OpenAppResult",
     "openLate": "OpenAppResult", "openComeback": "OpenAppResult", "openComeback2": "OpenAppResult",
-    "gift": "DailyGiftResult", "chestOpen": "ChestOpenResult", "wheel": "WheelResult", "win": "WinReward", "loss": "LossInfo",
+    "gift": "DailyGiftResult", "calendarClaim": "CalendarClaimResult", "calendarRecover": "CalendarClaimResult", "chestOpen": "ChestOpenResult", "wheel": "WheelResult", "win": "WinReward", "loss": "LossInfo",
     "missionClaim": "MissionClaimResult", "tierClaim": "TierClaimResult", "fail": "ActionResult",
     "skinCatalog": "[SkinItem]", "fxCatalog": "[FxItem]", "avatarCatalog": "[AvatarItem]", "bannerCatalog": "[BannerItem]",
     "albumCatalog": "AlbumCatalogData", "seasonTiers": "[SeasonTierInfo]", "wheelSlices": "[WheelSliceInfo]",

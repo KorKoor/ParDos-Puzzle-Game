@@ -196,7 +196,7 @@ struct MissionsSheet: View {
                 WeeklyRow(item: item)
             }
             if state.weeklyBonusClaimed {
-                Text("Premio semanal cobrado ✓")
+                Text("Premio semanal cobrado")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(Theme.accent)
             } else {

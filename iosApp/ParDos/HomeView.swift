@@ -15,6 +15,12 @@ struct HomeView: View {
                 dailyCard
                 todayStrip
                 if let state = model.state {
+                    if let happy = state.happyHour {
+                        HappyHourCard(info: happy)
+                    }
+                    if let calendar = state.calendar {
+                        CalendarCard(info: calendar)
+                    }
                     MissionsCard(missions: state.missions, perfectDays: state.perfectDays)
                     ForEach(state.events) { event in
                         EventBanner(event: event)
@@ -22,6 +28,7 @@ struct HomeView: View {
                     ForEach(state.eventSkins) { info in
                         EventSkinCard(info: info)
                     }
+                    FreeGemsCard()
                     OfferCard(offer: state.offer)
                     chestsCard(state)
                     streakCard(state)
@@ -40,17 +47,19 @@ struct HomeView: View {
             .padding(.bottom, 20)
         }
         .onReceive(timer) { value in now = value }
-        .alert(isPresented: $askSkip) {
+        .confirmationDialog(
+            "Cofre gratis: faltan " + formatClock(ms: model.freeChestRemaining(now: now)),
+            isPresented: $askSkip,
+            titleVisibility: .visible
+        ) {
             let cost = model.state?.freeChest.skipCost ?? 1
-            return Alert(
-                title: Text("Cofre gratis"),
-                message: Text("Faltan " + formatClock(ms: model.freeChestRemaining(now: now)) + ". Puedes esperar o saltar la espera por " + String(cost) + (cost == 1 ? " gema." : " gemas.")),
-                primaryButton: .default(Text("Saltar · " + String(cost) + " \u{1F48E}")) {
-                    model.skipChestWithGems()
-                    model.claimFreeChest()
-                },
-                secondaryButton: .cancel(Text("Esperar"))
-            )
+            Button("Saltar la espera · " + String(cost) + (cost == 1 ? " gema" : " gemas")) {
+                if model.run({ $0.skipFreeChestWithGems() }) { model.claimFreeChest() }
+            }
+            Button(model.isVip ? "Saltar la espera (VIP)" : "Ver un anuncio y abrirlo ya") {
+                model.adSkipChest()
+            }
+            Button("Esperar", role: .cancel) {}
         }
     }
 
@@ -69,7 +78,7 @@ struct HomeView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 HStack(spacing: 12) {
                     Button(action: { model.tab = .profile }) {
-                        AvatarView(id: state?.avatar ?? 1, size: 62)
+                        AvatarView(id: state?.avatar ?? 1, size: 62, mine: true)
                             .overlay(Circle().stroke(Color.white, lineWidth: 3))
                     }
                     VStack(alignment: .leading, spacing: 4) {
@@ -375,11 +384,11 @@ struct TodayTile: View {
                             .offset(x: 8, y: -2)
                     }
                 }
-                Text(title)
+                Text(loc(title))
                     .font(.system(size: 13, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
                     .lineLimit(1)
-                Text(detail)
+                Text(loc(detail))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundColor(hot ? Theme.accent : Theme.ink.opacity(0.45))
                     .lineLimit(1)
@@ -501,7 +510,7 @@ struct OfferCard: View {
                     .font(.system(size: 10, weight: .heavy))
                     .kerning(1.5)
                     .foregroundColor(Theme.energy)
-                Text(title)
+                Text(loc(title))
                     .font(.system(size: 17, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
                 HStack(spacing: 4) {

@@ -86,16 +86,17 @@ struct BoardStyle {
 
 // MARK: - Partículas del fondo
 
-/// Adornos que flotan detrás del tablero según la skin (pétalos, nieve, burbujas, estrellas...).
+/// Adornos que flotan detrás del tablero según la skin (pétalos, nieve, burbujas, estrellas...). Son dibujos, no caracteres.
 struct ParticlesView: View {
     let kind: String
     let tint: Color
+    @ObservedObject private var power = PowerMonitor.shared
 
     var body: some View {
-        if kind == "NONE" || UIAccessibility.isReduceMotionEnabled {
+        if kind == "NONE" || !power.decorativeMotion {
             EmptyView()
         } else {
-            TimelineView(.animation) { timeline in
+            TimelineView(.animation(minimumInterval: power.frameInterval, paused: false)) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     draw(context, size, t)
@@ -106,24 +107,24 @@ struct ParticlesView: View {
         }
     }
 
-    private var glyph: String {
+    private var icons: [String] {
         switch kind {
-        case "PETALS": return "❀"
-        case "SNOW", "SNOWFLAKE": return "❄︎"
-        case "LEAVES": return "🍃"
-        case "FIREFLIES": return "•"
-        case "BUBBLES": return "○"
-        case "STARS", "SPARKLES": return "✦"
-        case "EMBERS": return "•"
-        case "SPRINKLES", "CONFETTI", "FLAG_CONFETTI": return "▪︎"
-        case "RAIN": return "╱"
-        case "SAND": return "·"
-        case "HEARTS": return "♥"
-        case "BATS": return "🦇"
-        case "MARIGOLD", "FLOWERS": return "✿"
-        case "FIREWORKS": return "✺"
-        case "METEORS": return "☄︎"
-        default: return "•"
+        case "PETALS": return ["fx.petal", "fx.petal_cherry"]
+        case "SNOW", "SNOWFLAKE": return ["fx.snowflake", "fx.snow_dot"]
+        case "LEAVES": return ["fx.leaf", "fx.leaf_round"]
+        case "FIREFLIES": return ["fx.glow"]
+        case "BUBBLES": return ["fx.bubble"]
+        case "STARS", "SPARKLES": return ["fx.sparkle", "fx.star_soft"]
+        case "EMBERS": return ["fx.ember"]
+        case "SPRINKLES", "CONFETTI", "FLAG_CONFETTI": return ["fx.confetti_a", "fx.confetti_b", "fx.confetti_c"]
+        case "RAIN": return ["fx.raindrop"]
+        case "SAND": return ["fx.snow_dot"]
+        case "HEARTS": return ["fx.heart_small", "fx.heart"]
+        case "BATS": return ["fx.bat"]
+        case "MARIGOLD", "FLOWERS": return ["fx.marigold", "fx.flower"]
+        case "FIREWORKS": return ["fx.firework", "fx.spark"]
+        case "METEORS": return ["fx.meteor"]
+        default: return ["fx.snow_dot"]
         }
     }
 
@@ -136,7 +137,10 @@ struct ParticlesView: View {
     }
 
     private func draw(_ context: GraphicsContext, _ size: CGSize, _ t: Double) {
-        let count = 16
+        let count = max(4, Int(16.0 * power.particleScale))
+        let ids = icons
+        let color = ArtColor.from(tint)
+        let pal: ArtPalette = ["c": color, "c2": ArtColor.mix(color, ArtColor.hex(0xFFFFFF), 0.5)]
         for i in 0..<count {
             let seed = Double(i)
             let speed = 0.03 + 0.02 * Double((i * 5) % 4)
@@ -144,13 +148,9 @@ struct ParticlesView: View {
             let x = size.width * (0.05 + 0.9 * Double((i * 41) % 100) / 100.0) + 16.0 * sin(t * 0.8 + seed)
             let y = direction > 0 ? size.height * progress : size.height * (1.0 - progress)
             let fade = sin(progress * Double.pi)
-            let fontSize = 14.0 + 8.0 * Double((i * 3) % 3)
-            var layer = context
-            layer.opacity = 0.55 * fade
-            layer.translateBy(x: x, y: y)
-            layer.rotate(by: .radians(t * 0.6 + seed))
-            let text = Text(glyph).font(.system(size: fontSize)).foregroundColor(tint)
-            layer.draw(text, at: .zero)
+            let side = CGFloat(18.0 + 9.0 * Double((i * 3) % 3))
+            let rect = CGRect(x: x - Double(side) / 2, y: y - Double(side) / 2, width: Double(side), height: Double(side))
+            ArtLibrary.shared.draw(ids[i % ids.count], context, in: rect, palette: pal, opacity: 0.6 * fade, rotation: t * 0.6 + seed)
         }
     }
 }

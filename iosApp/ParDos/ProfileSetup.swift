@@ -8,7 +8,7 @@ struct ProfileSetupView: View {
 
     var body: some View {
         PopupFrame(title: "¿Cómo te llamas?") {
-            AvatarView(id: avatar, size: 84)
+            AvatarView(id: avatar, size: 84, mine: true)
                 .overlay(Circle().stroke(Theme.gold, lineWidth: 3))
             TextField("Tu nombre", text: $name)
                 .font(.system(size: 18, weight: .black, design: .rounded))

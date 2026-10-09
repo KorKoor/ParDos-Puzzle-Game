@@ -70,6 +70,9 @@ internal class CollectionOps(private val s: MetaStore, private val wallet: Walle
         return result
     }
 
+    /** Guarda una carta extra (por ejemplo la de la serie destacada del día). */
+    fun addBonusDrop(drop: Drop) = applyDrops(listOf(drop))
+
     private fun applyDrops(drops: List<Drop>) {
         var c = copies
         drops.forEach { c = Copies.add(c, it.collectible.id) }

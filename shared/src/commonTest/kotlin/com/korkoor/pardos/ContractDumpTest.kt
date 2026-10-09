@@ -17,6 +17,8 @@ class ContractDumpTest {
         m.tick(day, day * 86_400_000L, 12 * 60)
         dump("open", m.openApp())
         dump("gift", m.claimDailyReward())
+        dump("calendarClaim", m.calendarClaim())
+        dump("calendarRecover", m.calendarRecover(1))
         m.claimFreeChest()
         dump("chestOpen", m.openChest("COMMON", 3L))
         dump("wheel", m.spinWheel(9L))

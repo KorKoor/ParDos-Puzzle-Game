@@ -75,7 +75,8 @@ extension AppModel {
                 rewardedKey = ""
                 hint = nil
                 refresh(animated: false)
-                sounds.play("win", volume: 0.6)
+                sounds.play(.goal_reached)
+                Haptics.success()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
                     self?.raceFlash = nil
                 }
@@ -197,7 +198,8 @@ extension AppModel {
         }
         if session.powerClean() {
             lastClean = Date()
-            afterPower()
+            sounds.play(.power_clean)
+            afterPower(silent: true)
         } else {
             showToast("No hay nada que limpiar todavía")
         }
@@ -211,7 +213,8 @@ extension AppModel {
         }
         if session.powerMerge() {
             lastMerge = Date()
-            afterPower()
+            sounds.play(.power_merge)
+            afterPower(silent: true)
         } else {
             showToast("No hay dos fichas iguales")
         }
@@ -222,8 +225,7 @@ extension AppModel {
         guard let current = snap, current.status == "playing", current.powers else { return }
         let price = eco?.powerPrice ?? 80
         if coins < price && !(state?.vip ?? false) {
-            showToast("Necesitas \(price) monedas")
-            sheet = .lowFunds
+            adPowerKind = kind
             return
         }
         selectMode = kind
@@ -238,7 +240,12 @@ extension AppModel {
     func tapTile(_ id: String) {
         guard let kind = selectMode else { return }
         if kind == "BROOM" {
-            if session.powerBroom(tileId: id) { chargeManualPower() } else { cancelSelect() }
+            if session.powerBroom(tileId: id) {
+                sounds.play(.power_broom)
+                chargeManualPower()
+            } else {
+                cancelSelect()
+            }
             return
         }
         guard let first = firstPick else {
@@ -251,6 +258,7 @@ extension AppModel {
             return
         }
         if session.powerLink(firstId: first, secondId: id) {
+            sounds.play(.power_link)
             chargeManualPower()
         } else {
             showToast("Tienen que valer lo mismo")
@@ -259,16 +267,20 @@ extension AppModel {
     }
 
     func chargeManualPower() {
-        run { $0.buyManualPower() }
+        if freePowerPending {
+            freePowerPending = false
+        } else {
+            run { $0.buyManualPower() }
+        }
         cancelSelect()
-        afterPower()
+        afterPower(silent: true)
     }
 
-    func afterPower() {
+    func afterPower(silent: Bool = false) {
         usedHelp = true
         hint = nil
-        sounds.play("better_pop")
-        buzz(.medium)
+        if !silent { sounds.play(.power_merge) }
+        Haptics.medium()
         refresh(animated: true)
     }
 }
@@ -305,7 +317,8 @@ extension AppModel {
     func showNextAchievement() {
         if achBanner != nil || achQueue.isEmpty { return }
         achBanner = achQueue.removeFirst()
-        sounds.play("better_pop")
+        sounds.play(.achievement)
+        Haptics.celebrate()
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) { [weak self] in
             self?.achBanner = nil
             self?.showNextAchievement()
@@ -358,6 +371,33 @@ extension AppModel {
             return
         }
         if run({ $0.buyRevive() }) && session.revive() {
+            finishRevive()
+        }
+    }
+
+    /// Seguir jugando viendo un anuncio (gratis, una vez por partida).
+    func reviveWithAd() {
+        guard let current = snap, current.canRevive else { return }
+        withAd {
+            if self.session.revive() {
+                self.finishRevive()
+            }
+        }
+    }
+
+    /// Escoba o Unir gratis viendo un anuncio.
+    func useAdPower() {
+        guard let kind = adPowerKind else { return }
+        adPowerKind = nil
+        withAd {
+            self.freePowerPending = true
+            self.selectMode = kind
+            self.firstPick = nil
+        }
+    }
+
+    private func finishRevive() {
+        do {
             rewardedKey = ""
             loss = nil
             hint = nil

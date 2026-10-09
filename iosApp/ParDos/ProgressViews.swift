@@ -257,7 +257,7 @@ struct PrestigeSheet: View {
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(row.title == data.rank ? Color.white.opacity(0.85) : Theme.ink.opacity(0.45))
                             if row.coins > 0 {
-                                Text("+\(row.coins) · \(row.gems)💎")
+                                Text("+\(row.coins) monedas · \(row.gems) gemas")
                                     .font(.system(size: 8, weight: .heavy))
                                     .foregroundColor(row.title == data.rank ? Color.white.opacity(0.85) : Theme.ink.opacity(0.45))
                             }

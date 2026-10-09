@@ -49,10 +49,13 @@ struct TabBarView: View {
         .padding(.top, 8)
         .padding(.bottom, 4)
         .background(
-            Rectangle()
-                .fill(Color.white)
-                .shadow(color: Theme.ink.opacity(0.12), radius: 6, x: 0, y: -2)
-                .ignoresSafeArea(edges: .bottom)
+            ZStack(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white)
+                    .shadow(color: Theme.ink.opacity(0.12), radius: 6, x: 0, y: -2)
+                Rectangle().fill(Theme.ink.opacity(0.06)).frame(height: 1)
+            }
+            .ignoresSafeArea(edges: .bottom)
         )
     }
 
@@ -64,16 +67,25 @@ struct TabBarView: View {
     private func item(_ tab: MainTab, _ symbol: String, _ title: String, badge: Int) -> some View {
         let selected = model.tab == tab
         return Button(action: {
+            if model.tab != tab {
+                model.sounds.play(.tab)
+                Haptics.select()
+            }
             model.tab = tab
             if tab == .album || tab == .home { model.refreshState() }
         }) {
             VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
+                    Capsule()
+                        .fill(selected ? Theme.accent.opacity(0.16) : Color.clear)
+                        .frame(width: 52, height: 30)
+                        .offset(x: -4, y: -1)
                     Image(systemName: symbol)
                         .font(.system(size: 21, weight: .bold))
                         .foregroundColor(selected ? Theme.accent : Theme.ink.opacity(0.35))
-                        .frame(height: 26)
-                        .scaleEffect(selected ? 1.12 : 1)
+                        .frame(width: 44, height: 28)
+                        .scaleEffect(selected ? 1.1 : 1)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: selected)
                     if badge > 0 {
                         Circle()
                             .fill(Color(hex: 0xE0475B))
@@ -82,7 +94,7 @@ struct TabBarView: View {
                             .offset(x: 8, y: -2)
                     }
                 }
-                Text(title)
+                Text(loc(title))
                     .font(.system(size: 10, weight: .heavy))
                     .foregroundColor(selected ? Theme.accent : Theme.ink.opacity(0.4))
             }

@@ -181,7 +181,12 @@ struct AmountPill: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Capsule().fill(Color.white))
+        .background(
+            Capsule()
+                .fill(LinearGradient(colors: [Color.white, Color(hex: 0xFBF7EE)], startPoint: .top, endPoint: .bottom))
+                .overlay(Capsule().strokeBorder(Color.white, lineWidth: 1))
+        )
+        .overlay(Capsule().stroke(Theme.ink.opacity(0.06), lineWidth: 1))
         .shadow(color: Theme.ink.opacity(0.10), radius: 0, x: 0, y: 2)
     }
 
@@ -215,15 +220,36 @@ struct CurrencyBar: View {
     }
 }
 
-/// Tarjeta blanca de la app.
+extension Color {
+    /// Aclara (amount > 0) u oscurece (amount < 0) un color mezclándolo con blanco o con negro.
+    func shade(_ amount: Double) -> Color {
+        let c = ArtColor.from(self).resolve([:], [:])
+        let target: Double = amount >= 0 ? 1 : 0
+        let k = abs(amount)
+        return Color(.sRGB, red: c.r + (target - c.r) * k, green: c.g + (target - c.g) * k, blue: c.b + (target - c.b) * k, opacity: c.a)
+    }
+}
+
+/// Tarjeta de la app: relieve de juguete (borde inferior sólido), brillo arriba, borde claro y una sombra suave que da profundidad.
 struct CardBackground: ViewModifier {
     var radius: CGFloat = 22
     var fill: Color = Color.white
 
     func body(content: Content) -> some View {
-        content
-            .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill))
+        let soft = PowerMonitor.shared.heavyEffects
+        return content
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous).fill(fill)
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.55), Color.white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.45)))
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.85), lineWidth: 1.2)
+                }
+            )
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Theme.ink.opacity(0.06), lineWidth: 1))
             .shadow(color: Theme.ink.opacity(0.10), radius: 0, x: 0, y: 3)
+            .shadow(color: Theme.ink.opacity(soft ? 0.07 : 0), radius: 10, x: 0, y: 7)
     }
 }
 
@@ -233,7 +259,17 @@ extension View {
     }
 }
 
-/// Botón grande de acción.
+/// Se hunde un poco al tocarlo, como un botón de juguete.
+struct ToyPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.965 : 1)
+            .offset(y: configuration.isPressed ? 2 : 0)
+            .animation(.spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+/// Botón grande de acción: degradado, brillo y borde inferior que se hunde al tocar.
 struct BigButton: View {
     let title: String
     var color: Color = Theme.accent
@@ -241,15 +277,29 @@ struct BigButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            Text(title)
+        let base = enabled ? color : Color.gray.opacity(0.45)
+        return Button(action: action) {
+            Text(loc(title))
                 .font(.system(size: 16, weight: .black, design: .rounded))
                 .kerning(1.5)
                 .foregroundColor(.white)
+                .shadow(color: Color.black.opacity(0.18), radius: 0, x: 0, y: 1)
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(enabled ? color : Color.gray.opacity(0.45)))
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous).fill(base.shade(-0.28)).offset(y: 4)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(LinearGradient(colors: [base.shade(0.16), base], startPoint: .top, endPoint: .bottom))
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(LinearGradient(colors: [Color.white.opacity(0.32), Color.white.opacity(0)], startPoint: .top, endPoint: .center))
+                            .padding(2)
+                        RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
+                    }
+                )
+                .padding(.bottom, 4)
         }
+        .buttonStyle(ToyPressStyle())
         .disabled(!enabled)
     }
 }
@@ -273,14 +323,15 @@ struct SectionTitle: View {
     var detail: String? = nil
 
     var body: some View {
-        HStack {
-            Text(text.uppercased())
+        HStack(spacing: 8) {
+            Capsule().fill(Theme.accent).frame(width: 4, height: 13)
+            Text(loc(text).uppercased())
                 .font(.system(size: 11, weight: .heavy))
                 .kerning(2.5)
                 .foregroundColor(Theme.ink.opacity(0.5))
             Spacer()
             if let detail = detail {
-                Text(detail)
+                Text(loc(detail))
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(Theme.ink.opacity(0.4))
             }

@@ -34,7 +34,7 @@ struct NotifPrimerView: View {
     private func line(_ text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill").foregroundColor(Theme.accent)
-            Text(text).font(.system(size: 13, weight: .bold)).foregroundColor(Theme.ink)
+            Text(loc(text)).font(.system(size: 13, weight: .bold)).foregroundColor(Theme.ink)
         }
     }
 }

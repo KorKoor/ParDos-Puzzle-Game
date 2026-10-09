@@ -84,6 +84,20 @@ jobs:
       - name: Instalar XcodeGen
         run: brew install xcodegen
 
+      # La configuración de Firebase NO está en el repositorio (es público): viene del secreto GOOGLE_SERVICE_INFO_PLIST_B64
+      # (el archivo GoogleService-Info.plist en base64). Sin el secreto la app se compila igual, pero sin Firebase conectado.
+      - name: Poner la configuración de Firebase
+        env:
+          PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          if [ -n "$PLIST_B64" ]; then
+            python3 -c "import base64, os; open('iosApp/ParDos/GoogleService-Info.plist', 'wb').write(base64.b64decode(os.environ['PLIST_B64']))"
+            plutil -lint iosApp/ParDos/GoogleService-Info.plist
+            plutil -extract BUNDLE_ID raw iosApp/ParDos/GoogleService-Info.plist
+          else
+            echo "::warning::Falta el secreto GOOGLE_SERVICE_INFO_PLIST_B64: la app se compila sin Firebase conectado"
+          fi
+
       - name: Generar el proyecto de Xcode
         working-directory: iosApp
         run: xcodegen generate

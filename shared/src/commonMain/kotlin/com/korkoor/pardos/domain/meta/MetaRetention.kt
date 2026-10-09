@@ -136,10 +136,15 @@ internal class Retention(
 
     fun repairCost(): Int = StreakRepair.gemCost(pendingRepair())
 
-    fun repairStreak(): Boolean {
+    fun repairStreak(): Boolean = repairStreakInternal(withGems = true)
+
+    /** Recupera la racha viendo un anuncio (sin gemas). */
+    fun repairStreakWithAd(): Boolean = repairStreakInternal(withGems = false)
+
+    private fun repairStreakInternal(withGems: Boolean): Boolean {
         val lost = pendingRepair()
         if (lost <= 0) return false
-        if (!wallet.spendGems(repairCost())) return false
+        if (withGems && !wallet.spendGems(repairCost())) return false
         val fixed = StreakRepair.repaired(StreakState(lost, s.int("repair_best", lost), today), today)
         s.setInt("streak", fixed.streak)
         s.setInt("best_streak", fixed.best)
@@ -182,6 +187,13 @@ internal class Retention(
         return type
     }
 
+    /** Salta la espera del cofre gratis viendo un anuncio. */
+    fun skipFreeChestWithAd(): Boolean {
+        if (freeChestRemainingMs() <= 0L) return false
+        s.setLong("free_chest_last", 0L)
+        return true
+    }
+
     fun skipFreeChestWithGems(): Boolean {
         val cost = FreeChest.skipCostGems(freeChestRemainingMs())
         if (cost <= 0 || !wallet.spendGems(cost)) return false
@@ -200,6 +212,17 @@ internal class Retention(
         if (wheelAllowance().freeLeft <= 0) return null
         s.setInt("wheel_free", wheelUsed("wheel_free") + 1)
         s.setInt("wheel_ad", wheelUsed("wheel_ad"))
+        s.setInt("wheel_day", today)
+        val index = DailyWheel.pick(random)
+        applyWheelPrize(DailyWheel.slices[index])
+        return index
+    }
+
+    /** Giro extra de la ruleta a cambio de un anuncio (cuando ya no quedan giros gratis). */
+    fun spinWheelWithAd(random: Random): Int? {
+        if (wheelAllowance().freeLeft > 0 || wheelAllowance().adLeft <= 0) return null
+        s.setInt("wheel_free", wheelUsed("wheel_free"))
+        s.setInt("wheel_ad", wheelUsed("wheel_ad") + 1)
         s.setInt("wheel_day", today)
         val index = DailyWheel.pick(random)
         applyWheelPrize(DailyWheel.slices[index])

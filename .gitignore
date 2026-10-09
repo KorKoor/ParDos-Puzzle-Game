@@ -23,6 +23,7 @@ local.properties
 
 # Seguridad y Firebase
 google-services.json
+GoogleService-Info.plist
 *.jks
 *.keystore
 secrets.properties
@@ -44,3 +45,10 @@ amdin-key.json
 *.aab
 *.pem
 /app/release/
+
+# Dibujos vectoriales de iPhone: vistas previas locales
+iosApp/tools/art/_preview/
+__pycache__/
+
+# Descargas locales de la app compilada (nunca al repositorio)
+ipa-descarga/

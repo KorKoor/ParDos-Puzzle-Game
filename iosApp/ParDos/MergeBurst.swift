@@ -6,6 +6,7 @@ struct MergeBurst: View {
     let size: CGFloat
     let value: Int
     @State private var t: Double = 0
+    @ObservedObject private var power = PowerMonitor.shared
 
     private var count: Int {
         var steps = 0
@@ -14,54 +15,67 @@ struct MergeBurst: View {
             v *= 2
             steps += 1
         }
-        return min(26, max(8, 8 + steps * 2))
+        let base = min(26, max(8, 8 + steps * 2))
+        return max(4, Int(Double(base) * power.particleScale))
     }
 
-    private var glyph: String {
+    private var icons: [String] {
         switch fx {
-        case "sparks": return "✦"
-        case "bubbles": return "○"
-        case "petals": return "❀"
-        case "hearts": return "♥"
-        case "confetti": return "▪︎"
-        case "stars": return "★"
-        case "lightning": return "⚡︎"
-        case "fireworks": return "✺"
-        default: return ""
+        case "sparks": return ["fx.spark", "fx.sparkle"]
+        case "bubbles": return ["fx.bubble"]
+        case "petals": return ["fx.petal", "fx.petal_cherry"]
+        case "hearts": return ["fx.heart", "fx.heart_small"]
+        case "confetti": return ["fx.confetti_a", "fx.confetti_b", "fx.confetti_c"]
+        case "stars": return ["fx.star", "fx.star_soft"]
+        case "lightning": return ["fx.bolt"]
+        case "fireworks": return ["fx.firework", "fx.spark"]
+        default: return []
         }
     }
 
-    private func color(_ i: Int) -> Color {
+    private func tint(_ i: Int) -> UInt32 {
         switch fx {
-        case "sparks": return Color(hex: 0xFFC94A)
-        case "bubbles": return Color(hex: 0x7FD6F5)
-        case "petals": return Color(hex: 0xF4A8BC)
-        case "hearts": return Color(hex: 0xE0475B)
-        case "stars": return Color(hex: 0xFFD36E)
-        case "lightning": return Color(hex: 0xB27BFF)
+        case "sparks": return 0xFFC94A
+        case "bubbles": return 0x7FD6F5
+        case "petals": return 0xF4A8BC
+        case "hearts": return 0xE0475B
+        case "stars": return 0xFFD36E
+        case "lightning": return 0xB27BFF
         default:
-            let palette: [Color] = [Color(hex: 0xE8772E), Color(hex: 0x9B4FC9), Color(hex: 0xE0A93B), Color(hex: 0x6B9E86), Color(hex: 0xE07A5F), Color(hex: 0x4E8FA6)]
+            let palette: [UInt32] = [0xE8772E, 0x9B4FC9, 0xE0A93B, 0x6B9E86, 0xE07A5F, 0x4E8FA6]
             return palette[i % palette.count]
         }
     }
 
+    private func particle(_ i: Int, _ ids: [String]) -> some View {
+        let total = Double(count)
+        let angle = Double(i) / total * 2.0 * Double.pi + Double(i % 3) * 0.2
+        let reach = Double(size) * (0.55 + 0.5 * Double((i * 7) % 5) / 4.0)
+        let side = size * (fx == "confetti" ? 0.24 : 0.3)
+        let lift: CGFloat = (fx == "bubbles" || fx == "hearts") ? CGFloat(t) * size * 0.3 : 0
+        let dx = CGFloat(cos(angle) * reach * t)
+        let dy = CGFloat(sin(angle) * reach * t) - lift
+        let spin: Double = (fx == "confetti" || fx == "petals") ? t * 220.0 : 0
+        let color = ArtColor.hex(tint(i))
+        let pal: ArtPalette = ["c": color, "c2": ArtColor.mix(color, ArtColor.hex(0xFFFFFF), 0.5)]
+        return ArtView(id: ids[i % ids.count], palette: pal)
+            .frame(width: side, height: side)
+            .offset(x: dx, y: dy)
+            .rotationEffect(.degrees(spin))
+            .opacity(1.0 - t)
+            .scaleEffect(1.0 - 0.4 * CGFloat(t))
+    }
+
     var body: some View {
-        ZStack {
+        let ids = icons
+        return ZStack {
             if fx == "ripple" {
                 Circle()
                     .stroke(Color(hex: 0x7FD6F5).opacity(1 - t), lineWidth: 3)
                     .frame(width: size * (0.5 + 1.2 * CGFloat(t)), height: size * (0.5 + 1.2 * CGFloat(t)))
-            } else if !glyph.isEmpty {
+            } else if !ids.isEmpty {
                 ForEach(0..<count, id: \.self) { i in
-                    let angle = Double(i) / Double(count) * 2.0 * Double.pi + Double(i % 3) * 0.2
-                    let reach = Double(size) * (0.55 + 0.5 * Double((i * 7) % 5) / 4.0)
-                    Text(glyph)
-                        .font(.system(size: size * (fx == "confetti" ? 0.2 : 0.26), weight: .black))
-                        .foregroundColor(color(i))
-                        .offset(x: CGFloat(cos(angle) * reach * t), y: CGFloat(sin(angle) * reach * t) - (fx == "bubbles" || fx == "hearts" ? CGFloat(t) * size * 0.3 : 0))
-                        .rotationEffect(.degrees(fx == "confetti" || fx == "petals" ? t * 220.0 : 0))
-                        .opacity(1.0 - t)
-                        .scaleEffect(1.0 - 0.4 * CGFloat(t))
+                    particle(i, ids)
                 }
             }
         }

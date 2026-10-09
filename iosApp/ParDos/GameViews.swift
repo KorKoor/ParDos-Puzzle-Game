@@ -5,6 +5,7 @@ import SwiftUI
 struct GameView: View {
     @EnvironmentObject var model: AppModel
     @State private var confirmExit = false
+    @AppStorage("dpad_on") private var dpadOn = false
     private let clock = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -23,6 +24,9 @@ struct GameView: View {
                     BoardView(snap: snap, hint: currentGuide(snap))
                         .padding(.horizontal, 14)
                     StatsRow(snap: snap)
+                    if dpadOn || UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning {
+                        DirectionPad()
+                    }
                     if model.selectMode != nil { SelectBanner() }
                     bottom(snap)
                     Spacer(minLength: 0)
@@ -56,6 +60,22 @@ struct GameView: View {
             }
         }
         .onReceive(clock) { _ in model.tick() }
+        .confirmationDialog(
+            "No te alcanzan las monedas",
+            isPresented: Binding(get: { model.adPowerKind != nil }, set: { shown in if !shown { model.adPowerKind = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(model.isVip ? "Usarlo gratis (VIP)" : "Ver un anuncio y usarlo gratis") {
+                model.useAdPower()
+            }
+            Button("Ir a la tienda de ayudas") {
+                model.adPowerKind = nil
+                model.sheet = .lowFunds
+            }
+            Button("Cancelar", role: .cancel) {
+                model.adPowerKind = nil
+            }
+        }
         .alert(isPresented: $confirmExit) {
             Alert(
                 title: Text("¿Salir del nivel?"),
@@ -161,7 +181,7 @@ struct GameView: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: symbol)
-                Text(title).font(.system(size: 14, weight: .heavy, design: .rounded))
+                Text(loc(title)).font(.system(size: 14, weight: .heavy, design: .rounded))
                 if let count = count {
                     Text("\(count)")
                         .font(.system(size: 11, weight: .black, design: .rounded))
@@ -265,7 +285,7 @@ struct RuleChips: View {
     }
 
     private func chip(_ text: String, color: Color, filled: Bool) -> some View {
-        Text(text)
+        Text(loc(text))
             .font(.system(size: 12, weight: .heavy, design: .rounded))
             .foregroundColor(filled ? .white : color)
             .padding(.horizontal, 10)
@@ -293,7 +313,7 @@ struct StatsRow: View {
             Text(value)
                 .font(.system(size: 20, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 9, weight: .heavy))
                 .kerning(1.5)
                 .foregroundColor(Theme.ink.opacity(0.4))
@@ -331,7 +351,7 @@ struct CoachCard: View {
                             .frame(width: 8, height: 8)
                     }
                 }
-                Text(text)
+                Text(loc(text))
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -351,7 +371,7 @@ struct ToastView: View {
 
     var body: some View {
         VStack {
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(.white)
                 .padding(.horizontal, 18)
@@ -409,7 +429,7 @@ struct ResultOverlay: View {
             }
         }
         .sheet(item: $sharing) { item in
-            ShareSheet(text: item.text)
+            ShareSheet(text: item.text, image: item.image)
         }
     }
 
@@ -448,6 +468,14 @@ struct ResultOverlay: View {
                 }
                 if snap.canRevive {
                     bigButton("SEGUIR JUGANDO · " + String(model.eco?.revivePrice ?? 12) + " GEMAS", Theme.energy) { model.revive() }
+                    WatchAdButton(
+                        title: "SEGUIR JUGANDO GRATIS",
+                        subtitle: "Ver un anuncio corto",
+                        tag: "GRATIS",
+                        color: Color(hex: 0x8E6BD6)
+                    ) {
+                        model.reviveWithAd()
+                    }
                 }
             }
             buttons
@@ -530,7 +558,7 @@ struct ResultOverlay: View {
 
     private func line(_ text: String, _ value: String) -> some View {
         HStack {
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(Theme.ink.opacity(0.6))
             Spacer()
@@ -543,7 +571,7 @@ struct ResultOverlay: View {
     private func pill(_ icon: AnyView, _ text: String) -> some View {
         HStack(spacing: 4) {
             icon
-            Text(text)
+            Text(loc(text))
                 .font(.system(size: 12, weight: .heavy, design: .rounded))
                 .foregroundColor(Theme.ink)
         }
@@ -572,7 +600,7 @@ struct ResultOverlay: View {
             if won {
                 bigButton(snap.daily ? "VOLVER AL MENÚ" : (willAutoAdvance ? "SIGUIENTE · \(countdown)" : "SIGUIENTE"), Theme.accent) { model.nextLevel() }
                 smallButton(snap.daily ? "Jugar otra vez" : "Repetir nivel") { model.restart() }
-                smallButton("Compartir resultado") { sharing = ShareItem(text: model.shareText(snap)) }
+                smallButton("Compartir resultado") { sharing = ShareItem(text: model.shareText(snap), image: model.shareImage(snap)) }
             } else {
                 bigButton("REINTENTAR", Theme.accent) { model.restart() }
             }
@@ -586,7 +614,7 @@ struct ResultOverlay: View {
 
     private func bigButton(_ title: String, _ color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 17, weight: .black, design: .rounded))
                 .kerning(2)
                 .foregroundColor(.white)
@@ -598,9 +626,56 @@ struct ResultOverlay: View {
 
     private func smallButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title)
+            Text(loc(title))
                 .font(.system(size: 14, weight: .heavy, design: .rounded))
                 .foregroundColor(Theme.ink.opacity(0.6))
         }
+    }
+}
+
+// MARK: - Botones de dirección (para jugar con una mano, con Control por botón o con VoiceOver)
+
+struct DirectionPad: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        HStack(spacing: 10) {
+            pad("arrow.left", "Izquierda", 2)
+            pad("arrow.up", "Arriba", 0)
+            pad("arrow.down", "Abajo", 1)
+            pad("arrow.right", "Derecha", 3)
+            if UIAccessibility.isVoiceOverRunning {
+                Button(action: {
+                    if let snap = model.snap { model.announce(model.boardDescription(snap)) }
+                }) {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 44)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.energy))
+                }
+                .accessibilityLabel("Leer el tablero")
+            }
+        }
+        .padding(.horizontal, 14)
+    }
+
+    private func pad(_ symbol: String, _ label: String, _ direction: Int) -> some View {
+        Button(action: { model.swipe(direction) }) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .black))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.accentDark).offset(y: 3)
+                        RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.accent)
+                    }
+                )
+                .padding(.bottom, 3)
+        }
+        .buttonStyle(ToyPressStyle())
+        .accessibilityLabel(label)
     }
 }
