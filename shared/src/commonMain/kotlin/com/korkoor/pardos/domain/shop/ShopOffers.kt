@@ -52,4 +52,18 @@ object DailyOffers {
         }
         return DailyOffer(day, item, discount)
     }
+
+    /**
+     * Igual que [forDay], pero sin ofrecer una skin que el jugador ya tiene: se elige otra sin repetirse (la misma todo el día,
+     * porque la semilla solo depende del día). Si ya las tiene todas, la oferta es un cofre raro.
+     */
+    fun forDayAvoiding(day: Int, ownedSkinIds: Set<String>): DailyOffer {
+        val base = forDay(day)
+        val item = base.item
+        if (item !is OfferItem.SkinOffer || item.skin.id !in ownedSkinIds) return base
+        val candidates = skins.filter { it.id !in ownedSkinIds }
+        if (candidates.isEmpty()) return DailyOffer(day, OfferItem.ChestOffer(ChestType.RARE), base.discountPercent)
+        val rng = Random(day.toLong() * 104_729L + 13L)
+        return DailyOffer(day, OfferItem.SkinOffer(candidates[rng.nextInt(candidates.size)]), base.discountPercent)
+    }
 }

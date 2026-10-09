@@ -128,6 +128,13 @@ class CollectionManager(context: Context) {
         return result
     }
 
+    /** Carta extra por ver un anuncio al abrir un cofre (ver [ChestRules.extraCard]). Se guarda igual que cualquier carta. */
+    fun grantExtraCard(type: ChestType, alreadyDrawn: Set<String>): Drop {
+        val drop = ChestRules.extraCard(type, _owned.value, alreadyDrawn)
+        applyDrops(listOf(drop))
+        return drop
+    }
+
     private fun applyDrops(drops: List<Drop>) {
         var c = _copies.value
         drops.forEach { c = Copies.add(c, it.collectible.id) }

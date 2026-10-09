@@ -99,7 +99,9 @@ internal fun GameHeader(
     /** Niveles de campaña ganados seguidos (0 = no se enseña). */
     winStreak: Int = 0,
     /** Corazones que quedan en la torre (null = no se está en la torre). */
-    towerHearts: Int? = null
+    towerHearts: Int? = null,
+    /** Movimientos máximos para 3 y para 2 estrellas (null = no se enseñan las estrellas en vivo). */
+    starLimits: Pair<Int, Int>? = null
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -137,7 +139,8 @@ internal fun GameHeader(
                 goalCount = state.goalCount,
                 score = state.score,
                 goalStats = state.goalStats,
-                tileValues = state.tiles.mapTo(HashSet()) { it.value }
+                tileValues = state.tiles.mapTo(HashSet()) { it.value },
+                liveStars = if (starLimits != null && !state.isLevelCompleted && !state.isGameOver) Triple(state.moveCount, starLimits.first, starLimits.second) else null
             )
             LevelRuleChips(state, Modifier.padding(top = 6.dp))
             if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = 6.dp))
@@ -437,7 +440,9 @@ internal fun ObjectiveCard(
     goalCount: Int = 1,
     score: Int = 0,
     goalStats: com.korkoor.pardos.domain.level.GoalStats = com.korkoor.pardos.domain.level.GoalStats(),
-    tileValues: Set<Int> = emptySet()
+    tileValues: Set<Int> = emptySet(),
+    /** (jugadas hechas, máximo para 3 estrellas, máximo para 2): si viene, las estrellas en vivo ocupan la esquina de la tarjeta. */
+    liveStars: Triple<Int, Int, Int>? = null
 ) {
     val isScore = goal == com.korkoor.pardos.domain.level.LevelGoal.SCORE
     val isMerges = goal == com.korkoor.pardos.domain.level.LevelGoal.MERGES
@@ -451,6 +456,16 @@ internal fun ObjectiveCard(
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 120f),
         label = "ObjectiveProgress"
     )
+    // Cada avance de la barra la hace "latir": se nota que lo que hiciste cuenta
+    val pulse = remember { Animatable(0f) }
+    var lastProgress by remember { mutableFloatStateOf(progress) }
+    LaunchedEffect(progress) {
+        if (progress > lastProgress + 0.001f) {
+            pulse.snapTo(1f)
+            pulse.animateTo(0f, tween(520))
+        }
+        lastProgress = progress
+    }
     JellySurface(
         modifier = modifier,
         color = Color.White,
@@ -540,6 +555,7 @@ internal fun ObjectiveCard(
                     modifier = Modifier
                         .width(120.dp)
                         .height(6.dp)
+                        .graphicsLayer { scaleY = 1f + 0.9f * pulse.value }
                         .clip(CircleShape)
                         .background(Navy.copy(alpha = 0.08f))
                 ) {
@@ -552,7 +568,9 @@ internal fun ObjectiveCard(
                 }
             }
             Spacer(Modifier.width(14.dp))
-            Text(
+            if (liveStars != null) {
+                LiveStarMeter(liveStars.first, liveStars.second, liveStars.third, ink = Navy, compact = true)
+            } else Text(
                 text = "${boardSize}×$boardSize",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Black,

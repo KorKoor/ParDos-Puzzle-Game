@@ -60,6 +60,16 @@ object ChestRules {
     private fun atLeast(r: Rarity, min: Rarity) = r.ordinal >= min.ordinal
 
     /**
+     * Una carta más a cambio de un anuncio: una sola tirada con las probabilidades del cofre que acaba de abrirse, sin garantías
+     * ni cambios en la "mala suerte" acumulada (no regala nada que el cofre no pudiera dar).
+     */
+    fun extraCard(type: ChestType, owned: Set<String>, drawn: Set<String> = emptySet(), random: Random = Random.Default): Drop {
+        val c = pick(rollRarity(type.weights, random), owned, drawn, random)
+        val isNew = c.id !in owned
+        return Drop(c, isNew, if (isNew) 0 else c.rarity.shardValue, bonus = true)
+    }
+
+    /**
      * [extraCardChance] (0..1) = probabilidad de una carta extra gratis (mejora de suerte, ver [PerkRules]).
      */
     fun open(

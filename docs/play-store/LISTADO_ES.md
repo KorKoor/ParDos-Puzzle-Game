@@ -6,14 +6,14 @@ ParDos: Puzzle de Números Zen
 ## Descripción breve (75/80)
 Fusiona números, relájate y reta a tus amigos. ¡El puzzle zen que engancha!
 
-## Descripción completa (2453/4000)
+## Descripción completa (2601/4000)
 ¿Te gustan los puzzles de números tipo 2048? ParDos es el puzzle zen más bonito y adictivo: desliza, fusiona las fichas y alcanza la meta de cada nivel. Fácil de aprender, difícil de soltar.
 
 ✨ POR QUÉ TE VA A ENGANCHAR
 • 2,400 niveles de campaña en capítulos con su propio paisaje, clima y ambiente
 • Un modo para cada momento: Campaña, Desafío contra el reloj, Zen sin límites, Carrera por etapas, Multi-Mates (tablas de multiplicar) y niveles personalizados
 • Tableros de distintos tamaños y poderes como Deshacer, Limpiar, Fusión y Escoba para salir de cualquier apuro
-• Combos, rachas y estrellas: cada partida se siente increíble
+• Combos, rachas y estrellas en vivo: cada fusión suena y se siente increíble
 
 🎨 PERSONALIZA TU JUEGO
 • Más de 25 skins con temática completa: cambian las fichas, el fondo y hasta las partículas (pétalos, estrellas, burbujas, brasas…)
@@ -25,7 +25,7 @@ Fusiona números, relájate y reta a tus amigos. ¡El puzzle zen que engancha!
 • Cofre gratis cada pocas horas y ruleta de la suerte diaria
 • Pase de temporada mensual con 30 niveles de premios: monedas, gemas, cofres, avatares, banners y skins exclusivas
 • Misiones diarias y semanales, racha con escudos y hucha de gemas
-• Álbum con 48 piezas coleccionables en 6 series: abre cofres, completa series y desbloquea skins únicas
+• Álbum con 320 coleccionables únicos: abre cofres, hazlos Brillantes, véndelos o cámbialos con tus amigos y completa series para desbloquear skins
 • Recompensa diaria que crece cuando vuelves cada día
 
 👥 JUEGA CON AMIGOS
@@ -36,7 +36,7 @@ Fusiona números, relájate y reta a tus amigos. ¡El puzzle zen que engancha!
 • Inicia sesión con Google para guardar tu progreso y cambiar de teléfono sin perder nada
 
 🧘 RELAJANTE POR DISEÑO
-Un diseño minimalista y cálido, colores suaves, sonidos agradables y cero presión. Juega 2 minutos o 2 horas: ParDos se adapta a tu ritmo y entrena tu mente sin estrés.
+Un diseño minimalista y cálido, colores suaves, música que se adapta a tu partida, más de 200 efectos de sonido y cero presión. Juega 2 minutos o 2 horas: ParDos se adapta a tu ritmo y entrena tu mente sin estrés.
 
 👥 ¿PARA QUIÉN ES?
 • Fans de 2048, puzzles de números y juegos de lógica
@@ -44,18 +44,17 @@ Un diseño minimalista y cálido, colores suaves, sonidos agradables y cero pres
 • Estudiantes que quieren practicar agilidad mental y tablas de multiplicar
 • Jugadores que disfrutan coleccionar, personalizar y competir con amigos
 
-Gratis para jugar. Contiene anuncios opcionales para ganar recompensas y compras opcionales dentro de la app.
+Gratis para jugar. Contiene anuncios (la mayoría opcionales, para ganar recompensas) y compras opcionales dentro de la app. Con el pase VIP no ves ninguno.
 
 Descarga ParDos y encuentra tu momento zen de cada día. ¡Te esperamos!
 
-## Novedades de la versión (412/500)
+## Novedades de la versión (423/500)
 (Se pegan al crear la versión en *Producción → Crear versión*, no en la ficha.)
 
-🎃 ¡Llegó la Noche de Brujas!
-• Nuevo icono y pantalla de inicio de temporada
-• Nuevo Pase de temporada con avatares, banners y skins exclusivas
-• Ruleta diaria, cofre gratis, misiones semanales y hucha de gemas
-• Studio: diseña tu propia skin
-• Más avatares adorables, banners de perfil y 10 skins nuevas
-• Mapa renovado, retos a distancia con amigos y ligas semanales
-• Avisos mejorados y mejoras de rendimiento
+🎃 ¡Noche de Brujas con mucho sonido!
+• Audio nuevo: música que se adapta a tu partida, una nota por cada fusión y efectos en combos, menús y premios
+• Combos más emocionantes y estrellas en vivo
+• Nuevo icono y pantalla de temporada, pase mensual, ruleta, cofre gratis y hucha
+• Álbum de 320 coleccionables con intercambio entre amigos
+• Studio, avatares y banners nuevos, retos a distancia y ligas
+• Mejoras de rendimiento

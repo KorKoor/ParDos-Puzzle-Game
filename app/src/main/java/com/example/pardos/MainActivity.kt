@@ -117,6 +117,20 @@ class MainActivity : ComponentActivity() {
             com.korkoor.pardos.data.local.LocalDay.debugOffsetDays = intent.getIntExtra("debug_day_offset", 0)
         }
 
+        // Solo depuración: `adb shell am broadcast -a com.korkoor.pardos.DEBUG --es do win|lose -p <paquete>` fuerza el resultado de la partida
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            val receiver = object : android.content.BroadcastReceiver() {
+                override fun onReceive(c: android.content.Context?, i: android.content.Intent?) {
+                    when (i?.getStringExtra("do")) {
+                        "win" -> gameViewModel.debugFinish(true)
+                        "lose" -> gameViewModel.debugFinish(false)
+                    }
+                }
+            }
+            ContextCompat.registerReceiver(this, receiver, android.content.IntentFilter("com.korkoor.pardos.DEBUG"), ContextCompat.RECEIVER_EXPORTED)
+            debugReceiver = receiver
+        }
+
         routeFromNotification = intent?.getStringExtra(com.korkoor.pardos.notifications.NotificationRoute.EXTRA)
         notificationManager = ZenNotificationManager(this)
         // Sonido: efectos y música (se carga en segundo plano)
@@ -373,7 +387,9 @@ class MainActivity : ComponentActivity() {
                                         onSeasonClick = { currentScreen = Screen.Season },
                                         onWheelClick = { currentScreen = Screen.Wheel },
                                         piggyPrice = storePrices[com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK],
-                                        onBuyPiggy = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK) }
+                                        onBuyPiggy = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK) },
+                                        starterPrice = storePrices[com.korkoor.pardos.domain.shop.ShopCatalog.STARTER_PACK],
+                                        onBuyStarter = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.STARTER_PACK) }
                                     )
                                 }
                             }
@@ -420,6 +436,8 @@ class MainActivity : ComponentActivity() {
                             Screen.Game -> GameScreen(
                                 viewModel = gameViewModel,
                                 themeViewModel = themeViewModel,
+                                gemPackPrice = storePrices[com.korkoor.pardos.domain.shop.ShopCatalog.GEMS_TINY],
+                                onBuyGemPack = { billingManager.purchase(this@MainActivity, com.korkoor.pardos.domain.shop.ShopCatalog.GEMS_TINY) },
                                 onBackToMenu = {
                                     gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.resetGameSession()
@@ -558,6 +576,13 @@ class MainActivity : ComponentActivity() {
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             Log.d(TAG, "POST_NOTIFICATIONS result granted=$granted")
         }
+    }
+
+    private var debugReceiver: android.content.BroadcastReceiver? = null
+
+    override fun onDestroy() {
+        debugReceiver?.let { try { unregisterReceiver(it) } catch (_: Exception) { } }
+        super.onDestroy()
     }
 
     override fun onResume() {

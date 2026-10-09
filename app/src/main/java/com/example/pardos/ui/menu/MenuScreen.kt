@@ -87,7 +87,9 @@ fun MenuScreen(
     onSeasonClick: () -> Unit = {},
     onWheelClick: () -> Unit = {},
     piggyPrice: String? = null,
-    onBuyPiggy: () -> Unit = {}
+    onBuyPiggy: () -> Unit = {},
+    starterPrice: String? = null,
+    onBuyStarter: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
@@ -266,6 +268,10 @@ fun MenuScreen(
                         onAlbum = onCollectionClick, onBuyPiggy = onBuyPiggy,
                         onProfileChanged = { profileTick++ }
                     )
+                    com.korkoor.pardos.ui.rewards.PromoStrip(
+                        campaignLevel = profileL.currentCampaignLevel, starterPrice = starterPrice,
+                        onBuyStarter = onBuyStarter, onShop = onShopClick
+                    )
                     activeEvents.take(2).forEach { ev -> MenuEventBanner(ev, todayDay, retentionForCards) { eventDialog = ev } }
                     com.korkoor.pardos.ui.rewards.LeagueCard(retention = retentionForCards)
                     DailyMissionsCard(missionManager = missionManager, profileManager = profileManager)
@@ -350,6 +356,12 @@ fun MenuScreen(
                         piggyPrice = piggyPrice, onSeason = onSeasonClick, onWheel = onWheelClick,
                         onAlbum = onCollectionClick, onBuyPiggy = onBuyPiggy,
                         onProfileChanged = { profileTick++ }
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+                    com.korkoor.pardos.ui.rewards.PromoStrip(
+                        campaignLevel = profile.currentCampaignLevel, starterPrice = starterPrice,
+                        onBuyStarter = onBuyStarter, onShop = onShopClick
                     )
 
                     activeEvents.take(2).forEach { ev ->

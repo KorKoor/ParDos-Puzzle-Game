@@ -32,11 +32,15 @@ android {
             // Debug: SIEMPRE anuncios de prueba de Google (tocar anuncios reales en pruebas puede suspender la cuenta de AdMob)
             manifestPlaceholders["admobAppId"] = "ca-app-pub-3940256099942544~3347511713"
             buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/5224354917\"")
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
         }
         release {
             // Release: IDs reales de AdMob
             manifestPlaceholders["admobAppId"] = "ca-app-pub-3851960142449906~8749596168"
             buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-3851960142449906/7125882091\"")
+            // Intersticial (pantalla completa tras ganar): vacío = desactivado hasta que crees el bloque en AdMob y pongas su ID
+            // en gradle.properties como pardos.interstitialAdUnitId=ca-app-pub-3851960142449906/XXXXXXXXXX
+            buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${(project.findProperty("pardos.interstitialAdUnitId") as String?) ?: ""}\"")
             // R8: código sin usar fuera + recursos sin usar fuera (APK/AAB más pequeño y más rápido). Reglas en proguard-rules.pro
             isMinifyEnabled = true
             isShrinkResources = true

@@ -16,7 +16,7 @@ Fuente: rama `gh-pages` del repo. Contacto público en la página: carlosghta999
 | Información personal → **ID de usuario** (UID de Firebase / ANDROID_ID) | Sí | No | Obligatorio | Funciones de la app, Gestión de cuentas |
 | Actividad en la app → **Interacciones con la app** (nivel, XP, rachas, estrellas, récords) | Sí | Sí (amigos) | Obligatorio | Funciones de la app |
 | Info y rendimiento de la app → *no aplica* (no hay Analytics ni Crashlytics) | No | — | — | — |
-| Dispositivo u otros ID → **ID de publicidad** (AdMob) | Sí | Sí (Google AdMob) | Opcional (anuncios recompensados) | Publicidad o marketing |
+| Dispositivo u otros ID → **ID de publicidad** (AdMob) | Sí | Sí (Google AdMob) | Opcional (anuncios, con consentimiento donde la ley lo exige) | Publicidad o marketing |
 
 - Ubicación, contactos, fotos, audio, archivos, mensajes y datos financieros: **No**.
 - Declara también el permiso `AD_ID` en *Contenido de la app → ID de publicidad* (**Sí**, publicidad).

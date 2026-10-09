@@ -46,6 +46,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val _comboCount = mutableStateOf(0)
     val comboCount: State<Int> = _comboCount
 
+    /** Último golpe del tablero (la pantalla lo convierte en sacudida). Crece con la ficha más alta fusionada y con el combo. */
+    var impact by mutableStateOf<com.korkoor.pardos.ui.game.components.BoardImpact?>(null)
+        private set
+    private var impactSeq = 0
+    private fun fireImpact(strength: Float) {
+        if (strength > 0f) impact = com.korkoor.pardos.ui.game.components.BoardImpact(++impactSeq, strength.coerceAtMost(1f))
+    }
+
     // 🎈 LISTA DE PUNTOS FLOTANTES
     val floatingScores = mutableStateListOf<FloatingScoreModel>()
 
@@ -549,6 +557,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Solo depuración: fuerza una victoria o una derrota para ver las pantallas de resultado sin jugar el nivel entero. */
+    fun debugFinish(win: Boolean) {
+        if (!com.korkoor.pardos.BuildConfig.DEBUG) return
+        if (win) {
+            val st = _boardState.value
+            gameEngine.spawnTileWithSpecificValue(st.tiles, st.levelLimit, 1)?.let { t -> _boardState.update { it.copy(tiles = it.tiles + t) } }
+            handleLevelVictory(st.levelLimit)
+        } else handleGameOver()
+    }
+
     private fun handleGameOver() {
         timerJob?.cancel()
         _boardState.update { it.copy(isGameOver = true) }
@@ -1006,6 +1024,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     registerMerge()
                     // Cada fusión es una nota (más grave o más aguda según la ficha); las de una misma jugada forman un arpegio
                     com.korkoor.pardos.audio.GameAudio.merges(movedTiles.filter { it.isMerged }.map { it.value }, _comboCount.value)
+                    // Golpe en el tablero: las fichas grandes y los combos altos hacen temblar un poco la pantalla
+                    val topMerged = movedTiles.filter { it.isMerged }.maxOfOrNull { it.value } ?: 0
+                    val byTile = when { topMerged >= 512 -> 1f; topMerged >= 256 -> 0.8f; topMerged >= 128 -> 0.6f; topMerged >= 64 -> 0.35f; else -> 0f }
+                    val byCombo = when { _comboCount.value >= 6 -> 0.7f; _comboCount.value >= 4 -> 0.4f; else -> 0f }
+                    fireImpact(maxOf(byTile, byCombo))
 
                     // 🔥 INTEGRACIÓN MISIONES: Contabiliza los pares combinados
                     missionManager.updateProgress(MissionType.MERGE_PAIRS, mergesCount)
@@ -1361,6 +1384,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             var flowPct = 0
             lastStreakMilestone = null
             if (isCampaignRun()) {
+                // Cuenta para decidir cuándo toca un anuncio de pantalla completa (pocos y espaciados)
+                com.korkoor.pardos.ui.game.logic.AdManager.onCampaignWin(getApplication())
                 winStreak = com.korkoor.pardos.domain.flow.WinStreak.afterWin(winStreak)
                 prefs.edit().putInt(KEY_WIN_STREAK, winStreak).apply()
                 streakPct = com.korkoor.pardos.domain.flow.WinStreak.coinBonusPct(winStreak)
@@ -1431,6 +1456,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             com.korkoor.pardos.audio.GameAudio.music.duck(0.28f, 3800)
             com.korkoor.pardos.audio.GameAudio.music.intensity(1)
             com.korkoor.pardos.audio.GameAudio.play(when { activeSpec?.isBoss == true -> com.korkoor.pardos.audio.Sfx.BOSS_WIN; wonStars >= 3 -> com.korkoor.pardos.audio.Sfx.WIN_BIG; else -> com.korkoor.pardos.audio.Sfx.WIN })
+            fireImpact(if (activeSpec?.isBoss == true) 0.9f else if (wonStars >= 3) 0.55f else 0.35f)
         }
 
         // --- LÓGICA DE REDIRECCIÓN ---
@@ -1809,6 +1835,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COINS)
         val bonus = rewardsManager.doubleCoins(lastCoinsEarned)
         lastCoinsEarned += bonus
+    }
+
+    /** Continuar pagando con gemas en vez de ver el anuncio (mismo efecto). Devuelve false si no alcanzan. */
+    fun reviveWithGems(): Boolean {
+        if (!economy.spendGems(com.korkoor.pardos.domain.shop.ContinueOffer.GEMS)) return false
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REVIVE)
+        grantAdReward("REVIVE")
+        return true
     }
 
     fun grantAdReward(type: String) {

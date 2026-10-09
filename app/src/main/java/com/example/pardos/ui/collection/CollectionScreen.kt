@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -77,7 +78,7 @@ private val PurpleDeep = Color(0xFF241547)
 private val PurpleMid = Color(0xFF3A2570)
 
 /** Lo que se está enseñando al abrir un cofre o un sobre. */
-private data class Opening(val title: String, val drops: List<Drop>)
+private data class Opening(val title: String, val drops: List<Drop>, val chest: ChestType? = null)
 
 @Composable
 fun CollectionScreen(onBack: () -> Unit) {
@@ -169,7 +170,7 @@ fun CollectionScreen(onBack: () -> Unit) {
                             ChestSlot(t, n, Modifier.weight(1f)) {
                                 if (n > 0) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    manager.openChest(t)?.let { opening = Opening(chestName(t), it.drops) }
+                                    manager.openChest(t)?.let { opening = Opening(chestName(t), it.drops, t) }
                                 }
                             }
                         }
@@ -282,7 +283,7 @@ fun CollectionScreen(onBack: () -> Unit) {
         }
 
         // --- Apertura de cofre / sobre ---
-        opening?.let { o -> OpeningDialog(o) { opening = null } }
+        opening?.let { o -> OpeningDialog(o, manager) { opening = null } }
 
         // --- Detalle de una carta ---
         detail?.let { c ->
@@ -661,6 +662,30 @@ private fun TradeTab(
             Spacer(Modifier.height(8.dp))
             val bought = manager.tokensBoughtToday()
             val can = TokenRules.canBuy(gemsNow, bought, tokens)
+            val ctx = LocalContext.current
+            val vipNow by remember { EconomyManager(ctx) }.isVip.collectAsState()
+            val adFreq = remember { com.korkoor.pardos.data.local.AdFrequency(ctx) }
+            var adTick by remember { mutableIntStateOf(0) }
+            val adLeft = remember(adTick) { com.korkoor.pardos.domain.shop.AdRewards.left(adFreq.usedToday(com.korkoor.pardos.data.local.AdFrequency.SLOT_TOKEN), com.korkoor.pardos.domain.shop.AdRewards.TOKEN_PER_DAY) }
+            if (adLeft > 0 && tokens < TokenRules.MAX_STOCK) {
+                com.korkoor.pardos.ui.design.WatchAdButton(
+                    label = "FICHA GRATIS", sublabel = if (vipNow) "VIP: sin anuncio · te quedan $adLeft hoy" else "Ver un anuncio · te quedan $adLeft hoy",
+                    tag = "+1", color = Color(0xFF8B6FF0), minHeight = 48.dp, adFree = vipNow,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        val grant = {
+                            manager.addTokens(1)
+                            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COIN)
+                            adFreq.consume(com.korkoor.pardos.data.local.AdFrequency.SLOT_TOKEN)
+                            adTick++
+                            onToast("+1 ficha de intercambio")
+                        }
+                        if (vipNow) grant()
+                        else (ctx as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                    }
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             Row(
                 Modifier.clip(RoundedCornerShape(14.dp)).background(if (can) Color.White else Color.White.copy(alpha = 0.15f))
                     .clickable(enabled = can) { onToast(if (manager.buyToken()) "+1 ficha de intercambio" else "No se pudo comprar") }
@@ -879,11 +904,25 @@ private fun CollectibleDialog(
 // ============================== Apertura ==============================
 
 @Composable
-private fun OpeningDialog(opening: Opening, onDone: () -> Unit) {
-    val drops = opening.drops
+private fun OpeningDialog(opening: Opening, manager: CollectionManager, onDone: () -> Unit) {
+    val context = LocalContext.current
+    val vip by remember { EconomyManager(context) }.isVip.collectAsState()
+    val adFreq = remember { com.korkoor.pardos.data.local.AdFrequency(context) }
+    // Una carta más a cambio de un anuncio (solo en cofres; con tope diario)
+    var extra by remember { mutableStateOf<Drop?>(null) }
+    var adTick by remember { mutableIntStateOf(0) }
+    val extraLeft = remember(adTick) { com.korkoor.pardos.domain.shop.AdRewards.left(adFreq.usedToday(com.korkoor.pardos.data.local.AdFrequency.SLOT_EXTRA_CARD), com.korkoor.pardos.domain.shop.AdRewards.EXTRA_CARD_PER_DAY) }
+    val drops = opening.drops + listOfNotNull(extra)
     // Las cartas se revelan una a una
     var revealed by remember { mutableIntStateOf(0) }
     val haptic = LocalHapticFeedback.current
+    LaunchedEffect(extra) {
+        val e = extra ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(450L)
+        revealed = opening.drops.size + 1
+        com.korkoor.pardos.audio.GameAudio.card(e.collectible.rarity.ordinal, e.isNew)
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
     LaunchedEffect(Unit) {
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CHEST_SHAKE)
         kotlinx.coroutines.delay(500L)
@@ -899,6 +938,14 @@ private fun OpeningDialog(opening: Opening, onDone: () -> Unit) {
     }
     val all = revealed >= drops.size
     val best = drops.maxOf { it.collectible.rarity.ordinal }
+    val cardsScroll = rememberScrollState()
+    // Al llegar la carta extra (queda en una fila nueva) la lista baja sola para enseñarla
+    LaunchedEffect(extra) {
+        if (extra != null) {
+            kotlinx.coroutines.delay(600L)
+            cardsScroll.animateScrollTo(cardsScroll.maxValue)
+        }
+    }
     Dialog(onDismissRequest = { if (all) onDone() }) {
         JellyColumn(
             modifier = Modifier.popIn(), shape = RoundedCornerShape(Radius.XLarge), fill = Cream, lipHeight = 8.dp,
@@ -916,13 +963,39 @@ private fun OpeningDialog(opening: Opening, onDone: () -> Unit) {
                 color = if (all && best == Rarity.LEGENDARY.ordinal) Gold else Navy
             )
             Spacer(Modifier.height(12.dp))
-            drops.chunked(2).forEachIndexed { rowIdx, row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
-                    row.forEachIndexed { colIdx, drop ->
-                        DropCard(drop, visible = rowIdx * 2 + colIdx < revealed, modifier = Modifier.weight(1f))
+            // Las cartas se desplazan si no caben (cofre épico + carta extra = 5); los botones de abajo no se mueven
+            Column(
+                modifier = Modifier.weight(1f, fill = false).verticalScroll(cardsScroll),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                drops.chunked(2).forEachIndexed { rowIdx, row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(bottom = 12.dp)) {
+                        row.forEachIndexed { colIdx, drop ->
+                            DropCard(drop, visible = rowIdx * 2 + colIdx < revealed, modifier = Modifier.weight(1f))
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
+            }
+            val chestType = opening.chest
+            if (all && chestType != null && extra == null && extraLeft > 0) {
+                com.korkoor.pardos.ui.design.WatchAdButton(
+                    label = "UNA CARTA MÁS",
+                    sublabel = if (vip) "VIP: sin anuncio · te quedan $extraLeft hoy" else "Ver un anuncio · te quedan $extraLeft hoy",
+                    tag = "+1",
+                    adFree = vip,
+                    color = Color(0xFF6A4CE0),
+                    minHeight = 50.dp,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    onClick = {
+                        val grant = {
+                            extra = manager.grantExtraCard(chestType, opening.drops.map { it.collectible.id }.toSet())
+                            adFreq.consume(com.korkoor.pardos.data.local.AdFrequency.SLOT_EXTRA_CARD)
+                            adTick++
+                        }
+                        if (vip) grant() else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                    }
+                )
             }
             val repeats = drops.count { !it.isNew }
             if (all && repeats > 0) {

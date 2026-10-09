@@ -408,4 +408,5 @@
     <string name="duel_margin">por %1$d puntos</string>
     <string name="duel_rematch">REVANCHA</string>
     <string name="duel_exit">SALIR</string>
+    <string name="ad_not_ready">El anuncio todavía no está listo. Prueba otra vez en unos segundos.</string>
 </resources>

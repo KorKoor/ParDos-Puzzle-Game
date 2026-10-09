@@ -87,11 +87,24 @@ fun ShopScreen(
     var localMessage by remember { mutableStateOf<String?>(null) }
     var tab by remember { mutableStateOf(ShopTab.FEATURED) }
 
+    val adFreq = remember { com.korkoor.pardos.data.local.AdFrequency(context) }
+    var adTick by remember { mutableIntStateOf(0) }
+    val freeGemsLeft = remember(adTick) { AdRewards.left(adFreq.usedToday(com.korkoor.pardos.data.local.AdFrequency.SLOT_FREE_GEMS), AdRewards.FREE_GEMS_PER_DAY) }
+    val watchForGems = {
+        com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(activity) {
+            economy.addGems(AdRewards.FREE_GEMS)
+            adFreq.consume(com.korkoor.pardos.data.local.AdFrequency.SLOT_FREE_GEMS)
+            adTick++
+            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.GEM)
+            localMessage = "+${AdRewards.FREE_GEMS} gemas por ver el anuncio"
+        }
+    }
+
     val today = remember { LocalDay.today() }
     val liveEvents = remember(today) { com.korkoor.pardos.domain.events.EventCalendar.activeOn(today) }
     var eventDialog by remember { mutableStateOf<com.korkoor.pardos.domain.events.GameEvent?>(null) }
     eventDialog?.let { ev -> com.korkoor.pardos.ui.rewards.EventSkinDialog(ev, retention) { eventDialog = null } }
-    val offer = remember(today) { DailyOffers.forDay(today) }
+    val offer = remember(today, ownedSkins) { DailyOffers.forDayAvoiding(today, ownedSkins) }
 
     LaunchedEffect(Unit) { billing.connect() }
 
@@ -165,6 +178,10 @@ fun ShopScreen(
                         )
 
                         Spacer(Modifier.height(16.dp))
+                        if (!isVip) {
+                            FreeGemsCard(left = freeGemsLeft, onWatch = watchForGems)
+                            Spacer(Modifier.height(16.dp))
+                        }
                         // --- Pack inicial ---
                         if (!economy.isStarterClaimed()) {
                             StarterPackCard(price = prices[ShopCatalog.STARTER_PACK]) { billing.purchase(activity, ShopCatalog.STARTER_PACK) }
@@ -389,6 +406,10 @@ fun ShopScreen(
                         Spacer(Modifier.height(8.dp))
                         Text("Las gemas sirven para skins premium, cofres raros y épicos, impulsos y efectos.", fontSize = 12.sp, color = InkSecondary)
                         Spacer(Modifier.height(12.dp))
+                        if (!isVip) {
+                            FreeGemsCard(left = freeGemsLeft, onWatch = watchForGems)
+                            Spacer(Modifier.height(14.dp))
+                        }
                         val firstFlags = remember(gems) { GemPacks.packs.associate { it.id to economy.isFirstPurchase(it.id) } }
                         GemPacks.packs.chunked(3).forEach { row ->
                             Row(modifier = Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -498,6 +519,34 @@ private fun DailyOfferCard(
     }
 }
 
+/** Gemas a cambio de un anuncio corto: gratis para el jugador, con un tope diario para que el juego no pierda valor. */
+@Composable
+private fun FreeGemsCard(left: Int, onWatch: () -> Unit) {
+    JellyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(Radius.XLarge), fill = GemBlue.lighten(0.90f), lip = GemBlue.copy(alpha = 0.45f), lipHeight = 6.dp,
+        borderColor = GemBlue.copy(alpha = 0.5f),
+        padding = PaddingValues(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile(Icons.Rounded.Diamond, GemBlue, size = 50.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("GEMAS GRATIS", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.sp)
+                Text(
+                    if (left > 0) "Mira un anuncio corto y llévate ${AdRewards.FREE_GEMS} gemas · te quedan $left hoy"
+                    else "Ya cobraste las de hoy. Mañana hay más.",
+                    fontSize = 11.sp, color = InkSecondary, lineHeight = 14.sp
+                )
+            }
+        }
+        if (left > 0) {
+            Spacer(Modifier.height(12.dp))
+            WatchAdButton(label = "+${AdRewards.FREE_GEMS} ◆", sublabel = "Ver anuncio", onClick = onWatch, modifier = Modifier.fillMaxWidth(), color = GemBlue)
+        }
+    }
+}
+
 @Composable
 private fun StarterPackCard(price: String?, onBuy: () -> Unit) {
     val shape = RoundedCornerShape(Radius.XLarge)
@@ -549,7 +598,7 @@ private fun VipCard(owned: Boolean, price: String?, onBuy: () -> Unit) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("PASE VIP", fontSize = 17.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 2.sp)
                 Spacer(Modifier.height(4.dp))
-                Text("Sin anuncios en los poderes, x2 monedas sin verlos, +${VipPerks.COIN_BONUS_PERCENT}% de monedas por victoria y ${VipPerks.DAILY_GEMS} gemas cada día. Para siempre.", fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f), lineHeight = 16.sp)
+                Text("Nunca más un anuncio: poderes, segunda oportunidad y x2 monedas gratis, +${VipPerks.COIN_BONUS_PERCENT}% de monedas por victoria y ${VipPerks.DAILY_GEMS} gemas cada día. Para siempre.", fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f), lineHeight = 16.sp)
             }
             Spacer(Modifier.width(10.dp))
             Box(

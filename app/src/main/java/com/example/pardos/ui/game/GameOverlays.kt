@@ -112,6 +112,8 @@ fun PowerUpSection(
     labelColor: Color = com.korkoor.pardos.ui.design.Navy
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
+    val vipContext = androidx.compose.ui.platform.LocalContext.current
+    val isVip by remember { com.korkoor.pardos.data.local.EconomyManager(vipContext).isVip }.collectAsState()
 
     PowerUpBar(
         viewModel = viewModel,
@@ -121,6 +123,8 @@ fun PowerUpSection(
         onCleanClick = {
             if (viewModel.isPowerUpAvailable(viewModel.lastCleanTime, currentTime)) {
                 viewModel.useCleanPowerUp()
+            } else if (isVip) {
+                viewModel.grantAdReward("CLEAN")
             } else {
                 activity?.let { act ->
                     AdManager.showRewardedAd(act) {
@@ -133,6 +137,8 @@ fun PowerUpSection(
         onMergeClick = {
             if (viewModel.isPowerUpAvailable(viewModel.lastMergeTime, currentTime)) {
                 viewModel.useMergePowerUp()
+            } else if (isVip) {
+                viewModel.grantAdReward("MERGE")
             } else {
                 activity?.let { act ->
                     AdManager.showRewardedAd(act) {
@@ -278,32 +284,67 @@ fun GameOverOverlay(
     }
 }
 
+/** Cómo se ve un combo según su tamaño: más alto = más grande, más colorido y con fuegos artificiales. */
+private data class ComboLook(val label: String, val colors: List<Color>, val size: Int, val fireworks: Boolean)
+
+private fun comboLook(count: Int, accent: Color): ComboLook = when {
+    count >= 8 -> ComboLook("¡LEYENDA!", listOf(Color(0xFFFFF0A8), Color(0xFFFF9A5B), Color(0xFFC04CFF)), 76, true)
+    count >= 6 -> ComboLook("¡ÉPICO!", listOf(Color(0xFFD7B8FF), Color(0xFF6C63FF)), 68, true)
+    count >= 4 -> ComboLook("¡INCREÍBLE!", listOf(Color(0xFFFFC08F), Color(0xFFE07A5F)), 62, false)
+    count >= 3 -> ComboLook("¡GENIAL!", listOf(Color(0xFFFFE9A0), Color(0xFFE0A93B)), 58, false)
+    else -> ComboLook("COMBO", listOf(accent, accent), 52, false)
+}
+
 @Composable
 fun ComboIndicator(count: Int, accentColor: Color) {
     // Durante la animación de salida `count` ya vale 0: mostramos el último combo real para que no aparezca "×0"
     var shown by remember { mutableIntStateOf(2) }
     if (count > 1) shown = count
+    val look = comboLook(shown, accentColor)
+    // Cada subida del combo "golpea": el número aparece grande y se asienta con rebote
+    val punch = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(count) {
+        if (count > 1) {
+            punch.snapTo(1.45f)
+            punch.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 420f))
+        }
+    }
     androidx.compose.animation.AnimatedVisibility(
         visible = count > 1,
         enter = scaleIn(animationSpec = spring(Spring.DampingRatioMediumBouncy)) + fadeIn() + expandIn(),
         exit = scaleOut() + fadeOut()
     ) {
-        Text(
-            text = stringResource(R.string.combo_multiplier, shown),
-            style = androidx.compose.ui.text.TextStyle(
-                fontSize = 58.sp,
-                fontWeight = FontWeight.Black,
-                color = accentColor,
-                shadow = Shadow(
-                    Color.Black.copy(alpha = 0.5f),
-                    offset = Offset(4f, 6.dp.value),
-                    blurRadius = 12f
+        Box(contentAlignment = Alignment.Center) {
+            // Estallido de estrellitas en cada subida (fuegos artificiales a partir de x6)
+            com.korkoor.pardos.ui.game.components.MergeBurst(
+                if (look.fireworks) com.korkoor.pardos.domain.shop.MergeFx.FIREWORKS else com.korkoor.pardos.domain.shop.MergeFx.STARS,
+                count, 128, 230.dp
+            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.graphicsLayer {
+                    rotationZ = -5f
+                    scaleX = punch.value
+                    scaleY = punch.value
+                }
+            ) {
+                val shadow = Shadow(Color.Black.copy(alpha = 0.5f), offset = Offset(4f, 6.dp.value), blurRadius = 12f)
+                Text(
+                    text = look.label,
+                    style = androidx.compose.ui.text.TextStyle(
+                        fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp,
+                        brush = Brush.horizontalGradient(look.colors), shadow = shadow
+                    )
                 )
-            ),
-            modifier = Modifier.graphicsLayer {
-                rotationZ = -5f
+                Text(
+                    text = stringResource(R.string.combo_multiplier, shown),
+                    style = androidx.compose.ui.text.TextStyle(
+                        fontSize = look.size.sp, fontWeight = FontWeight.Black,
+                        brush = Brush.verticalGradient(look.colors), shadow = shadow
+                    )
+                )
             }
-        )
+        }
     }
 }
 

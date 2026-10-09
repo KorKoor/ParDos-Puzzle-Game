@@ -20,7 +20,7 @@ shared/   (Kotlin Multiplatform: Android + iOS)   <- lógica pura, sin Android
   domain/rewards    DailyRewards, StreakCalculator, CoinRewards, ChapterRewards
   domain/shop       ShopCatalog, CoinShop, TileSkins (catálogo + inventario)
   domain/social     Leaderboard, WeekCalendar, FriendCode
-  domain/collection Collection (48 piezas, cofres con garantía, crear con esencia)
+  domain/collection Collection (320 piezas en 32 series, cofres con garantía, esencia, intercambio; ver docs/COLECCIONABLES.md)
   domain/economy    Economy (TODOS los precios y premios en un solo archivo)
   domain/retention  FreeChest, DailyWheel, SeasonPass, WeeklyMissions, PiggyBank, Leagues, ReminderPlanner
   domain/social     (+ ShareText: texto para compartir resultados e invitaciones)
@@ -54,7 +54,7 @@ Eso es lo que permitirá reutilizarla en iOS.
 - **Cofres de capítulo:** `ChapterRewards` (cada 20 niveles del mapa).
 - **Skins con temática (12):** cada `TileSkin` trae un `SkinStyle` con paleta de fichas, acabado, fondo, colores de texto
   y partículas. Añadir una skin = añadir una entrada en `TileSkins.kt` (no hay que tocar la UI).
-- **Colección:** 48 piezas en 6 series (4 comunes, 2 raras, 1 épica y 1 legendaria por serie). Cofres común/raro/épico con
+- **Colección:** empezó con 48 piezas en 6 series y hoy son **320 piezas en 32 series** (detalle en `docs/COLECCIONABLES.md`). Cofres común/raro/épico con
   garantía por cofre y por acumulación (`ChestRules.PITY_*`). Las repetidas dan esencia; la esencia crea piezas.
 - **Economía:** todo en `domain/economy/Economy.kt` y `domain/shop/ShopOffers.kt`, con pruebas de balance. Fuentes:
   niveles, misiones, regalo diario, logros (pagan según rareza), hitos de racha, cofres de capítulo, x2 con anuncio,
@@ -188,8 +188,9 @@ con monedas. Tiempo extra suma a `elapsedTime` y a `maxTime` a la vez para no al
 
 ## Anuncios
 
-Se usan los **IDs de prueba de Google** hasta publicar. Antes de lanzar, restaurar en
-`AndroidManifest.xml` (App ID) y `AdManager.kt` (unidad de recompensa) los IDs reales.
+En **depuración** se usan siempre los IDs de prueba de Google; en **lanzamiento**, los reales (`app/build.gradle.kts`, bloques `debug` y
+`release`: App ID, unidad con premio e intersticial). El intersticial de lanzamiento se activa pegando su ID en `gradle.properties`
+(`pardos.interstitialAdUnitId`). Todo el detalle (dónde salen, topes, consentimiento, consolas) está en `docs/MONETIZACION.md`.
 
 ## Compras (Play Console)
 
@@ -349,3 +350,11 @@ Dos tipos de nivel más (17 en total), 4 callejones (una dirección prohibida), 
 
 ## iPhone (.ipa de prueba) (2026-10-08 y 09)
 Ver `docs/IOS.md` y `docs/APPSTORE_PRODUCTOS.md`. La app SwiftUI de `iosApp/` ya cubre casi todo lo de Android con la **misma lógica compartida**: `GameSession` (la partida) y `MetaSession` (`shared/.../domain/meta/`: monedas, tienda, cofres, álbum de 320 piezas, misiones, pase, liga, 82 logros, prestigio, modos Torre/Carrera/Duelo/Tablas/Libre, duelo a distancia, Studio, avisos, copia de seguridad, amigos por tarjeta). Un workflow de GitHub Actions genera `ParDos-unsigned.ipa` para Sideloadly. La lógica nueva tiene pruebas (`MetaSessionTest`, `GameSessionTest`, `IosStoreTest`) y `iosApp/tools/check_swift_contract.py` comprueba que todo el JSON de Kotlin se puede leer con las estructuras de Swift. Los precios de iPhone (`IosStore.kt`) son escalones de App Store; sin anuncios con premio, los poderes manuales y la segunda oportunidad se pagan con monedas y gemas (`Economy.kt`).
+
+## Audio, anuncios y juego más vivo (2026-10-09)
+- **Audio completo** (`docs/AUDIO.md`): 213 efectos y 5 músicas adaptativas por capas, **todo sintetizado por código** (`tools/audio/`, sin derechos de autor). Cada fusión es una nota de la escala pentatónica (más aguda cuanto mayor la ficha) con la voz del efecto de fusión equipado; combos, racha (flow), estrellas, jefes, cofres/cartas por rareza, ruleta, compras y menús tienen su sonido; un "tok" suave en cualquier toque; música que se adapta a la intensidad de la partida, cede si ya suena tu música y se calla en segundo plano; volúmenes en Ajustes.
+- **Monetización** (`docs/MONETIZACION.md`): intersticiales **solo tras ganar** y espaciados (`AdPolicy`, con pruebas), consentimiento UMP + "Anuncios y privacidad" en Ajustes, botón **DUPLICAR MONEDAS** grande y claro, segunda oportunidad con anuncio / 12 ◆ / compra rápida de gemas sin salir de la partida, **gemas gratis** (3, hasta 3 al día), **carta extra** al abrir cofres, **ficha de intercambio gratis**, **impulso del pase**, y una tarjeta de ofertas en el menú que rota (pack inicial, VIP, oferta del día sin repetir lo que ya tienes, gemas gratis). El VIP ya no ve ningún anuncio.
+- **Juego más vivo**: aviso de **combo por niveles** (¡GENIAL!, ¡INCREÍBLE!, ¡ÉPICO!, ¡LEYENDA!) con golpe y estallido, **sacudida del tablero** en fusiones enormes, combos altos, victorias y jefes, **estrellas en vivo** bajo la meta (cuánto margen te queda para las 3 estrellas) y la barra de la meta que "late" con cada avance.
+- **Cambios en `:shared`** (con pruebas): `AdPolicy`/`AdRewards`/`ContinueOffer`, `MenuPromo`, `DailyOffers.forDayAvoiding` (la antigua `forDay` se conserva para iPhone), `ChestRules.extraCard`.
+- Solo depuración: `adb shell am broadcast -a com.korkoor.pardos.DEBUG --es do win|lose -p com.korkoor.pardos.debug` fuerza el resultado de la partida en curso (para ver las pantallas de victoria y de segunda oportunidad).
+

@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -60,9 +62,13 @@ fun LevelSummaryOverlay(
     coinsEarned: Int = 0,
     canDouble: Boolean = false,
     onDouble: () -> Unit = {},
+    /** VIP: duplicar las monedas es gratis y sin anuncio. */
+    vip: Boolean = false,
     bonus: com.korkoor.pardos.data.local.GameBonus = com.korkoor.pardos.data.local.GameBonus(),
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
+    /** Avance automático (sin que el jugador toque): nunca debe mostrar un anuncio de pantalla completa. */
+    onAutoNext: () -> Unit = onDismiss,
     onShare: (() -> Unit)? = null,
     nextGoal: com.korkoor.pardos.domain.retention.NextGoal? = null,
     /** Cómo conseguir las 3 estrellas (solo se enseña si faltó alguna). */
@@ -107,7 +113,7 @@ fun LevelSummaryOverlay(
                 autoProgress = i / steps.toFloat()
                 delay(50)
             }
-            onDismiss()
+            onAutoNext()
         }
     }
 
@@ -135,6 +141,9 @@ fun LevelSummaryOverlay(
 
         JellySurface(
             modifier = Modifier
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(vertical = 10.dp)
                 .fillMaxWidth(if (isLandscape) 0.85f else 0.88f)
                 .scale(scale)
                 .alpha(alpha)
@@ -180,18 +189,23 @@ fun LevelSummaryOverlay(
                             modifier = Modifier.weight(1.3f),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            StatsRow(moves, timeElapsed)
-                            StarHintLine(starHint)
-                            CoinsEarnedChip(coinsEarned, canDouble, onDouble)
-                            BonusChips(bonus)
-                            com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
-                                streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
-                                if (autoCancelled) 0f else autoProgress, currentTheme.actionColor
-                            )
-                            NextGoalRow(nextGoal, currentTheme)
-                            Spacer(Modifier.height(16.dp))
-                            PersonalRecordsBox(currentTheme, bestMoves, bestTime)
-                            Spacer(Modifier.height(20.dp))
+                            Column(
+                                modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                StatsRow(moves, timeElapsed)
+                                StarHintLine(starHint)
+                                CoinsEarnedChip(coinsEarned, canDouble, vip, onDouble)
+                                BonusChips(bonus)
+                                com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
+                                    streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
+                                    if (autoCancelled) 0f else autoProgress, currentTheme.actionColor
+                                )
+                                NextGoalRow(nextGoal, currentTheme)
+                                Spacer(Modifier.height(16.dp))
+                                PersonalRecordsBox(currentTheme, bestMoves, bestTime)
+                            }
+                            Spacer(Modifier.height(14.dp))
                             ActionButtons(currentTheme, onRetry, onDismiss, onShare)
                         }
                     }
@@ -199,7 +213,7 @@ fun LevelSummaryOverlay(
                     Box(contentAlignment = Alignment.Center) {
                         Box(
                             modifier = Modifier
-                                .size(120.dp)
+                                .size(100.dp)
                                 .background(
                                     Brush.radialGradient(
                                         colors = listOf(currentTheme.accentColor.copy(alpha = 0.2f), Color.Transparent)
@@ -209,24 +223,30 @@ fun LevelSummaryOverlay(
                         AnimatedStarsRow(stars, currentTheme)
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
                     VictoryHeader(stars, modeName, base, currentTheme)
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
                     StatsRow(moves, timeElapsed)
-                            StarHintLine(starHint)
-                            CoinsEarnedChip(coinsEarned, canDouble, onDouble)
-                            BonusChips(bonus)
-                            com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
-                                streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
-                                if (autoCancelled) 0f else autoProgress, currentTheme.actionColor
-                            )
-                            NextGoalRow(nextGoal, currentTheme)
-                    // Con el "siguiente nivel" a la vista el botón tiene que seguir cabiendo: los récords se guardan igual en el perfil
-                    if (teaser == null) {
-                        Spacer(modifier = Modifier.height(24.dp))
-                        PersonalRecordsBox(currentTheme, bestMoves, bestTime)
+                    // Si no cabe todo (teléfonos pequeños), lo de en medio se desplaza; el botón SIGUIENTE siempre queda a la vista
+                    Column(
+                        modifier = Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        StarHintLine(starHint)
+                        CoinsEarnedChip(coinsEarned, canDouble, vip, onDouble)
+                        BonusChips(bonus)
+                        com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
+                            streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
+                            if (autoCancelled) 0f else autoProgress, currentTheme.actionColor
+                        )
+                        NextGoalRow(nextGoal, currentTheme)
+                        // Con el "siguiente nivel" a la vista se omiten los récords (se guardan igual en el perfil)
+                        if (teaser == null) {
+                            Spacer(modifier = Modifier.height(18.dp))
+                            PersonalRecordsBox(currentTheme, bestMoves, bestTime)
+                        }
                     }
-                    Spacer(modifier = Modifier.height(if (teaser == null) 32.dp else 18.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     ActionButtons(currentTheme, onRetry, onDismiss, onShare)
                 }
             }
@@ -498,7 +518,7 @@ fun formatTime(ms: Long): String {
 }
 
 @Composable
-private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit) {
+private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, vip: Boolean, onDouble: () -> Unit) {
     if (coins <= 0) return
     // Las monedas suben contando, con un tic cada vez más agudo, y al final tintinean
     var shown by remember { mutableIntStateOf(0) }
@@ -514,38 +534,48 @@ private fun CoinsEarnedChip(coins: Int, canDouble: Boolean, onDouble: () -> Unit
         shown = coins
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.COIN)
     }
+    // Se ofreció duplicar y ya se hizo: se enseña como "hecho" en lugar de dejar un hueco
+    var offered by remember { mutableStateOf(false) }
+    LaunchedEffect(canDouble) { if (canDouble) offered = true }
+
     Spacer(modifier = Modifier.height(14.dp))
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFFE0A93B).copy(alpha = 0.14f))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Rounded.MonetizationOn,
                 contentDescription = null,
                 tint = Color(0xFFE0A93B),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(22.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(text = "+$shown", fontSize = 16.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
+            Text(text = "+$shown", fontSize = 18.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
+            if (offered && !canDouble) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("x2", fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color(0xFF6C63FF),
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0xFF6C63FF).copy(alpha = 0.14f)).padding(horizontal = 8.dp, vertical = 2.dp))
+            }
         }
         if (canDouble) {
-            Spacer(modifier = Modifier.width(10.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF6C63FF))
-                    .clickable(onClick = onDouble)
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Rounded.PlayCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("x2", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White)
-            }
+            val extra = com.korkoor.pardos.domain.economy.Economy.doubleBonus(coins)
+            Spacer(modifier = Modifier.height(10.dp))
+            // Llamativo pero honesto: se ve exactamente cuánto se gana y que se pide con un anuncio (o gratis con VIP)
+            com.korkoor.pardos.ui.design.WatchAdButton(
+                label = "DUPLICAR MONEDAS",
+                sublabel = if (vip) "VIP: gratis, sin anuncio" else "+$extra ● viendo un anuncio corto",
+                tag = "x2",
+                onClick = onDouble,
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFF6C63FF),
+                pulse = true,
+                minHeight = 52.dp,
+                adFree = vip
+            )
         }
     }
 }
@@ -562,7 +592,12 @@ private fun BonusChips(bonus: com.korkoor.pardos.data.local.GameBonus) {
     }
     if (chips.isEmpty()) return
     Spacer(modifier = Modifier.height(10.dp))
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Las fichas pequeñas comparten fila cuando caben (ahorra altura en la pantalla de victoria)
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
         chips.forEach { (text, color) ->
             com.korkoor.pardos.ui.design.CozyText(
                 text = text, fontSize = 11.sp, fontWeight = FontWeight.Black, color = color,

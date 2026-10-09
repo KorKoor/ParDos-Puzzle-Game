@@ -28,6 +28,19 @@ class AlbumEconomyTest {
     private val all = CollectibleCatalog.all
 
     // ---------- Contenido ----------
+    @Test
+    fun anExtraCardForAnAdIsASingleBonusRollOfTheSameChest() {
+        val d = ChestRules.extraCard(ChestType.COMMON, emptySet(), emptySet(), Random(3))
+        assertTrue(d.bonus && d.isNew)
+        // con todo el álbum, la extra es repetida y vale su esencia
+        val all = com.korkoor.pardos.domain.collection.CollectibleCatalog.all.map { it.id }.toSet()
+        val dup = ChestRules.extraCard(ChestType.EPIC, all, emptySet(), Random(3))
+        assertTrue(!dup.isNew && dup.shards == dup.collectible.rarity.shardValue)
+        // las probabilidades son las del cofre: el común casi nunca da legendarias
+        val legendaries = (0 until 2000).count { ChestRules.extraCard(ChestType.COMMON, emptySet(), emptySet(), Random(it)).collectible.rarity == com.korkoor.pardos.domain.collection.Rarity.LEGENDARY }
+        assertTrue(legendaries < 20, "legendarias en 2000 cofres comunes: $legendaries")
+    }
+
     @Test fun everyPieceIsUniqueAndFullyDescribed() {
         assertEquals(320, all.size)
         val dupGlyphs = all.groupBy { it.glyph }.filterValues { it.size > 1 }.mapValues { e -> e.value.map { it.id } }

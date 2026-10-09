@@ -87,6 +87,24 @@ fun SettingsScreen(onBack: () -> Unit) {
                 }
             }
 
+            Spacer(Modifier.height(4.dp))
+            SectionLabel("Privacidad")
+            PardosCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    LinkRow(Icons.Rounded.PrivacyTip, GemBlue, "Política de privacidad", "Qué guardamos y cómo pedir que se borre") {
+                        runCatching {
+                            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(PRIVACY_URL)))
+                        }
+                    }
+                    // La ley (EEE, Reino Unido y algunos estados de EE. UU.) obliga a poder cambiar la decisión sobre anuncios
+                    if (com.korkoor.pardos.ui.game.logic.AdManager.privacyOptionsRequired) {
+                        LinkRow(Icons.Rounded.Tune, Violet, "Anuncios y privacidad", "Cambia lo que elegiste sobre anuncios personalizados") {
+                            (context as? android.app.Activity)?.let { com.korkoor.pardos.ui.game.logic.AdManager.showPrivacyOptions(it) }
+                        }
+                    }
+                }
+            }
+
             Spacer(Modifier.height(8.dp))
             Text(
                 "ParDos${if (version.isNotBlank()) " · versión $version" else ""}\nKorKoor Studios",
@@ -95,6 +113,25 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+private const val PRIVACY_URL = "https://www.korwork.org/ParDos-Puzzle-Game/"
+
+/** Fila que abre algo (una página o un formulario) en vez de activar un interruptor. */
+@Composable
+private fun LinkRow(icon: ImageVector, color: Color, title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconTile(icon, color, size = 44.dp)
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Navy)
+            Text(subtitle, fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp)
+        }
+        Icon(Icons.Rounded.ChevronRight, null, tint = InkTertiary, modifier = Modifier.size(22.dp))
     }
 }
 

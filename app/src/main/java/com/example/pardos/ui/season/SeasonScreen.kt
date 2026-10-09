@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.season
 
+import com.korkoor.pardos.domain.shop.AdRewards
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -111,6 +112,10 @@ fun SeasonScreen(
     val premium by retention.seasonPremium.collectAsState()
     val claimed by retention.seasonClaimed.collectAsState()
     val gems by economy.gems.collectAsState()
+    val vip by economy.isVip.collectAsState()
+    val adFreq = remember { com.korkoor.pardos.data.local.AdFrequency(context) }
+    var adTick by remember { mutableIntStateOf(0) }
+    val boostLeft = remember(adTick) { AdRewards.left(adFreq.usedToday(com.korkoor.pardos.data.local.AdFrequency.SLOT_SEASON), AdRewards.SEASON_BOOST_PER_DAY) }
     var message by remember { mutableStateOf<String?>(null) }
 
     val today = remember { LocalDay.today() }
@@ -166,6 +171,27 @@ fun SeasonScreen(
                 item(key = "cta") {
                     Spacer(Modifier.height(16.dp))
                     PremiumCard(pal, seasonId, seasonSkin.displayName, premium, premiumPrice, onBuyPremium)
+                    if (tier < SeasonPass.TIERS && boostLeft > 0) {
+                        Spacer(Modifier.height(12.dp))
+                        com.korkoor.pardos.ui.design.WatchAdButton(
+                            label = "IMPULSO DEL PASE",
+                            sublabel = if (vip) "VIP: +${AdRewards.SEASON_BOOST_POINTS} puntos sin anuncio · te quedan $boostLeft hoy" else "+${AdRewards.SEASON_BOOST_POINTS} puntos viendo un anuncio · te quedan $boostLeft hoy",
+                            tag = "+${AdRewards.SEASON_BOOST_POINTS}",
+                            adFree = vip,
+                            color = pal.accent,
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                val grant = {
+                                    retention.addSeasonPoints(AdRewards.SEASON_BOOST_POINTS)
+                                    adFreq.consume(com.korkoor.pardos.data.local.AdFrequency.SLOT_SEASON)
+                                    adTick++
+                                    com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.SEASON_TIER)
+                                    message = "+${AdRewards.SEASON_BOOST_POINTS} puntos del pase"
+                                }
+                                if (vip) grant() else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                            }
+                        )
+                    }
                     Spacer(Modifier.height(20.dp))
                     Text("RECOMPENSAS", fontSize = 11.sp, fontWeight = FontWeight.Black, color = pal.ink.copy(alpha = 0.6f), letterSpacing = 3.sp)
                     Spacer(Modifier.height(10.dp))

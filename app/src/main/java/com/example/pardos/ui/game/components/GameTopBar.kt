@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.*
 import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.runtime.*
@@ -50,6 +52,9 @@ fun GameTopBar(
 
         Spacer(modifier = Modifier.width(6.dp))
 
+        MuteButton()
+        Spacer(modifier = Modifier.width(8.dp))
+
         // Botón de Salir
         JellySurface(
             color = Color(0xFFE07A5F).copy(alpha = 0.15f),
@@ -76,6 +81,45 @@ fun GameTopBar(
                     modifier = Modifier.size(24.dp)
                 )
             }
+        }
+    }
+}
+
+/** Silencio rápido: apaga (o enciende) efectos y música a la vez, sin salir de la partida. */
+@Composable
+private fun MuteButton() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val settings = remember { com.korkoor.pardos.data.local.SettingsManager(context) }
+    val sound by settings.soundEnabled.collectAsState()
+    val music by settings.musicEnabled.collectAsState()
+    val on = sound || music
+    JellySurface(
+        color = Color.White.copy(alpha = 0.85f),
+        shape = CircleShape,
+        modifier = Modifier.size(48.dp).zIndex(10f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.06f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(bounded = true),
+                    onClick = {
+                        val turnOn = !on
+                        settings.setSound(turnOn)
+                        settings.setMusic(turnOn)
+                        if (turnOn) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_ON)
+                    }
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (on) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
+                contentDescription = if (on) "Silenciar" else "Activar sonido",
+                tint = if (on) com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f) else Color(0xFFE07A5F),
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }

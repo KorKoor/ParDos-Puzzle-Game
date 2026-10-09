@@ -86,7 +86,10 @@ fun GameScreen(
     viewModel: GameViewModel,
     themeViewModel: ThemeViewModel,
     onBackToMenu: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Precio con formato local del pack pequeño de gemas y cómo comprarlo sin salir de la partida (al faltar gemas para continuar). */
+    gemPackPrice: String? = null,
+    onBuyGemPack: () -> Unit = {}
 ) {
     val state by viewModel.boardState.collectAsStateWithLifecycle()
     val currentTheme = themeViewModel.currentTheme
@@ -94,6 +97,9 @@ fun GameScreen(
     val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
     val context = LocalContext.current
     val activity = context as? Activity
+    val adEconomy = remember { com.korkoor.pardos.data.local.EconomyManager(context) }
+    val gemsNow by adEconomy.gems.collectAsState()
+    val isVipNow by adEconomy.isVip.collectAsState()
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -137,6 +143,14 @@ fun GameScreen(
     }
     val inCampaign = state.gameMode == GameMode.CLASICO && viewModel.dailyChallengeThemeIndex == null
     val tutorialOn = !tutorialDone && inCampaign && state.currentLevel == 1 && !state.isGameOver && !state.isLevelCompleted && !viewModel.showLevelSummary
+    // Estrellas en vivo: solo campaña sin reloj (los límites salen de la misma regla que las estrellas finales)
+    val starLimits = remember(state.currentLevel, inCampaign, viewModel.towerActive) {
+        if (!inCampaign || viewModel.towerActive) null else {
+            val sp = com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel)
+            if ((sp.timeLimitMs ?: 0L) > 0L) null
+            else com.korkoor.pardos.domain.level.LevelMath.threeStarMoves(sp) to com.korkoor.pardos.domain.level.LevelMath.twoStarMoves(sp)
+        }
+    }
     val goalLine = com.korkoor.pardos.domain.level.goalText(state.goal, state.levelLimit, state.goalCount)
     val coachStep = if (tutorialOn) remember(state.tiles, state.moveCount, state.merges) {
         com.korkoor.pardos.domain.logic.TutorialCoach.step(
@@ -262,7 +276,8 @@ fun GameScreen(
                                             onExtraTime = { viewModel.useExtraTime() },
                                             titleOverride = remoteTitle,
                                             winStreak = if (inCampaign) viewModel.winStreak else 0,
-                                            towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null
+                                            towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null,
+                                            starLimits = if (tutorialOn) null else starLimits
                                         )
                                     }
                                 }
@@ -279,6 +294,7 @@ fun GameScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(boardSize)
+                                        .impactShake(viewModel.impact)
                                         .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -393,7 +409,8 @@ fun GameScreen(
                                             onExtraTime = { viewModel.useExtraTime() },
                                             titleOverride = remoteTitle,
                                             winStreak = if (inCampaign) viewModel.winStreak else 0,
-                                            towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null
+                                            towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null,
+                                            starLimits = if (tutorialOn) null else starLimits
                                         )
                                     }
 
@@ -410,6 +427,7 @@ fun GameScreen(
                                         .weight(1f, fill = false)
                                         .aspectRatio(1f)
                                         .fillMaxWidth(if (isLargeGrid) 0.98f else 0.92f)
+                                        .impactShake(viewModel.impact)
                                         .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -475,6 +493,9 @@ fun GameScreen(
                     )
                 } else {
                 val stats = viewModel.getBestStats(state.currentLevel)
+                // Jefe vencido o hito de racha: momento de celebración, sin anuncio encima
+                val summaryBigMoment = viewModel.lastStreakMilestone != null ||
+                    com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel).isBoss
                 LevelSummaryOverlay(
                     modeName = stringResource(state.gameMode.nameResId),
                     base = viewModel.currentMultiplierBase,
@@ -490,11 +511,17 @@ fun GameScreen(
                     bonus = viewModel.lastGameBonus,
                     onDouble = {
                         // VIP: gratis, sin anuncio
-                        if (com.korkoor.pardos.data.local.EconomyManager(context).isVip.value) viewModel.grantDoubleCoins()
+                        if (isVipNow) viewModel.grantDoubleCoins()
                         else activity?.let { act -> AdManager.showRewardedAd(act) { viewModel.grantDoubleCoins() } }
                     },
+                    vip = isVipNow,
                     onRetry = { viewModel.retryLevel() },
-                    onDismiss = { viewModel.nextLevel() },
+                    onAutoNext = { viewModel.nextLevel() },
+                    onDismiss = {
+                        // Pausa natural tras ganar: si toca, un anuncio de pantalla completa (nunca con VIP, nunca tras perder)
+                        if (inCampaign && activity != null) AdManager.showInterstitialIfDue(activity, state.currentLevel, isVipNow, bigMoment = summaryBigMoment) { viewModel.nextLevel() }
+                        else viewModel.nextLevel()
+                    },
                     nextGoal = remember { com.korkoor.pardos.data.local.RetentionManager(context).nextGoal() },
                     starHint = if (state.gameMode == GameMode.CLASICO && state.starsEarned in 1..2)
                         com.korkoor.pardos.domain.level.LevelRules.threeStarHint(com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel))
@@ -506,7 +533,9 @@ fun GameScreen(
                     teaser = if (inCampaign) remember(state.currentLevel) { com.korkoor.pardos.domain.flow.NextLevelTeaser.after(state.currentLevel) } else null,
                     nextKindSeen = if (inCampaign) ruleSeen.getBoolean("kind_${com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel + 1).kind.name}", false) else true,
                     autoNextMs = if (inCampaign && autoNextOn && viewModel.lastStreakMilestone == null &&
-                        com.korkoor.pardos.domain.flow.NextLevelTeaser.after(state.currentLevel).levelsToChest > 0) 4500 else null,
+                        com.korkoor.pardos.domain.flow.NextLevelTeaser.after(state.currentLevel).levelsToChest > 0 &&
+                        // si toca un anuncio, el jugador pasa tocando SIGUIENTE: nada de anuncios que aparezcan solos
+                        !remember(state.currentLevel) { AdManager.isInterstitialDue(context, state.currentLevel, isVipNow, summaryBigMoment) }) 4500 else null,
                     onShare = {
                         val text = com.korkoor.pardos.domain.social.ShareText.victory(
                             modeName = context.getString(state.gameMode.nameResId),
@@ -571,7 +600,8 @@ fun GameScreen(
                     SecondChanceOverlay(
                         onUseSecondChance = {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            activity?.let { act ->
+                            if (isVipNow) viewModel.grantAdReward("REVIVE")
+                            else activity?.let { act ->
                                 AdManager.showRewardedAd(act) {
                                     viewModel.grantAdReward("REVIVE")
                                 }
@@ -579,7 +609,18 @@ fun GameScreen(
                         },
                         onCancel = { viewModel.declineSecondChance() },
                         currentTheme = currentTheme,
-                        reason = state.gameOverReason()
+                        reason = state.gameOverReason(),
+                        gems = gemsNow,
+                        vip = isVipNow,
+                        onPayGems = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.reviveWithGems()
+                        },
+                        gemPackPrice = gemPackPrice,
+                        gemPackGems = com.korkoor.pardos.domain.shop.ShopCatalog.byId(com.korkoor.pardos.domain.shop.ShopCatalog.GEMS_TINY)?.let {
+                            com.korkoor.pardos.domain.shop.GemPacks.gemsForPurchase(it, adEconomy.isFirstPurchase(it.id))
+                        } ?: 0,
+                        onBuyGems = onBuyGemPack
                     )
                 }
                 else {
