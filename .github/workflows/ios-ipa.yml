@@ -1,0 +1,125 @@
+name: iOS .ipa (sin firmar, para Sideloadly)
+
+# Cómo se lanza:
+#  - A mano: pestaña "Actions" > "iOS .ipa (sin firmar, para Sideloadly)" > "Run workflow"
+#    (el botón solo aparece si este archivo ya está en la rama principal del repositorio).
+#  - Subiendo la rama `ios-build`:   git push origin HEAD:ios-build
+#  - Subiendo una etiqueta `ios-*`:  git tag ios-1 && git push origin ios-1
+on:
+  workflow_dispatch:
+  push:
+    branches: [ios-build]
+    tags: ['ios-*']
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Revisión rápida y barata (Linux): si el Swift tiene un error de sintaxis, se avisa antes de gastar minutos de Mac
+  swift-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Revisar la sintaxis de los .swift
+        run: |
+          pip install tree-sitter tree-sitter-swift
+          python iosApp/tools/check_swift_syntax.py
+
+  ipa:
+    needs: swift-syntax
+    runs-on: macos-15
+    timeout-minutes: 75
+    steps:
+      - name: Bajar el código
+        uses: actions/checkout@v4
+
+      - name: Java 17 (para Gradle)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Elegir Xcode 16
+        run: |
+          for v in 16.2 16.1 16.0 16.3 16.4; do
+            if [ -d "/Applications/Xcode_$v.app" ]; then
+              sudo xcode-select -s "/Applications/Xcode_$v.app/Contents/Developer"
+              break
+            fi
+          done
+          xcodebuild -version
+
+      - name: SDK de Android (Gradle lo pide al configurar, aunque aquí no se compile Android)
+        run: |
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          echo "sdk.dir=$SDK" > local.properties
+          if [ -x "$SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+            "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" > /dev/null 2>&1 || true
+          fi
+
+      - name: Caché de Gradle y de Kotlin/Native
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Caché del compilador de Kotlin/Native
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Pruebas de la sesión de juego y del motor (las mismas que en Android)
+        continue-on-error: true   # un fallo de pruebas no impide probar el .ipa; se ve en el resumen
+        run: ./gradlew :shared:testDebugUnitTest --tests "*GameSessionTest" --tests "*GameEngine*" --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
+
+      - name: Compilar la lógica del juego para iPhone (Kotlin → Shared.xcframework)
+        run: ./gradlew :shared:assembleSharedReleaseXCFramework --no-daemon -Dorg.gradle.jvmargs=-Xmx4g
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar el proyecto de Xcode
+        working-directory: iosApp
+        run: xcodegen generate
+
+      - name: Compilar la app (sin firmar)
+        working-directory: iosApp
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ParDos.xcodeproj \
+            -scheme ParDos \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            clean build 2>&1 | tee xcodebuild.log | tail -n 80
+
+      - name: Empaquetar el .ipa
+        run: |
+          APP="iosApp/build/Build/Products/Release-iphoneos/ParDos.app"
+          test -d "$APP"
+          rm -rf Payload ParDos-unsigned.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry ParDos-unsigned.ipa Payload
+          ls -lh ParDos-unsigned.ipa
+
+      - name: Guardar el .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: ParDos-ipa
+          path: ParDos-unsigned.ipa
+          retention-days: 14
+
+      - name: Guardar el registro de compilación (por si algo falla)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: iosApp/xcodebuild.log
+          retention-days: 7

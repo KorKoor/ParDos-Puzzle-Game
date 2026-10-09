@@ -39,10 +39,10 @@ object DailyChallenge {
     val WEEK: List<LevelKind> get() = WEEKS.first()
 
     /** Número de semana (con la semana empezando en lunes) de un día de época. */
-    fun weekIndex(epochDay: Int): Int = Math.floorDiv(epochDay + 3, 7)
+    fun weekIndex(epochDay: Int): Int = (epochDay + 3).floorDiv(7)
 
     /** Tipo de reto de un día. */
-    fun kindFor(epochDay: Int): LevelKind = WEEKS[Math.floorMod(weekIndex(epochDay), WEEKS.size)][weekday(epochDay)]
+    fun kindFor(epochDay: Int): LevelKind = WEEKS[weekIndex(epochDay).mod(WEEKS.size)][weekday(epochDay)]
 
     /** Día de la semana de un día de época (0 = lunes). El día 0 (1-1-1970) fue jueves. */
     fun weekday(epochDay: Int): Int = ((epochDay + 3) % 7 + 7) % 7

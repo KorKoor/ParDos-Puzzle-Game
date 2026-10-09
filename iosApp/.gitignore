@@ -1,0 +1,4 @@
+# Se generan en cada compilación
+*.xcodeproj
+ParDos/Info.plist
+build/

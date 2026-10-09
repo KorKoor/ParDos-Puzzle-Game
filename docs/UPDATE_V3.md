@@ -346,3 +346,6 @@ Todo el juego comparte ahora un lenguaje propio en `ui/design/Jelly.kt`, `ToySwi
 
 ## Más contenido: Cosecha, Doble caída, Callejones, jefes con 2 fases y Torre infinita
 Dos tipos de nivel más (17 en total), 4 callejones (una dirección prohibida), **jefes con segunda fase** (16 recetas), **Torre infinita** (pisos con corazones, cada 5 un jefe) y retos diarios en 3 semanas. Detalle y calendario en `docs/CONTENIDO_NIVELES.md`.
+
+## iPhone (.ipa de prueba) (2026-10-08)
+Ver `docs/IOS.md`: app SwiftUI mínima en `iosApp/` que juega la campaña con la misma lógica compartida (`GameSession`), y un workflow de GitHub Actions que genera `ParDos-unsigned.ipa` para instalar con Sideloadly. Además se arregló código solo-JVM en `DailyChallenge` que impedía compilar `:shared` para iOS.
