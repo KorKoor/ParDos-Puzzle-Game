@@ -27,6 +27,8 @@ object Economy {
     const val MANUAL_POWER_PRICE_COINS = 80
     /** Espera entre usos de Limpiar y Fusión. */
     const val POWER_COOLDOWN_MS: Long = 15L * 60 * 1000
+    /** Segunda oportunidad al perder: en Android se logra viendo un anuncio; en iPhone cuesta gemas. */
+    const val REVIVE_PRICE_GEMS = 12
     /** Segundos que regala "Tiempo extra" en modos con reloj. */
     const val EXTRA_TIME_SECONDS = 20
 

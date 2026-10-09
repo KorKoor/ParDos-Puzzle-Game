@@ -269,6 +269,9 @@ struct ModeResultOverlay: View {
             .font(.system(size: 26, weight: .black, design: .rounded))
             .foregroundColor(Theme.accent)
         sub("Las partidas libres no dan monedas, pero cuentan para misiones y el pase.")
+        if snap.canRevive {
+            big("SEGUIR JUGANDO · " + String(model.eco?.revivePrice ?? 12) + " GEMAS", color: Theme.energy) { model.revive() }
+        }
         big("OTRA VEZ") { model.restart() }
         small("Volver al mapa") { model.backToMap() }
     }

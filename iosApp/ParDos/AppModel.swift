@@ -71,6 +71,7 @@ enum Celebration: Identifiable {
     case reveal(String)
     case leagueResult(LeaguePending)
     case info(String, String, String)
+    case notifPrimer
 
     var id: String {
         switch self {
@@ -82,6 +83,7 @@ enum Celebration: Identifiable {
         case .reveal(let skin): return "reveal\(skin)"
         case .leagueResult(let p): return "league\(p.from)\(p.to)"
         case .info(let title, _, _): return "info\(title)"
+        case .notifPrimer: return "notifPrimer"
         }
     }
 }
@@ -787,6 +789,7 @@ final class AppModel: ObservableObject {
             if let won = reward {
                 for skinID in won.newSkins { push(.reveal(skinID)) }
             }
+            maybeAskForNotifications()
         } else {
             let json = act { m in
                 m.onLoss(level: Int32(s.level), daily: s.daily, maxTile: Int32(s.maxTile), merges: Int32(s.merges))

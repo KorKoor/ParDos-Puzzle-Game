@@ -57,6 +57,7 @@ struct BoardSnap: Decodable {
     let callout: String
     let empty: Int
     let stuck: Bool
+    let canRevive: Bool
 }
 
 struct GuideHint: Decodable {

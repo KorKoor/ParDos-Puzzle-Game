@@ -269,6 +269,7 @@ struct SettingsView: View {
     @AppStorage("sound_on") private var soundOn = true
     @AppStorage("music_on") private var musicOn = true
     @AppStorage("haptics_on") private var hapticsOn = true
+    @AppStorage("notif_on") private var notifOn = true
     @State private var confirmReset = false
 
     var body: some View {
@@ -285,6 +286,8 @@ struct SettingsView: View {
                 toggleRow("music.note", "Música", $musicOn)
                 Divider()
                 toggleRow("hand.tap.fill", "Vibración", $hapticsOn)
+                Divider()
+                toggleRow("bell.fill", "Avisos", $notifOn)
             }
             .padding(.horizontal, 16)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
@@ -328,6 +331,7 @@ struct SettingsView: View {
         .padding(.horizontal, 22)
         .background(Theme.cream.ignoresSafeArea())
         .onChange(of: musicOn) { _ in model.syncMusic() }
+        .onChange(of: notifOn) { value in model.setNotifications(value) }
         .alert(isPresented: $confirmReset) {
             Alert(
                 title: Text("¿Borrar el progreso?"),

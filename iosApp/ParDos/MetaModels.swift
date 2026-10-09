@@ -328,6 +328,7 @@ struct WheelSliceInfo: Decodable {
 
 struct EconomyInfo: Decodable {
     let undoPrice: Int
+    let revivePrice: Int
     let powerPrice: Int
     let powerCooldownMs: Int
     let extraTimeSeconds: Int

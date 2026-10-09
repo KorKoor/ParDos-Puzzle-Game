@@ -63,6 +63,7 @@ class GameSession(seed: Long) {
     private var extraTimeMs = 0L
     private var comboTimeBonus = true
     private var flowStreak = 0
+    private var reviveUsed = false
     private var peakFlowStreak = 0
     private var flowCallout = ""
     private var powersAllowed = true
@@ -172,6 +173,7 @@ class GameSession(seed: Long) {
         flowStreak = 0
         peakFlowStreak = 0
         flowCallout = ""
+        reviveUsed = false
         engine = GameEngine(spec.boardSize, rng, spec.stoneSet)
         tiles = initialTiles()
     }
@@ -309,6 +311,39 @@ class GameSession(seed: Long) {
         return true
     }
 
+    /** ¿Se puede ofrecer seguir jugando tras perder? Una vez por partida y no en retos diarios. */
+    private fun canRevive(): Boolean = status == LOST && !reviveUsed && !daily && powersAllowed
+
+    /**
+     * Segunda oportunidad (una por partida): si el tablero se llenó, se queda la mitad de las fichas más grandes; si se acabaron
+     * los movimientos, se regalan unos cuantos más; si se acabó el tiempo, +30 segundos. Como la de Android.
+     */
+    fun revive(): Boolean {
+        if (!canRevive()) return false
+        reviveUsed = true
+        when (lostReason) {
+            BOARD_FULL -> {
+                val keep = (tiles.size / 2).coerceAtLeast(2)
+                tiles = tiles.sortedByDescending { it.value }.take(keep).map { it.copy(isNew = false, isMerged = false) }
+            }
+            OUT_OF_MOVES -> {
+                val limit = spec.moveLimit ?: moves
+                val extra = (limit * 15 / 100).coerceAtLeast(8)
+                spec = spec.copy(moveLimit = moves + extra)
+            }
+            TIME_UP -> {
+                timeLeftMs = 30_000L
+                extraTimeMs += 30_000L
+            }
+        }
+        status = PLAYING
+        lostReason = ""
+        undo = null
+        blockedMessage = ""
+        engine = GameEngine(spec.boardSize, rng, blockedNow())
+        return true
+    }
+
     /** Reloj: la app avisa cada tanto de cuántos milisegundos pasaron (solo cuenta tras la primera jugada). */
     fun tick(deltaMs: Int) {
         if (status != PLAYING || !started) return
@@ -430,7 +465,7 @@ class GameSession(seed: Long) {
             "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
             "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs,
             "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent,
-            "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
+            "canRevive" to canRevive(), "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
             "empty" to (spec.freeCells - tiles.size).coerceAtLeast(0), "stuck" to engine.isGameOver(tiles)
         )
     }

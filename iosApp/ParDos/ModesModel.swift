@@ -325,3 +325,23 @@ extension AppModel {
         }
     }
 }
+
+// MARK: - Segunda oportunidad
+
+extension AppModel {
+    /// Seguir jugando tras perder (una vez por partida): cuesta gemas, porque en iPhone no hay anuncios con premio.
+    func revive() {
+        guard let current = snap, current.canRevive else { return }
+        let price = eco?.revivePrice ?? 12
+        if gems < price {
+            showToast("Necesitas \(price) gemas")
+            return
+        }
+        if run({ $0.buyRevive() }) && session.revive() {
+            rewardedKey = ""
+            loss = nil
+            hint = nil
+            refresh(animated: true)
+        }
+    }
+}

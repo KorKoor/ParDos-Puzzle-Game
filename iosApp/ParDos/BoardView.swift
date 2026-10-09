@@ -9,7 +9,7 @@ struct BoardView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle, selecting: model.selectMode != nil, picked: model.firstPick, onTap: { id in model.tapTile(id) })
+            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle, selecting: model.selectMode != nil, picked: model.firstPick, fx: model.state?.equippedFx ?? "classic", onTap: { id in model.tapTile(id) })
                 .frame(width: side, height: side)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
@@ -36,6 +36,7 @@ struct BoardCanvas: View {
     let side: CGFloat
     let style: BoardStyle
     var selecting: Bool = false
+    var fx: String = "classic"
     var picked: String? = nil
     var onTap: (String) -> Void = { _ in }
 
@@ -81,6 +82,11 @@ struct BoardCanvas: View {
 
     private var tileViews: some View {
         ZStack {
+            ForEach(snap.tiles.filter { $0.merged }) { tile in
+                MergeBurst(fx: fx, size: cell, value: tile.v)
+                    .id(tile.id + "-" + String(tile.v))
+                    .position(x: x(tile.c), y: y(tile.r))
+            }
             ForEach(snap.tiles) { tile in
                 TileView(tile: tile, size: cell, style: style)
                     .overlay(selectRing(tile))

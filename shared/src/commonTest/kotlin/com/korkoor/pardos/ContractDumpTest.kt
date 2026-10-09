@@ -54,6 +54,7 @@ class ContractDumpTest {
         dump("achList", m.achievementsList())
         dump("prestige", m.prestigeState())
         dump("prestigeEvents", m.takePrestigeEvents())
+        dump("reminders", m.reminders())
 
         // regreso tras ausencia larga y racha perdida por poco
         val m2 = MetaSession()

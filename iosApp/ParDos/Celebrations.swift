@@ -34,6 +34,8 @@ struct CelebrationOverlay: View {
             InfoPopup(title: "Liga: \(pending.to)", text: "Ganaste \(pending.coins) monedas la semana pasada.", symbol: "trophy.fill")
         case .info(let title, let text, let symbol):
             InfoPopup(title: title, text: text, symbol: symbol)
+        case .notifPrimer:
+            NotifPrimerView()
         }
     }
 }

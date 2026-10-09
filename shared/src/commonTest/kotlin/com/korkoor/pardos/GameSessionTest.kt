@@ -181,7 +181,7 @@ class GameSessionTest {
         val snapshotKeys = listOf(
             "level", "daily", "title", "kind", "kindLabel", "rule", "tip", "goal", "size", "progress", "score", "moves", "movesLeft", "timeLeftMs",
             "status", "lostReason", "stars", "tiles", "stones", "storm", "twist", "twistHint", "blocked", "phase", "phaseTitle", "chips",
-            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs", "powers", "label", "assist", "combo", "flow", "callout", "empty", "stuck"
+            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs", "powers", "label", "assist", "combo", "flow", "callout", "empty", "stuck", "canRevive"
         )
         val st = session.state()
         snapshotKeys.forEach { assertTrue(it in st.keys, "falta '$it' en el estado") }
@@ -284,5 +284,33 @@ class GameSessionTest {
         helped.startAssisted(level.id, 130)
         assertTrue(helped.state().int("movesLeft") > plain.state().int("movesLeft"))
         assertEquals(130, helped.state().int("assist"))
+    }
+
+    @Test fun aLostGameCanBeRevivedOnceAndKeepsPlaying() {
+        val session = GameSession(8L)
+        session.startCustom(size = 3, target = 4096, timeLimitMs = 0L, seed = 3L, levelNumber = 1, label = "x", comboBonus = false, powers = true)
+        var guard = 0
+        while (session.state()["status"] == "playing" && guard++ < 4000) session.move(guard % 4)
+        val lost = session.state()
+        if (lost["status"] == "lost") {
+            assertEquals(true, lost["canRevive"])
+            assertTrue(session.revive())
+            assertEquals("playing", session.state()["status"])
+            assertTrue(session.state().list("tiles").size < 9)
+            assertTrue(!session.revive(), "solo una vez por partida")
+        }
+    }
+
+    @Test fun movesRunOutThenReviveGivesMoreMoves() {
+        val level = LevelCatalog.all().first { it.moveLimit != null && it.kind == LevelKind.SPRINT }
+        val session = GameSession(5L)
+        session.start(level.id)
+        var guard = 0
+        while (session.state()["status"] == "playing" && guard++ < 5000) session.move(guard % 4)
+        val st = session.state()
+        if (st["status"] == "lost" && st["lostReason"] == "out_of_moves") {
+            assertTrue(session.revive())
+            assertTrue(session.state().int("movesLeft") >= 8)
+        }
     }
 }

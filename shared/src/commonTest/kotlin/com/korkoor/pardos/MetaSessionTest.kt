@@ -340,4 +340,22 @@ class MetaSessionTest {
         fails(m.equipTitle("t_platinum"))
         ok(m.equipTitle("default"))
     }
+
+    @Test fun remindersAreAPlanWithRealTextsAndPositiveDelays() {
+        val m = fresh()
+        m.openApp()
+        val list = jsonArray(m.reminders())
+        assertTrue(list.size >= 5)
+        list.forEach {
+            val r = it as Map<*, *>
+            assertTrue((r["title"] as String).isNotBlank() && (r["body"] as String).isNotBlank())
+            assertTrue((r["delayMs"] as Double) > 0)
+        }
+        assertTrue(!m.shouldAskNotifications(granted = false, enabled = true), "antes de la primera victoria no se pregunta")
+        m.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 1000, maxTile = 16, merges = 3, usedHelp = false, kind = "ZEN", boss = false, flow = 0)
+        assertTrue(m.shouldAskNotifications(granted = false, enabled = true))
+        assertTrue(!m.shouldAskNotifications(granted = true, enabled = true))
+        m.noteNotificationAsked()
+        assertTrue(!m.shouldAskNotifications(granted = false, enabled = true), "no se insiste el mismo día")
+    }
 }

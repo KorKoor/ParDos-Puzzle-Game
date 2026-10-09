@@ -40,6 +40,7 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active { model.appBecameActive() }
+            if phase == .background { model.rescheduleReminders() }
         }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {

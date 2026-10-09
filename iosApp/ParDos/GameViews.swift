@@ -383,6 +383,9 @@ struct ResultOverlay: View {
                 if let goal = model.loss?.nextGoal {
                     goalLine(goal)
                 }
+                if snap.canRevive {
+                    bigButton("SEGUIR JUGANDO · " + String(model.eco?.revivePrice ?? 12) + " GEMAS", Theme.energy) { model.revive() }
+                }
             }
             buttons
         }

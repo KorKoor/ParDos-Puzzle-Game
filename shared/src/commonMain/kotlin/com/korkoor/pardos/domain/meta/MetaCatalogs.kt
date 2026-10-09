@@ -87,7 +87,7 @@ internal object MetaCatalogs {
     })
 
     fun economy(): String = obj(
-        "undoPrice" to Economy.UNDO_PRICE_COINS, "powerPrice" to Economy.MANUAL_POWER_PRICE_COINS, "powerCooldownMs" to Economy.POWER_COOLDOWN_MS, "extraTimeSeconds" to Economy.EXTRA_TIME_SECONDS, "extraTimePrice" to Economy.EXTRA_TIME_PRICE_COINS,
+        "undoPrice" to Economy.UNDO_PRICE_COINS, "revivePrice" to Economy.REVIVE_PRICE_GEMS, "powerPrice" to Economy.MANUAL_POWER_PRICE_COINS, "powerCooldownMs" to Economy.POWER_COOLDOWN_MS, "extraTimeSeconds" to Economy.EXTRA_TIME_SECONDS, "extraTimePrice" to Economy.EXTRA_TIME_PRICE_COINS,
         "freezePrice" to Economy.STREAK_FREEZE_PRICE_COINS, "maxFreezes" to Economy.MAX_STREAK_FREEZES,
         "commonChestCoins" to Economy.COMMON_CHEST_COINS, "rareChestCoins" to Economy.RARE_CHEST_COINS,
         "rareChestGems" to Economy.RARE_CHEST_GEMS, "epicChestGems" to Economy.EPIC_CHEST_GEMS,

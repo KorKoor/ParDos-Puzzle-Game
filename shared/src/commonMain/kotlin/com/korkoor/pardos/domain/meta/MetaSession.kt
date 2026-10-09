@@ -288,6 +288,59 @@ class MetaSession {
 
     private fun afterChange() { prestige.refresh(unlockedLevel) }
 
+
+    // ------------------------------------------------------------------ avisos (notificaciones locales)
+
+    /** Los avisos que hay que programar ahora (el mismo planificador que Android; Swift los pasa a notificaciones locales). */
+    fun reminders(): String {
+        val today = clock.today
+        val owned = wallet.ownedSkins
+        val activeEvent = ret.activeSkinEvents().firstOrNull { e -> EventSkins.skinFor(e.type)?.let { it.id !in owned } == true }
+        val missions = ret.todayMissions()
+        val league = ret.league
+        val input = com.korkoor.pardos.domain.retention.ReminderInput(
+            nowMs = clock.nowMs, minuteOfDay = clock.minute, streak = ret.streak,
+            freeChestLastMs = store.long("free_chest_last"), seasonDaysLeft = SeasonCalendar.daysLeft(today),
+            seasonClaimable = ret.claimableTierCount(), seasonTierReached = SeasonPass.tierFor(ret.seasonPoints),
+            weeklyOpen = ret.weekly().count { !it.claimed }, daysLeftInWeek = WeekCalendar.daysLeft(today),
+            wheelFreeLeft = ret.wheelAllowance().freeLeft, piggyGems = ret.piggy,
+            leagueName = league.displayName,
+            leagueStarsToPromote = com.korkoor.pardos.domain.retention.Leagues.starsToPromote(league, ret.leagueWeekStars()),
+            leagueAtRisk = com.korkoor.pardos.domain.retention.Leagues.atRisk(league, ret.leagueWeekStars()),
+            eventName = activeEvent?.let { EventSkins.eventName(it.type) } ?: "",
+            eventSkinName = activeEvent?.let { EventSkins.skinFor(it.type)?.displayName } ?: "",
+            eventDaysLeft = activeEvent?.daysLeft(today) ?: Int.MAX_VALUE,
+            eventWinsLeft = activeEvent?.let { EventSkins.winsLeft(ret.eventWins(it)) } ?: 0,
+            missionsClaimable = missions.count { it.isCompleted && !ret.missionClaimed(it.id) },
+            missionsOpen = missions.count { !ret.missionClaimed(it.id) },
+            perfectDays = ret.perfectDays(), perfectToday = ret.perfectToday(), unopenedChests = col.totalChests,
+            dailyChallengeOpen = !ret.dailyChallengeDoneToday(),
+            upcomingEvents = EventCalendar.upcoming(today, 14).mapNotNull { (type, days) ->
+                val skin = EventSkins.skinFor(type) ?: return@mapNotNull null
+                if (skin.id in owned) null
+                else com.korkoor.pardos.domain.retention.UpcomingEvent(type.ordinal, EventSkins.eventName(type), skin.displayName, days)
+            }
+        )
+        val plan = com.korkoor.pardos.domain.retention.ReminderPlanner.plan(input)
+        val halloween = com.korkoor.pardos.domain.retention.SeasonalCopy.isHalloweenWindow(today)
+        val finalPlan = com.korkoor.pardos.domain.retention.SeasonalCopy.apply(plan, halloween)
+        return arr(finalPlan.map { robj("key" to it.key, "id" to it.id, "title" to it.title, "body" to it.body, "delayMs" to it.delayMs) })
+    }
+
+    /** ¿Toca preguntar si quiere avisos? (después de la primera victoria, pocas veces y separadas). */
+    fun shouldAskNotifications(granted: Boolean, enabled: Boolean): Boolean {
+        val last = if (store.has("notif_ask_day")) store.int("notif_ask_day") else null
+        return com.korkoor.pardos.domain.retention.NotificationPrimer.shouldAsk(
+            permissionNeeded = true, granted = granted, enabledInSettings = enabled,
+            hasWonAGame = store.int("total_wins") > 0, lastAskDay = last, askCount = store.int("notif_ask_count"), today = clock.today
+        )
+    }
+
+    fun noteNotificationAsked() {
+        store.addInt("notif_ask_count", 1)
+        store.setInt("notif_ask_day", clock.today)
+    }
+
     // ------------------------------------------------------------------ al abrir la app
 
     /** Una vez al día: racha, regalo de regreso, escudos, fichas. Devuelve lo que hay que celebrar. */
@@ -485,6 +538,9 @@ class MetaSession {
     fun grantCoins(n: Int) { wallet.addCoins(n) }
 
     fun useUndo(): Boolean = wallet.useUndo()
+
+    /** Paga la segunda oportunidad con gemas. */
+    fun buyRevive(): String = if (wallet.spendGems(Economy.REVIVE_PRICE_GEMS)) ok() else no("No alcanzan las gemas")
 
     /** Paga un poder manual (Escoba o Unir) con monedas. */
     fun buyManualPower(): String = if (wallet.spendCoins(Economy.MANUAL_POWER_PRICE_COINS)) ok() else no("No alcanzan las monedas")
