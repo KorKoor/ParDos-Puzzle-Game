@@ -5,19 +5,25 @@ Esto genera un `.ipa` **sin firmar** en la nube (GitHub Actions, en un Mac virtu
 
 ## Qué hay (y qué no)
 
-La app de Android es Jetpack Compose y no se puede compilar para iPhone. Para poder probar en iOS hay una **app nativa mínima
-en SwiftUI** (`iosApp/`) que usa la **misma lógica del juego** que Android: el módulo `:shared` (Kotlin) se compila a un
-`Shared.xcframework`, y SwiftUI solo dibuja.
+La app de Android es Jetpack Compose y no se puede compilar para iPhone. Para iOS hay una **app nativa en SwiftUI** (`iosApp/`) que
+usa la **misma lógica** que Android: el módulo `:shared` (Kotlin) se compila a un `Shared.xcframework` y SwiftUI solo dibuja.
+Hay dos "cerebros" compartidos: `GameSession` (la partida) y `MetaSession` (todo lo que la rodea: monedas, tienda, cofres, álbum,
+misiones, pase, liga, logros, prestigio). Los dos tienen pruebas en Windows y hablan con Swift en JSON.
 
-| | Sí está en la versión de iPhone | No está (solo Android por ahora) |
-|---|---|---|
-| Juego | motor, 2.400 niveles con todas sus reglas (piedras, tormentas, giros, jefes con fase 2, metas de puntos/escalera/combo/cosecha...), estrellas, deshacer, reloj | modos Multi-Mates, Carrera, Duelo, Zen, Studio, Torre |
-| Ayudas | tutorial del nivel 1 con la mano 3D, pista si te quedas parado 7 s (niveles 1-15), botón Pista, tarjeta que explica cada regla nueva y cada jefe la primera vez | poderes (Limpiar, Fusión, Escoba) |
-| Meta | mapa de campaña (12 capítulos con cartel y estrellas), **reto diario** (mismo tablero para todos, 3 estrellas) y **racha** de días, progreso guardado en el teléfono | tienda, cofres, álbum, pase, misiones, ligas, perfil, amigos, anuncios, Google/Firebase |
-| Ambiente | Noche de brujas en octubre: fondo con calabazas/fantasmas/murciélagos flotando, telarañas, luces, confeti al ganar, portada, sonidos y música, vibración | |
-| Ajustes | sonido, música, vibración y borrar progreso | |
+| Área | En iPhone |
+|---|---|
+| Juego | 2.400 niveles con todas sus reglas, jefes con fase 2, estrellas, reloj, deshacer (con inventario), pista, tutorial con mano 3D, "flow", ayuda tras perder varias veces |
+| Poderes | Limpiar y Fusión (espera de 15 min), Escoba y Unir (80 monedas: en iPhone no hay anuncios con premio), Tiempo extra |
+| Modos | Campaña, reto diario, Torre infinita (3 corazones), Carrera, Duelo local, Duelo a distancia por código (compatible con Android), Partida libre |
+| Economía | monedas, gemas, esencia, fichas, racha de días con escudos, regalo diario, cofre gratis cada 4 h, ruleta, hucha, primera victoria del día |
+| Tienda | skins (42, con eventos y secretas), efectos de fusión, ayudas, cofres, ofertas del día, Studio (editor de tu skin) y **packs de gemas con precios de App Store** (ver `docs/APPSTORE_PRODUCTOS.md`) |
+| Álbum | 32 series / 320 piezas, cofres con garantías, repetidas (vender/reciclar), crear piezas, brillantes, vitrina, recompensas de serie y de álbum, mejoras |
+| Metas | misiones diarias y semanales, días perfectos, pase de temporada (30 niveles, gratis y premium), liga semanal, eventos de calendario |
+| Perfil | 150 avatares y 60 banners (se componen con emojis y degradados), títulos, 82 logros, prestigio (8 rangos, ~75 hitos, Platino), récords |
+| Ambiente | Noche de brujas en octubre, partículas y fondos de cada skin, efectos de fusión, sonidos y música, vibración, avisos del teléfono (notificaciones locales) |
+| No está | amigos y ranking en línea, Google/Firebase, anuncios, compras reales (StoreKit), modo Tablas, Zen/Rápido como modos propios |
 
-Es una **versión de prueba**: sirve para sentir el juego y los niveles en iPhone y detectar problemas, no para publicar.
+Es una **versión de prueba**: sirve para sentir el juego y la economía en iPhone, no para publicar.
 
 ## Pasos
 
@@ -45,6 +51,7 @@ Con un Apple ID gratuito la app **caduca a los 7 días** (hay que volver a insta
 - `iosApp/project.yml` es el proyecto de Xcode (lo genera XcodeGen en la nube: no hace falta tener `.xcodeproj`).
 - `iosApp/ParDos/`: `AppModel` (progreso en UserDefaults), `SoundManager` (mp3 en `Sounds/`), `Decor` (adornos y animaciones),
   `Chapters` (temas de capítulo), `Theme` (paleta; `Theme.halloween` se activa en octubre).
+- `iosApp/tools/check_swift_contract.py` comprueba que **todo el JSON real** que entrega Kotlin se puede leer con las estructuras `Decodable` de Swift (claves y tipos). Es la red de seguridad contra pantallas vacías; corre en CI antes de compilar el Swift.
 - `iosApp/tools/check_swift_syntax.py` revisa la sintaxis de todos los `.swift` sin Mac (tree-sitter). El workflow lo corre primero en
   Linux (job `swift-syntax`), así un error tonto falla en segundos y no tras 20 minutos de Mac. No comprueba tipos.
 - El workflow: pruebas de la sesión y el motor → `./gradlew :shared:assembleSharedReleaseXCFramework` → `xcodegen generate` →

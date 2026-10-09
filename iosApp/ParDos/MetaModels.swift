@@ -629,6 +629,21 @@ struct DuelResultInfo: Decodable {
     let best: Int
 }
 
+struct TablesInfo: Decodable {
+    let level: Int
+    let base: Int
+    let target: Int
+    let label: String
+}
+
+struct RunInfo: Decodable, Identifiable {
+    let day: Int
+    let label: String
+    let detail: String
+
+    var id: String { "\(day)-\(label)-\(detail)" }
+}
+
 struct RecordsInfo: Decodable {
     let tower: Int
     let race: Int

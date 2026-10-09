@@ -77,6 +77,7 @@ enum Celebration: Identifiable {
     case leagueResult(LeaguePending)
     case info(String, String, String)
     case notifPrimer
+    case whatsNew
 
     var id: String {
         switch self {
@@ -89,6 +90,7 @@ enum Celebration: Identifiable {
         case .leagueResult(let p): return "league\(p.from)\(p.to)"
         case .info(let title, _, _): return "info\(title)"
         case .notifPrimer: return "notifPrimer"
+        case .whatsNew: return "whatsNew"
         }
     }
 }
@@ -144,6 +146,8 @@ final class AppModel: ObservableObject {
     var customSize = 4
     var customTarget = 512
     var customTimed = false
+    var customFast = false
+    var customTables = false
 
     @Published var state: MetaState?
     @Published var album: AlbumStateData?
@@ -158,6 +162,7 @@ final class AppModel: ObservableObject {
     private(set) var tiers: [SeasonTierInfo] = []
     private(set) var wheelSlices: [WheelSliceInfo] = []
     @Published var store: StoreCatalogData?
+    @Published var livePrices: [String: String] = [:]
     private(set) var eco: EconomyInfo?
 
     var cards: [Int: LevelCard] = [:]
@@ -173,16 +178,17 @@ final class AppModel: ObservableObject {
     var seriesByID: [String: AlbumSeries] = [:]
 
     init() {
-        loadCatalogs()
         if let saved = defaults.string(forKey: "meta_state_v1") {
             meta.load(state: saved)
         }
+        loadCatalogs()
         tickClock()
         migrateLegacyProgress()
         refreshDaily()
         openToday()
         refreshState()
         sounds.updateMusic(shouldPlay: true)
+        startStore()
     }
 
     // MARK: Carga
@@ -276,6 +282,7 @@ final class AppModel: ObservableObject {
             sounds.play("game_over", volume: 0.4)
         } else if result.ok {
             buzz(.light)
+            sounds.play("better_pop", volume: 0.45)
         }
         return result.ok
     }
@@ -359,6 +366,7 @@ final class AppModel: ObservableObject {
         }
         if state?.dailyReward.claimable ?? false { list.append(.dailyGift) }
         queue.append(contentsOf: list)
+        showWelcomeMessages()
     }
 
     /// Al volver a la app (otro día) se vuelve a mirar la racha y el regalo.
@@ -636,7 +644,8 @@ final class AppModel: ObservableObject {
         case .tower: startTowerFloor()
         case .race: startRace()
         case .duel: startDuelRound()
-        case .custom: startCustom(size: customSize, target: customTarget, timed: customTimed)
+        case .custom:
+            if customTables { startTables() } else { startCustom(size: customSize, target: customTarget, timed: customTimed, fast: customFast) }
         case .remote: restartRemote()
         case .daily: startDaily()
         case .campaign: start(current.level)
@@ -683,7 +692,10 @@ final class AppModel: ObservableObject {
         let moved = session.move(direction: Int32(direction))
         refresh(animated: true)
         guard let now = snap else { return }
-        if moved { checkAchievements(now) }
+        if moved {
+            checkAchievements(now)
+            announce(moveAnnouncement(now))
+        }
         if moved {
             let merged = now.tiles.contains(where: { $0.merged })
             sounds.play(merged ? "better_pop" : "move_pop")
@@ -760,7 +772,7 @@ final class AppModel: ObservableObject {
             snap = fresh
         }
         if before == "playing" && fresh.status != "playing" {
-            sounds.play(fresh.status == "won" ? "win" : "game_over")
+            sounds.play(fresh.status == "won" ? (fresh.stars >= 3 ? "victory_sound" : "win") : "game_over")
             finish(fresh)
         }
     }

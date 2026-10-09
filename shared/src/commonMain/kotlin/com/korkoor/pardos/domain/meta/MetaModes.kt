@@ -77,6 +77,7 @@ internal class Modes(
         val before = towerHearts
         s.setInt("tower_hearts", TowerRules.heartsAfterClear(floor, before))
         sideGame(won = true, merges = merges, maxTile = maxTile)
+        logRun("Torre infinita", "Piso " + floor + " superado")
         return TowerClear(reward.coins, reward.gems, reward.heart, towerHearts)
     }
 
@@ -94,6 +95,7 @@ internal class Modes(
         val over = hearts == 0
         val record = over && towerFloor > s.int("tower_record_start") && towerFloor > 1
         if (over) s.setBool("tower_active", false)
+        if (over) logRun("Torre infinita", "Cayó en el piso " + towerFloor)
         return TowerLoss(hearts, over, record)
     }
 
@@ -132,6 +134,7 @@ internal class Modes(
         val record = stages > best
         if (record) s.setInt("rec_race", stages)
         sideGame(won = stages > 0, merges = merges, maxTile = maxTile)
+        logRun("Carrera", stages.toString() + (if (stages == 1) " etapa" else " etapas"))
         return RaceEnd(coins, maxOf(best, stages), record)
     }
 
@@ -141,6 +144,7 @@ internal class Modes(
         val winner = DuelRules.winner(score1, score2)
         val best = s.int("rec_duel")
         val top = maxOf(score1, score2)
+        logRun("Duelo local", score1.toString() + " contra " + score2)
         if (top > best) s.setInt("rec_duel", top)
         return obj("ok" to true, "winner" to winner.name, "margin" to DuelRules.margin(score1, score2), "best" to maxOf(best, top))
     }
@@ -149,6 +153,7 @@ internal class Modes(
 
     fun customFinished(score: Int, won: Boolean, merges: Int, maxTile: Int) {
         if (score > s.int("rec_custom")) s.setInt("rec_custom", score)
+        logRun("Partida libre", score.toString() + " puntos" + (if (won) " · meta lograda" else ""))
         sideGame(won, merges, maxTile)
     }
 
@@ -217,6 +222,7 @@ internal class Modes(
             s.addToStrSet("remote_played", code)
         }
         sideGame(won = outcome == com.korkoor.pardos.domain.logic.RemoteOutcome.WIN, merges = 0, maxTile = 0)
+        logRun("Duelo a distancia", myScore.toString() + " contra " + theirScore)
         return obj("ok" to true, "outcome" to outcome.name, "coins" to coins, "gems" to gems, "firstTime" to first, "mine" to myScore, "theirs" to theirScore)
     }
 
@@ -230,6 +236,32 @@ internal class Modes(
             "createLimit" to Economy.REMOTE_DUEL_CREATE_PER_DAY
         )
     }
+
+    // ---------------- Tablas (la tabla de multiplicar de un número del 3 al 9) ----------------
+
+    val tablesLevel: Int get() = s.int("tables_level", 1)
+
+    /** Cada partida de Tablas elige un número del 3 al 9 y una meta que crece con el nivel (8, 16 y luego 32 veces el número). */
+    fun tablesInfoJson(): String {
+        val base = 3 + kotlin.random.Random(clock.nowMs + tablesLevel).nextInt(7)
+        val level = tablesLevel
+        val factor = if (level <= 2) 8 else if (level <= 4) 16 else 32
+        return obj("level" to level, "base" to base, "target" to base * factor, "label" to "Tablas del " + base + " · nivel " + level)
+    }
+
+    fun tablesWon() { s.setInt("tables_level", tablesLevel + 1) }
+
+    /** Anota una partida terminada para la lista de "Últimas partidas" (las 40 más recientes). */
+    fun logRun(label: String, detail: String) {
+        val line = clock.today.toString() + "|" + label.replace('|', '/').replace('\n', ' ') + "|" + detail.replace('|', '/').replace('\n', ' ')
+        val old = s.str("run_log").split('\n').filter { it.isNotBlank() }
+        s.setStr("run_log", (listOf(line) + old).take(40).joinToString("\n"))
+    }
+
+    fun runsJson(): String = arr(s.str("run_log").split('\n').filter { it.isNotBlank() }.mapNotNull { row ->
+        val p = row.split('|')
+        if (p.size < 3) null else robj("day" to (p[0].toIntOrNull() ?: 0), "label" to p[1], "detail" to p[2])
+    })
 
     fun recordsJson(): String = obj(
         "tower" to towerBest, "race" to s.int("rec_race"), "duel" to s.int("rec_duel"), "custom" to s.int("rec_custom"),

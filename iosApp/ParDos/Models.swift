@@ -58,6 +58,8 @@ struct BoardSnap: Decodable {
     let empty: Int
     let stuck: Bool
     let canRevive: Bool
+    let flowStreak: Int
+    let nearMiss: String?
 }
 
 struct GuideHint: Decodable {

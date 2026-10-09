@@ -270,6 +270,7 @@ struct SettingsView: View {
     @AppStorage("music_on") private var musicOn = true
     @AppStorage("haptics_on") private var hapticsOn = true
     @AppStorage("notif_on") private var notifOn = true
+    @AppStorage("auto_next") private var autoNext = true
     @State private var confirmReset = false
 
     var body: some View {
@@ -288,6 +289,8 @@ struct SettingsView: View {
                 toggleRow("hand.tap.fill", "Vibración", $hapticsOn)
                 Divider()
                 toggleRow("bell.fill", "Avisos", $notifOn)
+                Divider()
+                toggleRow("forward.fill", "Pasar solo al siguiente nivel", $autoNext)
             }
             .padding(.horizontal, 16)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))

@@ -74,3 +74,27 @@ struct MergeBurst: View {
         }
     }
 }
+
+/// El "+N" que sube y se desvanece donde se juntaron dos fichas.
+struct FloatingScore: View {
+    let value: Int
+    let size: CGFloat
+    @State private var rise: CGFloat = 0
+    @State private var fade: Double = 1
+
+    var body: some View {
+        Text("+" + String(value))
+            .font(.system(size: size * 0.3, weight: .black, design: .rounded))
+            .foregroundColor(Color.white)
+            .shadow(color: Color.black.opacity(0.55), radius: 2, x: 0, y: 1)
+            .offset(y: rise)
+            .opacity(fade)
+            .allowsHitTesting(false)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.8)) {
+                    rise = -size * 0.9
+                    fade = 0
+                }
+            }
+    }
+}

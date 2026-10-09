@@ -273,7 +273,7 @@ struct ModeResultOverlay: View {
         if snap.canRevive {
             big("SEGUIR JUGANDO · " + String(model.eco?.revivePrice ?? 12) + " GEMAS", color: Theme.energy) { model.revive() }
         }
-        big("OTRA VEZ") { model.restart() }
+        big(model.customTables && snap.status == "won" ? "SIGUIENTE TABLA" : "OTRA VEZ") { model.restart() }
         small("Volver al mapa") { model.backToMap() }
     }
 }
@@ -291,6 +291,7 @@ struct ModesSection: View {
                     modeCard("Torre infinita", "Piso a piso con 3 corazones", "building.2.fill", Color(hex: 0x8E6BD6)) { model.startTower() }
                     modeCard("Carrera", "Etapas contra el reloj", "flag.checkered", Theme.gold) { model.startRace() }
                     modeCard("Duelo", "Dos jugadores, un teléfono", "person.2.fill", Theme.energy) { model.startDuel() }
+                    modeCard("Tablas", "Metas con la tabla del 3 al 9", "multiply.square.fill", Color(hex: 0x4E8FA6)) { model.startTables() }
                     modeCard("A distancia", "Reta a un amigo con un código", "paperplane.fill", Color(hex: 0xE0568B)) { model.sheet = .remote }
                     modeCard("Libre", "Tu tablero, tu meta", "slider.horizontal.3", Color(hex: 0x2A9D8F)) { model.sheet = .custom }
                     modeCard("Récords", "Tus mejores marcas", "trophy.fill", Color(hex: 0x4E8FA6)) { model.sheet = .records }
@@ -342,6 +343,10 @@ struct CustomGameSheet: View {
             Text("Partida libre")
                 .font(.system(size: 24, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)
+            HStack(spacing: 10) {
+                presetButton("Zen", "4×4 hasta 2048, sin reloj", "leaf.fill", Theme.accent) { model.startCustom(size: 4, target: 2048, timed: false) }
+                presetButton("Rápido", "3×3 hasta 64 en 60 s", "bolt.fill", Theme.gold) { model.startCustom(size: 3, target: 64, timed: true, fast: true) }
+            }
             VStack(spacing: 14) {
                 row("Tablero") {
                     HStack(spacing: 8) {
@@ -393,6 +398,21 @@ struct CustomGameSheet: View {
         .background(Theme.cream.ignoresSafeArea())
     }
 
+    private func presetButton(_ title: String, _ detail: String, _ symbol: String, _ color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: symbol).font(.system(size: 18, weight: .bold)).foregroundColor(.white)
+                    .frame(width: 38, height: 38).background(Circle().fill(color))
+                Text(title).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                Text(detail).font(.system(size: 9, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .card(radius: 18)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
     private func row<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
         VStack(spacing: 8) {
             Text(title.uppercased())
@@ -409,7 +429,9 @@ struct RecordsSheet: View {
 
     var body: some View {
         let r = model.loadRecords()
-        return VStack(spacing: 14) {
+        let runs = model.loadRuns()
+        return ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
             Text("Récords")
                 .font(.system(size: 24, weight: .black, design: .rounded))
@@ -437,10 +459,32 @@ struct RecordsSheet: View {
                 .padding(.horizontal, 16)
                 .card()
             }
-            Spacer(minLength: 0)
+            runsCard(runs)
+            }
+            .padding(.bottom, 30)
         }
         .padding(.horizontal, 22)
         .background(Theme.cream.ignoresSafeArea())
+    }
+
+    private func runsCard(_ runs: [RunInfo]) -> some View {
+        VStack(spacing: 8) {
+            SectionTitle(text: "Últimas partidas")
+            if runs.isEmpty {
+                Text("Aquí saldrán tus partidas terminadas.").font(.system(size: 12, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.45))
+            }
+            ForEach(runs) { run in
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(run.label).font(.system(size: 13, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                        Text(run.detail).font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.55))
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .padding(14)
+        .card()
     }
 
     private func line(_ symbol: String, _ title: String, _ value: String) -> some View {

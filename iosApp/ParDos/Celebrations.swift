@@ -36,6 +36,8 @@ struct CelebrationOverlay: View {
             InfoPopup(title: title, text: text, symbol: symbol)
         case .notifPrimer:
             NotifPrimerView()
+        case .whatsNew:
+            WhatsNewView()
         }
     }
 }

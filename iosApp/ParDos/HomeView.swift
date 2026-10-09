@@ -347,6 +347,7 @@ struct TodayTile: View {
     let hot: Bool
     let icon: AnyView
     let action: () -> Void
+    @State private var pulse = false
 
     var body: some View {
         Button(action: action) {
@@ -374,8 +375,14 @@ struct TodayTile: View {
             .padding(.vertical, 12)
             .card(radius: 20)
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(hot ? Theme.accent.opacity(0.7) : Color.clear, lineWidth: 2))
+            .scaleEffect(hot && pulse ? 1.04 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
+        .onAppear {
+            if hot {
+                withAnimation(Animation.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { pulse = true }
+            }
+        }
     }
 }
 

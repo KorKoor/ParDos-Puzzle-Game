@@ -15,6 +15,7 @@ import com.korkoor.pardos.domain.level.Twist
 import com.korkoor.pardos.domain.level.goalText
 import com.korkoor.pardos.domain.flow.FlowMeter
 import com.korkoor.pardos.domain.flow.FlowTier
+import com.korkoor.pardos.domain.flow.NearMiss
 import com.korkoor.pardos.domain.logic.CoachStep
 import com.korkoor.pardos.domain.logic.DailyChallenge
 import com.korkoor.pardos.domain.logic.Direction
@@ -465,7 +466,8 @@ class GameSession(seed: Long) {
             "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
             "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs,
             "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent,
-            "canRevive" to canRevive(), "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
+            "canRevive" to canRevive(), "flowStreak" to flowStreak,
+            "nearMiss" to (if (status == LOST) NearMiss.message(spec.goal, spec.goalValue, spec.goalCount, tiles, score, stats, lostReason == OUT_OF_MOVES) else null), "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
             "empty" to (spec.freeCells - tiles.size).coerceAtLeast(0), "stuck" to engine.isGameOver(tiles)
         )
     }

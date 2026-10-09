@@ -111,8 +111,8 @@ struct StudioSheet: View {
                 .foregroundColor(Theme.ink.opacity(0.6))
                 .multilineTextAlignment(.center)
             if let item = model.store?.specials.first(where: { $0.id == "skin_studio" }) {
-                BigButton(title: "CONSEGUIR STUDIO · " + item.price) {
-                    model.testBuyProduct("skin_studio")
+                BigButton(title: "CONSEGUIR STUDIO · " + model.priceLabel(item.id, item.price)) {
+                    model.buyProduct("skin_studio")
                     load()
                 }
             }

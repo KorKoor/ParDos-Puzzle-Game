@@ -129,25 +129,41 @@ extension AppModel {
 
     // MARK: Partida libre
 
-    func startCustom(size: Int, target: Int, timed: Bool) {
+    func startTables() {
+        guard let info = decodeJSON(TablesInfo.self, meta.tablesInfo()) else { return }
+        startCustom(size: 4, target: info.target, timed: false, fast: false, title: info.label)
+        customTables = true
+    }
+
+    func startCustom(size: Int, target: Int, timed: Bool, fast: Bool = false, title: String? = nil) {
         mode = .custom
+        customTables = false
         customSize = size
         customTarget = target
-        customTimed = timed
+        customTimed = timed || fast
+        customFast = fast
         var seconds = 0
-        if timed {
+        if fast {
+            seconds = 60
+        } else if timed {
             if target <= 64 { seconds = 180 } else if target <= 128 { seconds = 360 } else if target <= 512 { seconds = 600 } else if target <= 2048 { seconds = 900 } else { seconds = 1200 }
         }
         session.tutorialEnabled = false
         session.startCustom(
             size: Int32(size), target: Int32(target), timeLimitMs: Int64(seconds * 1000), seed: 0,
-            levelNumber: 1, label: "Partida libre", comboBonus: timed, powers: true
+            levelNumber: 1, label: title ?? (fast ? "Partida rápida" : "Partida libre"), comboBonus: timed || fast, powers: true
         )
         assistMessage = nil
         begin(introFor: nil, key: "custom")
     }
 
     func finishCustom(_ s: BoardSnap) {
+        if customTables && s.status == "won" {
+            act { m in
+                m.tablesWon()
+                return "{}"
+            }
+        }
         act { m in
             m.customFinished(score: Int32(s.score), won: s.status == "won", merges: Int32(s.merges), maxTile: Int32(s.maxTile))
             return "{}"
@@ -156,6 +172,10 @@ extension AppModel {
 
     func loadRecords() -> RecordsInfo? {
         return decodeJSON(RecordsInfo.self, meta.records())
+    }
+
+    func loadRuns() -> [RunInfo] {
+        return decodeJSON([RunInfo].self, meta.recentRuns()) ?? []
     }
 
     // MARK: Poderes
@@ -261,7 +281,7 @@ extension AppModel {
         case .campaign, .tower: return "CLASICO"
         case .daily, .race: return "DESAFIO"
         case .duel, .remote: return "DUELO"
-        case .custom: return customTimed ? "DESAFIO" : "ZEN"
+        case .custom: return customFast ? "RAPIDO" : (customTimed ? "DESAFIO" : "ZEN")
         }
     }
 

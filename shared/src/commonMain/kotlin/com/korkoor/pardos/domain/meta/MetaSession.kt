@@ -190,6 +190,7 @@ class MetaSession {
 
         prestige.onLevelWon(kind, boss, flow >= FlowTier.FLOW.ordinal, winStreak)
         if (daily) prestige.onDailyDone()
+        modes.logRun(if (daily) "Reto diario" else "Campaña", (if (daily) "" else "Nivel " + level + " · ") + "★".repeat(st) + " · " + moves + " mov")
         prestige.refresh(unlockedLevel)
         val teaser = if (daily) null else com.korkoor.pardos.domain.flow.NextLevelTeaser.after(level)
         return ok(
@@ -260,10 +261,13 @@ class MetaSession {
     fun remoteFinishCreator(seed: Long, score: Int, name: String): String = modes.remoteFinishCreator(seed, score, name)
     fun remoteFinishChallenged(seed: Long, theirScore: Int, name: String, myScore: Int): String = modes.remoteFinishChallenged(seed, theirScore, name, myScore)
     fun remoteHistory(): String = modes.remoteHistoryJson()
+    fun tablesInfo(): String = modes.tablesInfoJson()
+    fun tablesWon() { modes.tablesWon() }
     fun duelConfig(): String = modes.duelConfigJson()
     fun duelResult(score1: Int, score2: Int): String = modes.duelResultJson(score1, score2)
     fun customFinished(score: Int, won: Boolean, merges: Int, maxTile: Int) { modes.customFinished(score, won, merges, maxTile) }
     fun records(): String = modes.recordsJson()
+    fun recentRuns(): String = modes.runsJson()
 
 
     // ------------------------------------------------------------------ logros y prestigio

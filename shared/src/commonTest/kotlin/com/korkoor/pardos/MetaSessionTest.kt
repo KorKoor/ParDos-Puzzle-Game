@@ -399,4 +399,15 @@ class MetaSessionTest {
         assertEquals(1, jsonObject(m.remoteHistory()).int("wins"))
         fails(m.remoteDecode("hola, no hay código aquí"))
     }
+
+    @Test fun tablesPickAnumberFromThreeToNineAndLevelUpOnlyOnWin() {
+        val m = fresh()
+        val first = jsonObject(m.tablesInfo())
+        assertTrue(first.int("base") in 3..9)
+        assertEquals(first.int("base") * 8, first.int("target"))
+        m.tablesWon(); m.tablesWon(); m.tablesWon()
+        val later = jsonObject(m.tablesInfo())
+        assertEquals(4, later.int("level"))
+        assertEquals(later.int("base") * 16, later.int("target"))
+    }
 }

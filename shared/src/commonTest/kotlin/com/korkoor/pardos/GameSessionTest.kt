@@ -181,7 +181,7 @@ class GameSessionTest {
         val snapshotKeys = listOf(
             "level", "daily", "title", "kind", "kindLabel", "rule", "tip", "goal", "size", "progress", "score", "moves", "movesLeft", "timeLeftMs",
             "status", "lostReason", "stars", "tiles", "stones", "storm", "twist", "twistHint", "blocked", "phase", "phaseTitle", "chips",
-            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs", "powers", "label", "assist", "combo", "flow", "callout", "empty", "stuck", "canRevive"
+            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs", "powers", "label", "assist", "combo", "flow", "callout", "empty", "stuck", "canRevive", "flowStreak", "nearMiss"
         )
         val st = session.state()
         snapshotKeys.forEach { assertTrue(it in st.keys, "falta '$it' en el estado") }

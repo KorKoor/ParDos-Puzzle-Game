@@ -228,10 +228,10 @@ struct SeasonSheet: View {
                 }
             }
             if !season.premium {
-                Button(action: { model.unlockPremium() }) {
+                Button(action: { model.buyProduct("season_pass") }) {
                     HStack(spacing: 8) {
                         SpriteImage(name: "ico_crown", size: 26)
-                        Text("Pase premium · " + (model.store?.specials.first(where: { $0.id == "season_pass" })?.price ?? "$4.99") + " (prueba: gratis)")
+                        Text("Pase premium · " + model.priceLabel("season_pass", model.store?.specials.first(where: { $0.id == "season_pass" })?.price ?? "$4.99") + (model.storeIsLive ? "" : " (prueba: gratis)"))
                             .font(.system(size: 12, weight: .heavy, design: .rounded))
                     }
                     .foregroundColor(Theme.ink)

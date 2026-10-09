@@ -27,7 +27,12 @@ struct ShopView: View {
                     essence
                     piggy(state)
                 }
-                Text("Versión de prueba: las compras con dinero real no cobran (con la App Store, el precio saldrá en tu moneda).")
+                Button(action: { model.restorePurchases() }) {
+                    Text("Restaurar compras")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.accent)
+                }
+                Text(model.storeIsLive ? "Pagos seguros de la App Store." : "Versión de prueba: las compras con dinero real no cobran (con la App Store, el precio saldrá en tu moneda).")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.4))
                     .multilineTextAlignment(.center)
@@ -175,7 +180,7 @@ struct ShopView: View {
 
     private func studioCard(_ state: MetaState) -> some View {
         let owned = state.ownedSkins.contains("studio")
-        let price = model.store?.specials.first(where: { $0.id == "skin_studio" })?.price ?? "$3.99"
+        let price = model.priceLabel("skin_studio", model.store?.specials.first(where: { $0.id == "skin_studio" })?.price ?? "$3.99")
         return Button(action: { model.sheet = .studio }) {
             HStack(spacing: 12) {
                 Image(systemName: "paintpalette.fill")
@@ -324,8 +329,8 @@ struct ShopView: View {
             Text(pack.first ? "¡Doble la 1.ª vez!" : (pack.bonus > 0 ? "+\(pack.bonus)% de bono" : "Pack básico"))
                 .font(.system(size: 10, weight: .bold))
                 .foregroundColor(pack.first ? Theme.energy : Theme.ink.opacity(0.45))
-            Button(action: { model.testBuyProduct(pack.id) }) {
-                Text(pack.price)
+            Button(action: { model.buyProduct(pack.id) }) {
+                Text(model.priceLabel(pack.id, pack.price))
                     .font(.system(size: 14, weight: .black, design: .rounded))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -374,8 +379,8 @@ struct ShopView: View {
                     .font(.system(size: 11, weight: .heavy))
                     .foregroundColor(Theme.accent)
             } else {
-                Button(action: { model.testBuyProduct(item.id) }) {
-                    Text(item.price)
+                Button(action: { model.buyProduct(item.id) }) {
+                    Text(model.priceLabel(item.id, item.price))
                         .font(.system(size: 13, weight: .black, design: .rounded))
                         .foregroundColor(.white)
                         .padding(.horizontal, 14)

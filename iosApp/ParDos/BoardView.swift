@@ -13,6 +13,13 @@ struct BoardView: View {
                 .frame(width: side, height: side)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(model.boardDescription(snap))
+                .accessibilityHint("Usa las acciones del rotor para deslizar")
+                .accessibilityAction(named: "Deslizar arriba") { model.swipe(0) }
+                .accessibilityAction(named: "Deslizar abajo") { model.swipe(1) }
+                .accessibilityAction(named: "Deslizar a la izquierda") { model.swipe(2) }
+                .accessibilityAction(named: "Deslizar a la derecha") { model.swipe(3) }
                 .gesture(
                     DragGesture(minimumDistance: 18)
                         .onEnded { value in handleSwipe(value.translation) }
@@ -40,6 +47,9 @@ struct BoardCanvas: View {
     var picked: String? = nil
     var onTap: (String) -> Void = { _ in }
 
+    /// Brillo alrededor del tablero que crece con las jugadas seguidas que fusionan (llena a las 20).
+    private var aura: Double { min(1.0, Double(snap.flowStreak) / 20.0) * 0.85 }
+
     private var gap: CGFloat { snap.size >= 5 ? 6 : 8 }
     private var cell: CGFloat { (side - gap * CGFloat(snap.size + 1)) / CGFloat(snap.size) }
 
@@ -50,6 +60,9 @@ struct BoardCanvas: View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill((style.ink ?? Theme.ink).opacity(0.12))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Theme.energy.opacity(aura), lineWidth: 4)
+                .shadow(color: Theme.energy.opacity(aura), radius: 10, x: 0, y: 0)
             emptyCells
             stoneCells
             tileViews
@@ -85,6 +98,9 @@ struct BoardCanvas: View {
             ForEach(snap.tiles.filter { $0.merged }) { tile in
                 MergeBurst(fx: fx, size: cell, value: tile.v)
                     .id(tile.id + "-" + String(tile.v))
+                    .position(x: x(tile.c), y: y(tile.r))
+                FloatingScore(value: tile.v, size: cell)
+                    .id(tile.id + "-s" + String(tile.v))
                     .position(x: x(tile.c), y: y(tile.r))
             }
             ForEach(snap.tiles) { tile in

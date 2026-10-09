@@ -91,6 +91,7 @@ struct GameView: View {
                     .frame(width: 42, height: 42)
                     .background(Circle().fill(Color.white))
             }
+            .accessibilityLabel("Salir del nivel")
             VStack(alignment: .leading, spacing: 1) {
                 Text(headerKicker(snap))
                     .font(.system(size: 10, weight: .heavy))
@@ -108,6 +109,7 @@ struct GameView: View {
                     .frame(width: 42, height: 42)
                     .background(Circle().fill(Color.white))
             }
+            .accessibilityLabel("Reiniciar el nivel")
         }
         .padding(.horizontal, 16)
     }
@@ -118,7 +120,7 @@ struct GameView: View {
         case .tower: return model.tower?.label ?? "TORRE"
         case .race: return "CARRERA · \(model.raceCleared) SUPERADAS"
         case .duel: return "DUELO LOCAL"
-        case .custom: return "PARTIDA LIBRE"
+        case .custom: return model.customTables ? "TABLAS" : "PARTIDA LIBRE"
         case .remote: return "DUELO A DISTANCIA"
         case .campaign: return snap.kindLabel.uppercased()
         }
@@ -130,7 +132,7 @@ struct GameView: View {
         case .tower: return "Piso \(model.tower?.floor ?? 1)"
         case .race: return "Etapa \(model.raceStage?.n ?? 1)"
         case .duel: return "Jugador \(model.duelPlayer)"
-        case .custom: return "\(snap.size)×\(snap.size) · \(snap.goal)"
+        case .custom: return model.customTables ? snap.label : "\(snap.size)×\(snap.size) · \(snap.goal)"
         case .remote: return snap.label.isEmpty ? "Reto" : snap.label.capitalized
         case .campaign: return "Nivel \(snap.level)"
         }
@@ -336,8 +338,15 @@ struct ResultOverlay: View {
     @EnvironmentObject var model: AppModel
     let snap: BoardSnap
     @State private var sharing: ShareItem?
+    @State private var countdown = 6
+    @State private var autoActive = true
+    @AppStorage("auto_next") private var autoNext = true
+    private let autoTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var won: Bool { snap.status == "won" }
+
+    /// Pasa solo al siguiente nivel unos segundos después de ganar (cualquier toque lo detiene).
+    private var willAutoAdvance: Bool { won && !snap.daily && model.mode == .campaign && autoNext && autoActive && sharing == nil }
 
     private var headline: String {
         if won { return Theme.halloween ? "¡MONSTRUOSO!" : "¡NIVEL SUPERADO!" }
@@ -355,6 +364,17 @@ struct ResultOverlay: View {
             ScrollView(showsIndicators: false) {
                 card
                     .padding(.vertical, 40)
+            }
+        }
+        .contentShape(Rectangle())
+        .simultaneousGesture(TapGesture().onEnded { autoActive = false })
+        .onReceive(autoTimer) { _ in
+            guard willAutoAdvance else { return }
+            if countdown > 1 {
+                countdown -= 1
+            } else {
+                autoActive = false
+                model.nextLevel()
             }
         }
         .sheet(item: $sharing) { item in
@@ -386,6 +406,12 @@ struct ResultOverlay: View {
                 Text("Prueba otro orden: cada jugada cuenta.")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.6))
+                if let near = snap.nearMiss {
+                    Text(near)
+                        .font(.system(size: 15, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.energy)
+                        .multilineTextAlignment(.center)
+                }
                 if let goal = model.loss?.nextGoal {
                     goalLine(goal)
                 }
@@ -513,7 +539,7 @@ struct ResultOverlay: View {
     private var buttons: some View {
         VStack(spacing: 12) {
             if won {
-                bigButton(snap.daily ? "VOLVER AL MENÚ" : "SIGUIENTE", Theme.accent) { model.nextLevel() }
+                bigButton(snap.daily ? "VOLVER AL MENÚ" : (willAutoAdvance ? "SIGUIENTE · \(countdown)" : "SIGUIENTE"), Theme.accent) { model.nextLevel() }
                 smallButton(snap.daily ? "Jugar otra vez" : "Repetir nivel") { model.restart() }
                 smallButton("Compartir resultado") { sharing = ShareItem(text: model.shareText(snap)) }
             } else {

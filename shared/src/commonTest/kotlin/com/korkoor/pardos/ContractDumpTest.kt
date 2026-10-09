@@ -55,6 +55,8 @@ class ContractDumpTest {
         dump("prestige", m.prestigeState())
         dump("prestigeEvents", m.takePrestigeEvents())
         dump("reminders", m.reminders())
+        dump("runs", m.recentRuns())
+        dump("tables", m.tablesInfo())
         val seed = m.remoteNewSeed()
         val created = jsonObject(m.remoteFinishCreator(seed, 321, "Luna"))
         dump("remoteCreate", m.remoteFinishCreator(seed, 321, "Luna"))
