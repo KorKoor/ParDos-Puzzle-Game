@@ -61,7 +61,7 @@ struct ShareCardView: View {
 
 extension AppModel {
     /// La imagen de la tarjeta (nil en iOS 15, donde solo se comparte el texto).
-    func shareImage(_ snap: BoardSnap) -> UIImage? {
+    @MainActor func shareImage(_ snap: BoardSnap) -> UIImage? {
         if #available(iOS 16.0, *) {
             let renderer = ImageRenderer(content: ShareCardView(snap: snap).environmentObject(self))
             renderer.scale = 3
@@ -130,7 +130,7 @@ struct PlayerCardView: View {
 
 extension AppModel {
     /// La tarjeta de jugador como imagen (nil en iOS 15).
-    func playerCardImage() -> UIImage? {
+    @MainActor func playerCardImage() -> UIImage? {
         if #available(iOS 16.0, *) {
             let renderer = ImageRenderer(content: PlayerCardView().environmentObject(self))
             renderer.scale = 3
