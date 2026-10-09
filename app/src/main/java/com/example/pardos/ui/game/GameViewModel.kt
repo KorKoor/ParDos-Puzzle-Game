@@ -38,6 +38,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     var musicSet by mutableStateOf("zen")
         private set
     private var audioMaxTile = 0
+    /** Cuántos avisos de "ya casi" se han dado en este nivel (50 %, 75 % y 90 % de la meta). */
+    private var pingStage = 0
 
     // 1. ESTADOS DE COMPOSE
     var showLevelSummary by mutableStateOf(false)
@@ -331,6 +333,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (towerActive && currentMode == GameMode.CLASICO) {
             // En la torre perder cuesta un corazón (no cuenta como intento de la campaña ni enfría la racha)
             towerHearts = (towerHearts - 1).coerceAtLeast(0)
+            com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.HEART_LOST, 450)
             towerNewRecord = towerHearts == 0 && towerFloor > towerRecordAtStart && towerFloor > 1
             nearMissMessage = com.korkoor.pardos.domain.flow.NearMiss.message(s.goal, s.levelLimit, s.goalCount, s.tiles, s.score, s.goalStats, s.outOfMoves)
             return
@@ -936,6 +939,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         musicSet = musicSetFor(spec, level)
         com.korkoor.pardos.audio.GameAudio.music.switchGameSet(musicSet)
         audioMaxTile = 0
+        pingStage = 0
         if (spec?.isBoss == true) viewModelScope.launch { delay(500); com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOSS_INTRO) }
 
         // 6. ACTUALIZACIÓN DEL ESTADO DEL TABLERO
@@ -1133,7 +1137,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         goalStats = newStats, stormStones = stormStones, blocked = blockedNow
                     )
                 }
-                if (!reachedTarget) maybeStartPhase2(currentState.moveCount + 1)
+                if (!reachedTarget) {
+                    maybeStartPhase2(currentState.moveCount + 1)
+                    // La meta se acerca: un ping suave cada vez más agudo al cruzar el 50, 75 y 90 %
+                    val progress = _boardState.value.levelProgress
+                    val stage = when { progress >= 0.9f -> 3; progress >= 0.75f -> 2; progress >= 0.5f -> 1; else -> 0 }
+                    if (stage > pingStage) {
+                        pingStage = stage
+                        com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.GOAL_PING, 260, 1f, 0.92f + 0.08f * stage)
+                    }
+                }
 
                 if (currentState.gameMode == GameMode.CLASICO) {
                     prefs.edit().putInt(KEY_SAVED_SCORE, newScore).apply()
@@ -1394,6 +1407,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     economy.addGems(m.gems)
                     if (m.undos > 0) economy.addUndos(m.undos)
                     lastStreakMilestone = m
+                    com.korkoor.pardos.audio.GameAudio.playLater(com.korkoor.pardos.audio.Sfx.STREAK, 1900)
                 }
             }
             lastStreakBonusPct = streakPct
@@ -1539,7 +1553,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun saveLevelProgress(level: Int, stars: Int, finalTime: Long, finalMoves: Int) {
-        levelStore.recordResult(currentMode, level, stars, finalTime, finalMoves)
+        lastRunWasRecord = levelStore.recordResult(currentMode, level, stars, finalTime, finalMoves)
         if (currentMode == GameMode.CLASICO) loadLevelsWithProgress()
     }
 
@@ -1787,18 +1801,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val topTiles = currentTiles.sortedByDescending { it.value }.take(3)
         _boardState.update { it.copy(tiles = topTiles) }
         lastCleanTime = System.currentTimeMillis()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOARD_CLEAR)
+        fireImpact(0.55f)
     }
 
     fun useMergePowerUp() {
         val currentTiles = _boardState.value.tiles
         val pair = currentTiles.groupBy { it.value }.values.firstOrNull { it.size >= 2 }
         pair?.let {
+            com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC)
             executeManualMerge(it[0], it[1])
             lastMergeTime = System.currentTimeMillis()
         }
     }
 
     private fun executeManualMerge(first: TileModel, second: TileModel) {
+        var mergedValue = 0
         _boardState.update { state ->
             val list = state.tiles.toMutableList()
             val t1 = list.find { it.id == first.id }
@@ -1808,9 +1826,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 list.remove(t1)
                 list.remove(t2)
                 list.add(t2.copy(value = newValue))
+                mergedValue = newValue
                 state.copy(tiles = list, score = state.score + newValue)
             } else state
         }
+        // la fusión manual también suena como cualquier otra (su nota)
+        if (mergedValue > 0) com.korkoor.pardos.audio.GameAudio.merges(listOf(mergedValue), 0)
         checkGameState(_boardState.value.tiles)
     }
 
@@ -1823,6 +1844,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             _comboCount.value = 0 // FIX: Se reinicia a 0
         }
     }
+
+    /** La última victoria mejoró tu marca en un nivel que ya habías superado (se celebra en el resumen). */
+    var lastRunWasRecord by mutableStateOf(false)
+        private set
 
     /** Ya se duplicaron las monedas de esta victoria (una vez por partida). */
     var coinsDoubled by mutableStateOf(false)

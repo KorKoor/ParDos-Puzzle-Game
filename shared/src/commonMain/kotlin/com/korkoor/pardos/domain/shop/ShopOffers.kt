@@ -37,6 +37,25 @@ sealed interface OfferItem {
 
 data class DailyOffer(val day: Int, val item: OfferItem, val discountPercent: Int)
 
+/** Texto corto para guardar la oferta elegida del día: "skin:<id>" o "chest:<TIPO>". */
+object OfferCodec {
+    fun encode(item: OfferItem): String = when (item) {
+        is OfferItem.SkinOffer -> "skin:${item.skin.id}"
+        is OfferItem.ChestOffer -> "chest:${item.type.name}"
+    }
+
+    fun decode(text: String?): OfferItem? {
+        if (text == null) return null
+        val parts = text.split(':', limit = 2)
+        if (parts.size != 2) return null
+        return when (parts[0]) {
+            "skin" -> TileSkin.entries.firstOrNull { it.id == parts[1] }?.let { OfferItem.SkinOffer(it) }
+            "chest" -> ChestType.entries.firstOrNull { it.name == parts[1] }?.let { OfferItem.ChestOffer(it) }
+            else -> null
+        }
+    }
+}
+
 /** Oferta del día: igual para todos, cambia cada día local y se puede calcular sin servidor. */
 object DailyOffers {
     private val skins = TileSkin.entries.filter { !it.isFree && !it.exclusive }
@@ -54,8 +73,9 @@ object DailyOffers {
     }
 
     /**
-     * Igual que [forDay], pero sin ofrecer una skin que el jugador ya tiene: se elige otra sin repetirse (la misma todo el día,
-     * porque la semilla solo depende del día). Si ya las tiene todas, la oferta es un cofre raro.
+     * Igual que [forDay], pero sin ofrecer una skin que el jugador ya tiene: se elige otra sin repetirse. Si ya las tiene todas, la
+     * oferta es un cofre raro. Ojo: depende de lo que tenga el jugador, así que la app guarda la elección del día (`DailyOfferStore`)
+     * para que comprar la skin no haga aparecer otra con descuento a mitad del día.
      */
     fun forDayAvoiding(day: Int, ownedSkinIds: Set<String>): DailyOffer {
         val base = forDay(day)

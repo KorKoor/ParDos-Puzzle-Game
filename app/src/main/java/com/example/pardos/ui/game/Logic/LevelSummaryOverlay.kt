@@ -64,6 +64,8 @@ fun LevelSummaryOverlay(
     onDouble: () -> Unit = {},
     /** VIP: duplicar las monedas es gratis y sin anuncio. */
     vip: Boolean = false,
+    /** Mejoró su marca en un nivel que ya había superado. */
+    newRecord: Boolean = false,
     bonus: com.korkoor.pardos.data.local.GameBonus = com.korkoor.pardos.data.local.GameBonus(),
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
@@ -176,6 +178,7 @@ fun LevelSummaryOverlay(
                             AnimatedStarsRow(stars, currentTheme)
                             Spacer(Modifier.height(12.dp))
                             VictoryHeader(stars, modeName, base, currentTheme)
+                            if (newRecord) RecordBadge()
                         }
 
                         Box(
@@ -225,6 +228,7 @@ fun LevelSummaryOverlay(
 
                     Spacer(Modifier.height(8.dp))
                     VictoryHeader(stars, modeName, base, currentTheme)
+                    if (newRecord) RecordBadge()
                     Spacer(modifier = Modifier.height(14.dp))
                     StatsRow(moves, timeElapsed)
                     // Si no cabe todo (teléfonos pequeños), lo de en medio se desplaza; el botón SIGUIENTE siempre queda a la vista
@@ -252,6 +256,27 @@ fun LevelSummaryOverlay(
             }
         }
     }
+}
+
+/** "¡NUEVO RÉCORD!": brota con un rebote y suena su fanfarria corta cuando ya se vieron las estrellas y las monedas. */
+@Composable
+private fun RecordBadge() {
+    val pop = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(2000L)
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.NEW_BEST)
+        pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 380f))
+    }
+    Spacer(Modifier.height(8.dp))
+    com.korkoor.pardos.ui.design.CozyText(
+        text = "★ ¡NUEVO RÉCORD!", fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp,
+        color = Color(0xFFB07A10),
+        modifier = Modifier
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = pop.value.coerceIn(0f, 1f) }
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xFFF2B84B).copy(alpha = 0.22f))
+            .padding(horizontal = 14.dp, vertical = 5.dp)
+    )
 }
 
 @Composable

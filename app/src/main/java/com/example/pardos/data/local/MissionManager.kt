@@ -84,6 +84,7 @@ class MissionManager(context: Context) {
 
     // Marca la misión como cobrada para que no den XP infinita
     fun claimMissionReward(missionId: Int) {
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CLAIM)
         prefs.edit().putBoolean("mission_${missionId}_claimed", true).apply()
     }
 }

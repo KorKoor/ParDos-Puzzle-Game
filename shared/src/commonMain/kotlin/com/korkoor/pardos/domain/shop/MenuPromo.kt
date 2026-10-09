@@ -21,19 +21,22 @@ object MenuPromo {
         val campaignLevel: Int,
         val freeGemsLeft: Int,
         /** Cuántas veces se ha abierto el menú hoy: sirve para rotar la tarjeta. */
-        val visit: Int
+        val visit: Int,
+        /** La oferta del día sigue disponible (si ya la compró hoy, no se le vuelve a enseñar). */
+        val offerAvailable: Boolean = true
     )
 
     fun eligible(s: State): List<PromoKind> = buildList {
         if (!s.starterClaimed && s.campaignLevel >= STARTER_MIN_LEVEL) add(PromoKind.STARTER_PACK)
         if (!s.vip && s.campaignLevel >= VIP_MIN_LEVEL) add(PromoKind.VIP)
-        add(PromoKind.DAILY_OFFER)
+        if (s.offerAvailable) add(PromoKind.DAILY_OFFER)
         if (!s.vip && s.freeGemsLeft > 0) add(PromoKind.FREE_GEMS)
     }
 
-    fun pick(s: State): PromoKind {
+    /** La tarjeta de esta visita, o null si no hay nada que ofrecerle (entonces no se enseña tarjeta). */
+    fun pick(s: State): PromoKind? {
         val list = eligible(s)
-        return list[s.visit.mod(list.size)]
+        return if (list.isEmpty()) null else list[s.visit.mod(list.size)]
     }
 
     /** Lo que vale el pack inicial en gemas "de tienda" (para decir cuánto se ahorra, sin inventar cifras). */

@@ -58,6 +58,12 @@ Una sola tarjeta que **rota en cada visita** entre: pack inicial · VIP · ofert
 ### Al perder (segunda oportunidad)
 Tres vías, todas visibles: **anuncio** (gratis), **12 ◆** (`Economy.REVIVE_PRICE_GEMS`, mismo precio que en iPhone) o, si faltan gemas, **comprar el pack pequeño** desde ahí mismo. VIP continúa sin anuncio.
 
+### Reseñas en Google Play
+`RatePolicy` (shared, con pruebas) + `RatePrompt` (app): al pulsar SIGUIENTE tras una victoria **buena** —3 estrellas con 3 victorias seguidas, o un jefe vencido— se pide una reseña con la ventana nativa de Play (`com.google.android.play:review`). Condiciones: nivel de campaña ≥ 12, al menos 2 días desde la instalación, 60 días entre peticiones, máximo 3 en total y **nunca pegada a un anuncio**. Play tiene además su propio tope, así que a veces no enseña la ventana (se cuenta igualmente como pedida). Sin preguntas previas del tipo "¿te gusta el juego?": lo prohíbe la política de Play.
+
+### Oferta del día fija
+La oferta de la tienda y la del menú son **la misma y no cambian a mitad del día**: la primera vez que se pide cada día se elige (sin repetir una skin que ya tienes) y se guarda (`DailyOfferStore`). Así comprar la skin del día no hace aparecer otra con descuento en cadena; si ya la compró, la tarjeta del menú deja de enseñarla.
+
 ## 3. Lo que tienes que hacer tú (consolas)
 
 1. **AdMob → Aplicaciones → ParDos → Bloques de anuncios → Añadir bloque de anuncios → Intersticial.** Copia su ID (`ca-app-pub-3851960142449906/XXXXXXXXXX`) y pégalo en `gradle.properties`:

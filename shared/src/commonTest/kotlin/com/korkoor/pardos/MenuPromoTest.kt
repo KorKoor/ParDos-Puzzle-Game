@@ -1,7 +1,11 @@
 package com.korkoor.pardos
 
+import com.korkoor.pardos.domain.collection.ChestType
 import com.korkoor.pardos.domain.shop.MenuPromo
+import com.korkoor.pardos.domain.shop.OfferCodec
+import com.korkoor.pardos.domain.shop.OfferItem
 import com.korkoor.pardos.domain.shop.PromoKind
+import com.korkoor.pardos.domain.shop.TileSkin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,6 +31,27 @@ class MenuPromoTest {
         // con todas las skins en su poder, la oferta pasa a ser un cofre
         val everything = com.korkoor.pardos.domain.shop.DailyOffers.forDayAvoiding(1, allSkins)
         assertTrue(everything.item is com.korkoor.pardos.domain.shop.OfferItem.ChestOffer)
+    }
+
+    @Test fun theChosenOfferSurvivesBeingStoredAndRead() {
+        TileSkin.entries.forEach { skin ->
+            val item = OfferItem.SkinOffer(skin)
+            assertEquals(item, OfferCodec.decode(OfferCodec.encode(item)))
+        }
+        ChestType.entries.forEach { type ->
+            val item = OfferItem.ChestOffer(type)
+            assertEquals(item, OfferCodec.decode(OfferCodec.encode(item)))
+        }
+        assertEquals(null, OfferCodec.decode(null))
+        assertEquals(null, OfferCodec.decode("skin:no-existe"))
+        assertEquals(null, OfferCodec.decode("basura"))
+    }
+
+    @Test fun withNothingToOfferThereIsNoCard() {
+        val nothing = fresh.copy(vip = true, starterClaimed = true, campaignLevel = 60, offerAvailable = false)
+        assertEquals(null, MenuPromo.pick(nothing))
+        // sin la oferta pero con gemas gratis, sigue habiendo algo honesto que enseñar
+        assertEquals(PromoKind.FREE_GEMS, MenuPromo.pick(fresh.copy(offerAvailable = false, campaignLevel = 1)))
     }
 
     @Test fun aNewPlayerOnlySeesHarmlessThings() {

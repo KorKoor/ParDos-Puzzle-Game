@@ -310,6 +310,7 @@ fun PiggyDialog(retention: RetentionManager, price: String?, onBuy: () -> Unit, 
 fun LevelUpDialog(rewards: List<LevelReward>, onDismiss: () -> Unit) {
     if (rewards.isEmpty()) return
     val top = rewards.last().level
+    LaunchedEffect(top) { com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.LEVEL_UP) }
     CardDialog(onDismiss) {
         IconTile(Icons.Rounded.EmojiEvents, Gold, size = 72.dp, shape = CircleShape)
         Spacer(Modifier.height(12.dp))
@@ -332,6 +333,7 @@ fun LevelUpDialog(rewards: List<LevelReward>, onDismiss: () -> Unit) {
 /** Regalo por volver tras unos días sin jugar. */
 @Composable
 fun ComebackDialog(gift: ComebackGift, daysAway: Int, onDismiss: () -> Unit) {
+    LaunchedEffect(Unit) { com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.GIFT) }
     CardDialog(onDismiss) {
         IconTile(Icons.Rounded.CardGiftcard, Terracotta, size = 72.dp, shape = CircleShape)
         Spacer(Modifier.height(12.dp))

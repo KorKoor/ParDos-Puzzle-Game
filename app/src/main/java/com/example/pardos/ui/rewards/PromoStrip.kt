@@ -38,7 +38,6 @@ import com.korkoor.pardos.data.local.EconomyManager
 import com.korkoor.pardos.data.local.LocalDay
 import com.korkoor.pardos.domain.economy.Economy
 import com.korkoor.pardos.domain.shop.AdRewards
-import com.korkoor.pardos.domain.shop.DailyOffers
 import com.korkoor.pardos.domain.shop.MenuPromo
 import com.korkoor.pardos.domain.shop.OfferItem
 import com.korkoor.pardos.domain.shop.PromoKind
@@ -78,10 +77,17 @@ fun PromoStrip(
     var tick by remember { mutableIntStateOf(0) }
     val freeGemsLeft = remember(tick) { AdRewards.left(adFreq.usedToday(AdFrequency.SLOT_FREE_GEMS), AdRewards.FREE_GEMS_PER_DAY) }
     // Se calcula una vez por visita: no cambia mientras el jugador mira el menú (excepto al cobrar las gemas)
+    // La oferta del día es una sola por día (se guarda): si ya compró esa skin, no se le enseña
+    val offer = remember { com.korkoor.pardos.data.local.DailyOfferStore.offerFor(context, LocalDay.today(), economy.ownedSkins.value) }
+    val offerOwned = (offer.item as? OfferItem.SkinOffer)?.let { it.skin.id in economy.ownedSkins.value } == true
     val kind = remember(visit, vip, campaignLevel) {
-        MenuPromo.pick(MenuPromo.State(vip, economy.isStarterClaimed(), campaignLevel, freeGemsLeft, visit))
+        MenuPromo.pick(MenuPromo.State(vip, economy.isStarterClaimed(), campaignLevel, freeGemsLeft, visit, offerAvailable = !offerOwned))
+    } ?: return
+    // Si acaba de cobrar las últimas gemas gratis de hoy, la tarjeta pasa a la oferta del día (o desaparece si ya la compró)
+    val showKind = when {
+        kind == PromoKind.FREE_GEMS && freeGemsLeft == 0 -> if (!offerOwned) PromoKind.DAILY_OFFER else return
+        else -> kind
     }
-    val showKind = if (kind == PromoKind.FREE_GEMS && freeGemsLeft == 0) PromoKind.DAILY_OFFER else kind
 
     Column(modifier = modifier.fillMaxWidth()) {
         when (showKind) {
@@ -94,7 +100,6 @@ fun PromoStrip(
             )
             PromoKind.VIP -> VipRow(onShop)
             PromoKind.DAILY_OFFER -> {
-                val offer = remember { DailyOffers.forDayAvoiding(LocalDay.today(), economy.ownedSkins.value) }
                 val name = when (val item = offer.item) {
                     is OfferItem.SkinOffer -> skinName(item.skin)
                     is OfferItem.ChestOffer -> chestName(item.type)

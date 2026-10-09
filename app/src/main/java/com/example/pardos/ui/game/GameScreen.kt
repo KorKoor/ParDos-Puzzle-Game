@@ -515,12 +515,21 @@ fun GameScreen(
                         else activity?.let { act -> AdManager.showRewardedAd(act) { viewModel.grantDoubleCoins() } }
                     },
                     vip = isVipNow,
+                    newRecord = viewModel.lastRunWasRecord,
                     onRetry = { viewModel.retryLevel() },
                     onAutoNext = { viewModel.nextLevel() },
                     onDismiss = {
                         // Pausa natural tras ganar: si toca, un anuncio de pantalla completa (nunca con VIP, nunca tras perder)
+                        val adDue = inCampaign && activity != null && AdManager.isInterstitialDue(context, state.currentLevel, isVipNow, summaryBigMoment)
                         if (inCampaign && activity != null) AdManager.showInterstitialIfDue(activity, state.currentLevel, isVipNow, bigMoment = summaryBigMoment) { viewModel.nextLevel() }
                         else viewModel.nextLevel()
+                        // Momento feliz (3 estrellas en racha o jefe vencido): una reseña, pero nunca pegada a un anuncio
+                        if (inCampaign && activity != null) {
+                            com.korkoor.pardos.data.local.RatePrompt.maybeAsk(
+                                activity, state.currentLevel, viewModel.winStreak, state.starsEarned >= 3,
+                                com.korkoor.pardos.domain.level.LevelCatalog.spec(state.currentLevel).isBoss, adDue, isVipNow
+                            )
+                        }
                     },
                     nextGoal = remember { com.korkoor.pardos.data.local.RetentionManager(context).nextGoal() },
                     starHint = if (state.gameMode == GameMode.CLASICO && state.starsEarned in 1..2)

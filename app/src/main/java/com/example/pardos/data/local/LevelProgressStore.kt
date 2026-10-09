@@ -54,13 +54,18 @@ class LevelProgressStore(private val prefs: SharedPreferences) {
         )
     }
 
-    /** Guarda el resultado de un nivel solo si mejora lo anterior y desbloquea el siguiente. */
-    fun recordResult(mode: GameMode, level: Int, stars: Int, finalTime: Long, finalMoves: Int) {
+    /**
+     * Guarda el resultado de un nivel solo si mejora lo anterior y desbloquea el siguiente.
+     * Devuelve true si es un **récord personal** al repetir un nivel ya superado (menos movimientos o más estrellas que antes).
+     */
+    fun recordResult(mode: GameMode, level: Int, stars: Int, finalTime: Long, finalMoves: Int): Boolean {
         val p = prefix(mode)
         val editor = prefs.edit()
+        var personalBest = false
 
         val starKey = "${p}stars_level_$level"
-        if (stars > prefs.getInt(starKey, 0)) editor.putInt(starKey, stars)
+        val previousStars = prefs.getInt(starKey, 0)
+        if (stars > previousStars) editor.putInt(starKey, stars)
 
         val timeKey = "${p}best_time_level_$level"
         val prevTime = prefs.getLong(timeKey, Long.MAX_VALUE).let { if (it == 0L) Long.MAX_VALUE else it }
@@ -68,7 +73,12 @@ class LevelProgressStore(private val prefs: SharedPreferences) {
 
         val movesKey = "${p}best_moves_level_$level"
         val prevMoves = prefs.getInt(movesKey, Int.MAX_VALUE).let { if (it == 0) Int.MAX_VALUE else it }
-        if (finalMoves in 1 until prevMoves) editor.putInt(movesKey, finalMoves)
+        if (finalMoves in 1 until prevMoves) {
+            editor.putInt(movesKey, finalMoves)
+            // solo cuenta si ya lo había superado antes (la primera vez no hay nada que "batir")
+            if (previousStars > 0 && prevMoves != Int.MAX_VALUE) personalBest = true
+        }
+        if (previousStars in 1 until stars) personalBest = true
 
         val next = level + 1
         when (mode) {
@@ -83,5 +93,6 @@ class LevelProgressStore(private val prefs: SharedPreferences) {
             }
             else -> editor.apply()
         }
+        return personalBest
     }
 }

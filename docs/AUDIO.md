@@ -20,6 +20,9 @@ La **voz** (marimba, kalimba, bloop, koto, caja de música, xilófono, cristal, 
 - Hitos de ficha (`milestone`): 128, 256, 512… con fanfarria creciente.
 - Victoria: `star_1/2/3` suenan una a una con cada estrella; `win`, `win_big` (3 estrellas), `boss_win`. La música baja (duck) para que se oigan.
 
+### Detalles que también suenan
+Récord personal al repetir un nivel (`new_best`, con su aviso "¡NUEVO RÉCORD!" en el resumen), "ya casi" al cruzar el 50, 75 y 90 % de la meta (`goal_ping`, cada vez más agudo), hito de racha de victorias (`streak`), los poderes de espera **Limpiar** (`board_clear` + sacudida) y **Fusión** (nota de fusión), el corazón que se pierde en la Torre (`heart_lost`), subir de nivel de jugador (`level_up`), tocar un nivel bloqueado (`ui_locked`), cambiar de pestaña (`ui_tab`) y reclamar misiones diarias o el premio de la liga (`claim`).
+
 ### Menús, tienda y premios
 Un "tok" suave en **cualquier toque sobre algo pulsable** (modificador `Modifier.uiTapSounds()` aplicado una sola vez en `MainActivity`; si el botón ya tiene su propio sonido —comprar, reclamar, volver— el genérico se calla). Sonidos propios para: abrir/cerrar, interruptor on/off, pestañas, error, bloqueado, notificación, monedas contando, gemas, cofre (sacudida + apertura), cartas por rareza (común → legendaria), carta nueva, brillante (foil), vender, intercambiar, ruleta (tic/parada/premio), hucha, compra, anuncio con premio, regalo, subida de pase, subida de nivel/rango, platino, logros y misiones.
 
@@ -43,6 +46,12 @@ Cinco piezas en bucle (≈ 45 s cada una), cada una en **3 capas sincronizadas**
 Los **menús** conservan la melodía de siempre (`theme_song.mp3`) y solo cambian a la pieza `halloween` en la Noche de brujas. Mientras estás en el menú, la pieza del juego se va decodificando en segundo plano para que al empezar un nivel la música entre sin espera.
 
 La mezcla se hace en tiempo real (`AdaptiveMusic.kt`: hilo con `AudioTrack`, decodificación con `MediaCodec`, cambios de capa y de pieza con fundidos). La intensidad (`MusicDirector.intensity(0..3)`) sube con las jugadas seguidas que fusionan y baja al perder la racha. Al ganar, la música baja unos segundos para que se oiga la fanfarria.
+
+## Escucharlo en la computadora: la mesa de sonido
+```bash
+python tools/audio/soundboard.py          # genera tools/audio/soundboard.html y lo abre en el navegador
+```
+Una sola página (≈ 9 MB, lleva los audios dentro, funciona sin internet) con: los **93 efectos** agrupados (volumen que tienen en el juego y dónde suenan; los de reserva salen atenuados), las **notas de fusión** de cada voz con un **simulador de jugada** (varias fusiones + combo, con la misma lógica que `GameAudio.merges`), **escenas** que encadenan sonidos como el juego (victoria con 3 estrellas, derrota, racha hasta FLOW, cofre épico, jefe, menús, premios, ruleta) y el **mezclador de la música** (5 piezas × 3 capas, con los presets de intensidad del juego).
 
 ## Cómo se comporta con el teléfono
 - **Cortesía**: si ya suena música de otra app (Spotify, YouTube…), la música del juego **no arranca** ni le roba el audio; los efectos sí suenan.

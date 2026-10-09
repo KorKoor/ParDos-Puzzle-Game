@@ -96,6 +96,8 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-ads:24.9.0")
     implementation("com.android.billingclient:billing-ktx:8.0.0")
+    // Ventana nativa de Google Play para pedir una reseña en un buen momento (la propia Play decide si la enseña)
+    implementation("com.google.android.play:review:2.0.2")
 
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
     implementation("com.google.firebase:firebase-auth")

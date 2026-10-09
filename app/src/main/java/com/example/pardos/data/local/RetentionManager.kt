@@ -487,6 +487,7 @@ class RetentionManager(context: Context) {
     /** Entrega el premio de la semana pasada. Devuelve el resultado o null si no había nada pendiente. */
     fun claimLeagueResult(): LeagueResult? {
         val r = pendingLeagueResult() ?: return null
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CLAIM)
         grantLeagueResult(r)
         prefs.edit().remove(K_LEAGUE_PENDING).apply()
         bump()

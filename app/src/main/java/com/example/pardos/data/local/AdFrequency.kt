@@ -19,6 +19,10 @@ class AdFrequency(context: Context) {
     /** Una victoria más desde el último anuncio de pantalla completa. */
     fun onCampaignWin() { prefs.edit().putInt(K_WINS, prefs.getInt(K_WINS, 0) + 1).apply() }
 
+    /** Días enteros desde que se instaló la versión (para no pedir reseña en la primera sesión). */
+    fun installAgeDays(now: Long = System.currentTimeMillis()): Int =
+        ((now - prefs.getLong(K_FIRST_SEEN, now)).coerceAtLeast(0) / 86_400_000L).toInt()
+
     fun recordInterstitial(now: Long = System.currentTimeMillis(), day: Int = LocalDay.today()) {
         prefs.edit()
             .putLong(K_LAST_AD, now)

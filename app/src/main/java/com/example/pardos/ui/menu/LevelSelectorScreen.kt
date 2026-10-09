@@ -233,6 +233,7 @@ fun LevelSelectorScreen(
                         onFriendsClick = { names -> hint = names },
                         onClick = {
                             if (item.level.isLocked) {
+                                com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_LOCKED)
                                 hint = "Completa el nivel ${item.level.id - 1} para desbloquearlo"
                             } else {
                                 hint = null

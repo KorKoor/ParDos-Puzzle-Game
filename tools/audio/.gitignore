@@ -1,3 +1,6 @@
 
 tools/audio/_sheet.png
 tools/audio/__pycache__/
+
+# mesa de sonido generada (pesa ~9 MB): python tools/audio/soundboard.py
+soundboard.html

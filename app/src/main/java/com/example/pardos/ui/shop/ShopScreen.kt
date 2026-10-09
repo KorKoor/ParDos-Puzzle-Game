@@ -104,7 +104,7 @@ fun ShopScreen(
     val liveEvents = remember(today) { com.korkoor.pardos.domain.events.EventCalendar.activeOn(today) }
     var eventDialog by remember { mutableStateOf<com.korkoor.pardos.domain.events.GameEvent?>(null) }
     eventDialog?.let { ev -> com.korkoor.pardos.ui.rewards.EventSkinDialog(ev, retention) { eventDialog = null } }
-    val offer = remember(today, ownedSkins) { DailyOffers.forDayAvoiding(today, ownedSkins) }
+    val offer = remember(today) { com.korkoor.pardos.data.local.DailyOfferStore.offerFor(context, today, economy.ownedSkins.value) }
 
     LaunchedEffect(Unit) { billing.connect() }
 
@@ -125,7 +125,7 @@ fun ShopScreen(
                 items(ShopTab.entries.toList()) { t ->
                     val sel = t == tab
                     JellyRow(
-                        onClick = { tab = t },
+                        onClick = { if (t != tab) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_TAB); tab = t },
                         shape = RoundedCornerShape(18.dp), fill = if (sel) Navy else Color.White, lipHeight = 4.dp,
                         lip = if (sel) Color(0xFF1E2036) else Color(0xFFCDB894).copy(alpha = 0.55f),
                         padding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)

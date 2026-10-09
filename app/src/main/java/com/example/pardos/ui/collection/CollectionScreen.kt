@@ -225,7 +225,7 @@ fun CollectionScreen(onBack: () -> Unit) {
                 item {
                     Tabs(
                         listOf("ÁLBUM" to null, "REPETIDAS" to spareTotal.takeIf { it > 0 }, "INTERCAMBIO" to incoming.size.takeIf { it > 0 }),
-                        selected = tab, onSelect = { tab = it }
+                        selected = tab, onSelect = { if (it != tab) com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UI_TAB); tab = it }
                     )
                 }
 
