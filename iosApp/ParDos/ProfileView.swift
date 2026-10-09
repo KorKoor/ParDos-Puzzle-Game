@@ -26,6 +26,7 @@ struct ProfileView: View {
                 if let state = model.state {
                     card(state)
                     stats(state)
+                    progressButtons(state)
                     showcase
                     gallery(state)
                 }
@@ -81,6 +82,10 @@ struct ProfileView: View {
                             }
                         }
                     }
+                    Text(state.title.uppercased())
+                        .font(.system(size: 9, weight: .heavy))
+                        .kerning(1.5)
+                        .foregroundColor(ink.opacity(0.85))
                     HStack(spacing: 6) {
                         Text("NIVEL \(state.playerLevel)")
                             .font(.system(size: 10, weight: .heavy))
@@ -98,6 +103,35 @@ struct ProfileView: View {
             }
             .padding(16)
         }
+    }
+
+    // MARK: Logros y prestigio
+
+    private func progressButtons(_ state: MetaState) -> some View {
+        HStack(spacing: 10) {
+            bigTile("trophy.fill", Theme.gold, "Logros", "82 por conseguir") { model.sheet = .achievements }
+            bigTile("crown.fill", Color(hex: 0x8E6BD6), "Prestigio", "\(state.rank) · \(state.prestige) pts") { model.sheet = .prestige }
+        }
+    }
+
+    private func bigTile(_ symbol: String, _ color: Color, _ title: String, _ detail: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(color))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                    Text(detail).font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .card(radius: 20)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: Estadísticas

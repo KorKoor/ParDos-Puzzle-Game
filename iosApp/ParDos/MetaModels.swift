@@ -188,6 +188,9 @@ struct MetaState: Decodable {
     let repair: RepairInfo?
     let coinPercent: Int
     let dayOfWeek: Int
+    let title: String
+    let rank: String
+    let prestige: Int
 }
 
 // MARK: - Catálogos
@@ -464,6 +467,7 @@ struct WinReward: Decodable {
     let coins: Int
     let rawCoins: Int
     let streakPct: Int
+    let flowPct: Int
     let albumPct: Int
     let eventMult: Double
     let vipBonus: Bool
@@ -634,4 +638,113 @@ struct RecordsInfo: Decodable {
     let totalWins: Int
     let totalStars: Int
     let daysPlayed: Int
+}
+
+// MARK: - Logros y prestigio
+
+struct AchUnlock: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let desc: String
+    let rarity: String
+    let coins: Int
+    let gems: Int
+    let chest: String?
+}
+
+struct AchCheckResult: Decodable {
+    let unlocked: [AchUnlock]
+}
+
+struct AchItem: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let desc: String
+    let color: Int
+    let rarity: String
+    let tier: String
+    let unlocked: Bool
+    let coins: Int
+    let gems: Int
+    let category: String
+}
+
+struct AchListData: Decodable {
+    let list: [AchItem]
+    let done: Int
+    let total: Int
+}
+
+struct PrestigeRankRow: Decodable, Identifiable {
+    let title: String
+    let min: Int
+    let coins: Int
+    let gems: Int
+    let chest: String?
+
+    var id: String { title }
+}
+
+struct MilestoneItem: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let desc: String
+    let group: String
+    let target: Int
+    let progress: Int
+    let done: Bool
+    let coins: Int
+    let gems: Int
+    let chest: String?
+}
+
+struct TitleItem: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let rarity: String
+    let how: String
+    let owned: Bool
+    let equipped: Bool
+    let price: Int
+}
+
+struct TierCount: Decodable, Identifiable {
+    let tier: String
+    let label: String
+    let count: Int
+
+    var id: String { tier }
+}
+
+struct PrestigeData: Decodable {
+    let score: Int
+    let rank: String
+    let rankIndex: Int
+    let nextRank: String?
+    let pointsToNext: Int
+    let progress: Double
+    let ranks: [PrestigeRankRow]
+    let trophies: Int
+    let trophiesTotal: Int
+    let tiers: [TierCount]
+    let milestonesDone: Int
+    let milestonesTotal: Int
+    let platinum: Bool
+    let platDone: Int
+    let platTotal: Int
+    let platCoins: Int
+    let platGems: Int
+    let milestones: [MilestoneItem]
+    let titles: [TitleItem]
+    let equippedTitle: String
+}
+
+struct PrestigeEventInfo: Decodable {
+    let type: String
+    let title: String?
+    let desc: String?
+    let count: Int?
+    let coins: Int?
+    let gems: Int?
+    let chest: String?
 }

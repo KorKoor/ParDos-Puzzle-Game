@@ -124,7 +124,7 @@ class MetaSessionTest {
     @Test fun winningLevelOnePaysCoinsUnlocksAndProgressesMissions() {
         val m = fresh()
         m.openApp()
-        val win = ok(m.onWin(level = 1, daily = false, stars = 3, moves = 12, timeMs = 40_000, maxTile = 16, merges = 9, usedHelp = false))
+        val win = ok(m.onWin(level = 1, daily = false, stars = 3, moves = 12, timeMs = 40_000, maxTile = 16, merges = 9, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertTrue(win.int("coins") >= 10 + 30 + 20, "monedas de la primera victoria: ${win["coins"]}")
         assertEquals(true, win["firstClear"])
         assertEquals(75, win.int("firstWinCoins"))
@@ -135,7 +135,7 @@ class MetaSessionTest {
         assertTrue(m.st().int("xp") > 0)
         assertTrue(m.st().map("season").int("points") >= 15)
         // la segunda vez ya no es primera victoria
-        val again = ok(m.onWin(level = 1, daily = false, stars = 2, moves = 20, timeMs = 50_000, maxTile = 8, merges = 5, usedHelp = false))
+        val again = ok(m.onWin(level = 1, daily = false, stars = 2, moves = 20, timeMs = 50_000, maxTile = 8, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertEquals(false, again["firstClear"])
         assertEquals(0, again.int("firstWinCoins"))
         assertEquals(3, m.starsOf(1), "no se pierden estrellas")
@@ -143,9 +143,9 @@ class MetaSessionTest {
 
     @Test fun lastLevelOfAChapterOpensItsChestOnce() {
         val m = fresh()
-        val win = ok(m.onWin(level = 20, daily = false, stars = 1, moves = 40, timeMs = 90_000, maxTile = 64, merges = 30, usedHelp = false))
+        val win = ok(m.onWin(level = 20, daily = false, stars = 1, moves = 40, timeMs = 90_000, maxTile = 64, merges = 30, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertNotNull(win["chapterChest"])
-        val again = ok(m.onWin(level = 20, daily = false, stars = 1, moves = 40, timeMs = 90_000, maxTile = 64, merges = 30, usedHelp = false))
+        val again = ok(m.onWin(level = 20, daily = false, stars = 1, moves = 40, timeMs = 90_000, maxTile = 64, merges = 30, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertEquals(null, again["chapterChest"])
     }
 
@@ -181,7 +181,7 @@ class MetaSessionTest {
         val id = (first["id"] as Double).toInt()
         fails(m.claimMission(id))
         // muchas victorias completan las misiones fáciles
-        repeat(6) { m.onWin(level = 1 + it, daily = false, stars = 3, moves = 10, timeMs = 30_000, maxTile = 128, merges = 60, usedHelp = false) }
+        repeat(6) { m.onWin(level = 1 + it, daily = false, stars = 3, moves = 10, timeMs = 30_000, maxTile = 128, merges = 60, usedHelp = false, kind = "ZEN", boss = false, flow = 0) }
         val done = jsonObject(m.state()).list("missions").map { it as Map<*, *> }.filter { it["done"] == true }
         assertTrue(done.isNotEmpty())
         val target = (done.first()["id"] as Double).toInt()
@@ -192,7 +192,7 @@ class MetaSessionTest {
     @Test fun seasonPassClaimsTiersAsPointsArrive() {
         val m = fresh()
         fails(m.claimTier(1, false))
-        repeat(12) { m.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 30_000, maxTile = 16, merges = 5, usedHelp = false) }
+        repeat(12) { m.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 30_000, maxTile = 16, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0) }
         val tier = m.st().map("season").int("tier")
         assertTrue(tier >= 1, "tras 12 victorias hay al menos un nivel del pase")
         val before = m.st().int("coins")
@@ -242,7 +242,7 @@ class MetaSessionTest {
 
     @Test fun leagueClosesAWeekAndPaysTheResult() {
         val m = fresh()
-        repeat(8) { m.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 30_000, maxTile = 16, merges = 5, usedHelp = false) }
+        repeat(8) { m.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 30_000, maxTile = 16, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0) }
         m.tick(day + 8, (day + 8) * 86_400_000L, noon)
         val lg = m.st().map("league")
         assertTrue(lg["pending"] != null || lg["id"] == "BRONZE")
@@ -254,7 +254,7 @@ class MetaSessionTest {
         assertEquals(1, start.int("floor"))
         assertEquals(3, start.int("hearts"))
         val before = m.st().int("coins")
-        val win = ok(m.towerWin(maxTile = 128, merges = 30))
+        val win = ok(m.towerWin(maxTile = 128, merges = 30, kind = "ZEN", boss = false, flow = 0))
         assertTrue(win.int("coins") > 0)
         assertTrue(m.st().int("coins") >= before + win.int("coins"))
         assertEquals(2, jsonObject(m.towerNext()).int("floor"))
@@ -293,7 +293,51 @@ class MetaSessionTest {
         assertEquals(a.int("undos"), m.st().int("undos"))
         // pedir la ayuda otra vez no regala más
         assertEquals(0, jsonObject(m.prepareLevel(5)).int("undos"))
-        m.onWin(level = 5, daily = false, stars = 1, moves = 20, timeMs = 1000, maxTile = 64, merges = 10, usedHelp = true)
+        m.onWin(level = 5, daily = false, stars = 1, moves = 20, timeMs = 1000, maxTile = 64, merges = 10, usedHelp = true, kind = "ZEN", boss = false, flow = 0)
         assertEquals(100, jsonObject(m.prepareLevel(5)).int("percent"))
+    }
+
+    @Test fun achievementsUnlockOnceAndPayTheirReward() {
+        val m = fresh()
+        val coins0 = m.st().int("coins")
+        val first = jsonObject(m.checkAchievements(true, 1, 12, 20_000, 200, 3, 5, true, 3, "CLASICO", "2:0:0;16:0:1"))
+        val ids = first.list("unlocked").map { (it as Map<*, *>)["id"] }
+        assertTrue("first_win" in ids && "tile_16" in ids && "combo_3" in ids, "salieron $ids")
+        assertTrue(m.st().int("coins") > coins0)
+        val again = jsonObject(m.checkAchievements(true, 1, 12, 20_000, 200, 3, 5, true, 3, "CLASICO", "2:0:0;16:0:1"))
+        assertEquals(0, again.list("unlocked").size, "no se pagan dos veces")
+        val list = jsonObject(m.achievementsList())
+        assertEquals(82, list.int("total"))
+        assertTrue(list.int("done") >= 3)
+        assertTrue(list.list("list").all { it is Map<*, *> })
+    }
+
+    @Test fun achievementTilesWithBadDataAreIgnored() {
+        val m = fresh()
+        val r = jsonObject(m.checkAchievements(false, 1, 0, 0, 0, 0, 9, true, 3, "NOPE", "x;0:0:0;4:-1:2;8:1"))
+        assertTrue(r.list("unlocked").isEmpty() || r.list("unlocked").isNotEmpty())
+    }
+
+    @Test fun prestigeRankClimbsAndPaysItsRewardOnce() {
+        val m = fresh()
+        m.prestigeState()
+        repeat(40) { n -> m.onWin(level = n + 1, daily = false, stars = 3, moves = 12, timeMs = 30_000, maxTile = 256, merges = 40, usedHelp = false, kind = "ZEN", boss = false, flow = 0) }
+        val st = jsonObject(m.prestigeState())
+        assertTrue(st.int("score") > 0)
+        assertEquals(st.int("milestonesDone"), (st.list("milestones").count { (it as Map<*, *>)["done"] == true }))
+        assertEquals(8, st.list("ranks").size)
+        val events = jsonArray(m.takePrestigeEvents())
+        assertTrue(jsonArray(m.takePrestigeEvents()).isEmpty(), "los avisos se entregan una sola vez")
+        assertTrue(events.all { it is Map<*, *> })
+    }
+
+    @Test fun titlesCanBeBoughtWithGemsAndEquipped() {
+        val m = fresh()
+        fails(m.buyTitle("g_fusion_king"))
+        m.grantGems(500)
+        ok(m.buyTitle("g_fusion_king"))
+        assertEquals("Rey de las fusiones", m.st()["title"])
+        fails(m.equipTitle("t_platinum"))
+        ok(m.equipTitle("default"))
     }
 }

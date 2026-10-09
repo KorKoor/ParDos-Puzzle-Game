@@ -13,6 +13,8 @@ import com.korkoor.pardos.domain.level.StormRules
 import com.korkoor.pardos.domain.level.StormStone
 import com.korkoor.pardos.domain.level.Twist
 import com.korkoor.pardos.domain.level.goalText
+import com.korkoor.pardos.domain.flow.FlowMeter
+import com.korkoor.pardos.domain.flow.FlowTier
 import com.korkoor.pardos.domain.logic.CoachStep
 import com.korkoor.pardos.domain.logic.DailyChallenge
 import com.korkoor.pardos.domain.logic.Direction
@@ -60,6 +62,9 @@ class GameSession(seed: Long) {
     private var peakTile = 0
     private var extraTimeMs = 0L
     private var comboTimeBonus = true
+    private var flowStreak = 0
+    private var peakFlowStreak = 0
+    private var flowCallout = ""
     private var powersAllowed = true
     private var customLabel = ""
     private var assistPercent = 100
@@ -164,6 +169,9 @@ class GameSession(seed: Long) {
         mergePairs = 0
         peakTile = 0
         extraTimeMs = 0L
+        flowStreak = 0
+        peakFlowStreak = 0
+        flowCallout = ""
         engine = GameEngine(spec.boardSize, rng, spec.stoneSet)
         tiles = initialTiles()
     }
@@ -223,6 +231,10 @@ class GameSession(seed: Long) {
         stats = stats.after(pairs, if (spec.goal == LevelGoal.COMBO) spec.goalValue else 0, harvested)
         tiles = finalTiles
         mergePairs += pairs
+        val flowBefore = flowStreak
+        flowStreak = FlowMeter.next(flowStreak, pairs > 0)
+        peakFlowStreak = maxOf(peakFlowStreak, flowStreak)
+        flowCallout = FlowMeter.tierUp(flowBefore, flowStreak)?.callout ?: ""
         peakTile = maxOf(peakTile, finalTiles.maxOfOrNull { it.value } ?: 0)
 
         // El reloj de los niveles contrarreloj regala segundos con las combinaciones
@@ -417,7 +429,9 @@ class GameSession(seed: Long) {
             "coachDone" to coach?.mergesDone, "coachNeeded" to coach?.mergesNeeded,
             "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
             "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs,
-            "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent
+            "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent,
+            "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
+            "empty" to (spec.freeCells - tiles.size).coerceAtLeast(0), "stuck" to engine.isGameOver(tiles)
         )
     }
 

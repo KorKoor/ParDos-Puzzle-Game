@@ -35,6 +35,14 @@ struct GameView: View {
                         ModeResultOverlay(snap: snap)
                     }
                 }
+                if !snap.callout.isEmpty {
+                    Text(snap.callout)
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.energy)
+                        .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 2)
+                        .transition(.scale)
+                        .allowsHitTesting(false)
+                }
                 if let flash = model.raceFlash {
                     Text("+\(flash) s")
                         .font(.system(size: 44, weight: .black, design: .rounded))

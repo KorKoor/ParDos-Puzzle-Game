@@ -65,7 +65,7 @@ struct HomeView: View {
                             .foregroundColor(bannerInk)
                             .lineLimit(1)
                         HStack(spacing: 6) {
-                            Text("NIVEL \(level)")
+                            Text("NIVEL \(level) · " + (state?.rank ?? "Novato").uppercased())
                                 .font(.system(size: 10, weight: .heavy))
                                 .kerning(1.5)
                                 .foregroundColor(bannerInk.opacity(0.8))

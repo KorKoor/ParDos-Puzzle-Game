@@ -52,6 +52,11 @@ struct BoardSnap: Decodable {
     let powers: Bool
     let label: String
     let assist: Int
+    let combo: Int
+    let flow: Int
+    let callout: String
+    let empty: Int
+    let stuck: Bool
 }
 
 struct GuideHint: Decodable {

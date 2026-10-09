@@ -24,7 +24,7 @@ extension AppModel {
 
     func finishTower(_ s: BoardSnap) {
         if s.status == "won" {
-            let json = act { $0.towerWin(maxTile: Int32(s.maxTile), merges: Int32(s.merges)) }
+            let json = act { $0.towerWin(maxTile: Int32(s.maxTile), merges: Int32(s.merges), kind: s.kind, boss: s.kind == "BOSS", flow: Int32(s.flow)) }
             towerWinInfo = decodeJSON(TowerWinInfo.self, json)
             if hapticsOn { UINotificationFeedbackGenerator().notificationOccurred(.success) }
         } else {
@@ -250,5 +250,78 @@ extension AppModel {
         sounds.play("better_pop")
         buzz(.medium)
         refresh(animated: true)
+    }
+}
+
+// MARK: - Logros y prestigio
+
+extension AppModel {
+    var achievementMode: String {
+        switch mode {
+        case .campaign, .tower: return "CLASICO"
+        case .daily, .race: return "DESAFIO"
+        case .duel: return "DUELO"
+        case .custom: return customTimed ? "DESAFIO" : "ZEN"
+        }
+    }
+
+    /// Después de cada jugada se miran los logros con el estado del tablero.
+    func checkAchievements(_ now: BoardSnap) {
+        var parts: [String] = []
+        for tile in now.tiles { parts.append("\(tile.v):\(tile.r):\(tile.c)") }
+        tickClock()
+        let json = meta.checkAchievements(
+            completed: now.status == "won", level: Int32(now.level), moves: Int32(now.moves), elapsedMs: Int64(now.elapsedMs),
+            score: Int32(now.score), combo: Int32(now.combo), empty: Int32(now.empty), hasMoves: !now.stuck,
+            size: Int32(now.size), mode: achievementMode, tiles: parts.joined(separator: ";")
+        )
+        guard let result = decodeJSON(AchCheckResult.self, json), !result.unlocked.isEmpty else { return }
+        persist()
+        refreshState()
+        achQueue.append(contentsOf: result.unlocked)
+        showNextAchievement()
+    }
+
+    func showNextAchievement() {
+        if achBanner != nil || achQueue.isEmpty { return }
+        achBanner = achQueue.removeFirst()
+        sounds.play("better_pop")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) { [weak self] in
+            self?.achBanner = nil
+            self?.showNextAchievement()
+        }
+    }
+
+    func loadAchievements() -> AchListData? {
+        return decodeJSON(AchListData.self, meta.achievementsList())
+    }
+
+    func loadPrestige() -> PrestigeData? {
+        tickClock()
+        let data = decodeJSON(PrestigeData.self, meta.prestigeState())
+        persist()
+        return data
+    }
+
+    func equipTitle(_ id: String) { run { $0.equipTitle(id: id) } }
+    func buyTitle(_ id: String) { run { $0.buyTitle(id: id) } }
+
+    /// Hitos, rangos, títulos y Platino nuevos: se avisan una sola vez.
+    func deliverPrestigeEvents() {
+        guard let events = decodeJSON([PrestigeEventInfo].self, meta.takePrestigeEvents()) else { return }
+        for event in events {
+            switch event.type {
+            case "rank":
+                push(.info("¡Rango \(event.title ?? "")!", "Premio: +\(event.coins ?? 0) monedas y +\(event.gems ?? 0) gemas" + (event.chest != nil ? " y un cofre" : ""), "crown.fill"))
+            case "platinum":
+                push(.info("¡PLATINO!", "Tienes todos los logros y todos los hitos. +\(event.coins ?? 0) monedas, +\(event.gems ?? 0) gemas.", "trophy.fill"))
+            case "backfill":
+                push(.info("Hitos cobrados", "Ya habías logrado \(event.count ?? 0) hitos: +\(event.coins ?? 0) monedas y +\(event.gems ?? 0) gemas.", "checkmark.seal.fill"))
+            case "title":
+                showToast("Título nuevo: \(event.title ?? "")")
+            default:
+                showToast("Hito: \(event.title ?? "") · +\(event.coins ?? 0) monedas")
+            }
+        }
     }
 }

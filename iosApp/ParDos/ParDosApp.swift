@@ -27,6 +27,7 @@ struct RootView: View {
                     .zIndex(30)
             }
             CelebrationOverlay()
+            AchievementBanner()
             if !splashDone {
                 SplashView()
                     .transition(.opacity)
@@ -80,6 +81,10 @@ struct RootView: View {
             CustomGameSheet()
         case .records:
             RecordsSheet()
+        case .achievements:
+            AchievementsSheet()
+        case .prestige:
+            PrestigeSheet()
         }
     }
 }

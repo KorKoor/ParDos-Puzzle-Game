@@ -29,7 +29,8 @@ MAPPING = {
     "levelCard": "LevelCard", "dailyCard": "LevelCard", "hint": "GuideHint",
     "assist": "AssistInfo", "towerStart": "TowerInfo", "towerNext": "TowerInfo", "towerWin": "TowerWinInfo", "towerLose": "TowerLossInfo",
     "raceStage": "RaceStageInfo", "raceFinish": "RaceEndInfo", "duelConfig": "DuelConfigInfo", "duelResult": "DuelResultInfo",
-    "records": "RecordsInfo",
+    "records": "RecordsInfo", "achCheck": "AchCheckResult", "achList": "AchListData", "prestige": "PrestigeData",
+    "prestigeEvents": "[PrestigeEventInfo]",
 }
 
 

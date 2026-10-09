@@ -13,6 +13,8 @@ import com.korkoor.pardos.domain.collection.Showcase
 import com.korkoor.pardos.domain.collection.TokenRules
 import com.korkoor.pardos.domain.economy.Economy
 import com.korkoor.pardos.domain.events.EventCalendar
+import com.korkoor.pardos.domain.flow.FlowMeter
+import com.korkoor.pardos.domain.flow.FlowTier
 import com.korkoor.pardos.domain.flow.WinStreak
 import com.korkoor.pardos.domain.level.LevelCatalog
 import com.korkoor.pardos.domain.level.LevelRules
@@ -53,6 +55,8 @@ class MetaSession {
     private val col = CollectionOps(store, wallet)
     private val ret = Retention(store, wallet, col, clock)
     private val modes = Modes(store, wallet, col, ret, clock)
+    private val ach = Achievements(store, wallet, col)
+    private val prestige = Prestige(store, wallet, col, ach, ret)
 
     // ------------------------------------------------------------------ guardado y reloj
 
@@ -116,7 +120,10 @@ class MetaSession {
      * Victoria. [level] es el número de nivel (o el del reto si [daily]). Entrega monedas, experiencia, puntos del pase,
      * misiones, hucha, cofre de capítulo y todo lo demás, y devuelve el desglose para enseñarlo.
      */
-    fun onWin(level: Int, daily: Boolean, stars: Int, moves: Int, timeMs: Long, maxTile: Int, merges: Int, usedHelp: Boolean): String {
+    fun onWin(
+        level: Int, daily: Boolean, stars: Int, moves: Int, timeMs: Long, maxTile: Int, merges: Int, usedHelp: Boolean,
+        kind: String, boss: Boolean, flow: Int
+    ): String {
         val st = stars.coerceIn(1, 3)
         if (!daily) modes.clearLevelAttempts(level)
         val firstClear = !daily && starsOf(level) == 0
@@ -132,7 +139,8 @@ class MetaSession {
             wallet.addGems(milestone.gems)
             wallet.addUndos(milestone.undos)
         }
-        val base = rawCoins * (100 + streakPct) / 100
+        val flowPct = FlowMeter.coinBonusPct(FlowTier.entries[flow.coerceIn(0, FlowTier.entries.size - 1)])
+        val base = rawCoins * (100 + streakPct + flowPct) / 100
         val eventMult = EventCalendar.coinMultiplier(clock.today)
         val albumPct = AlbumBonus.coinPercent(col.owned, col.foil)
         val withEvent = EventCalendar.apply(base, AlbumBonus.combine(eventMult, col.owned, col.foil))
@@ -177,9 +185,12 @@ class MetaSession {
         if (secs > 0) ret.updateMission(MissionType.WIN_UNDER_TIME, secs)
         if (!usedHelp) ret.updateMission(MissionType.WIN_NO_POWERUPS, 1)
 
+        prestige.onLevelWon(kind, boss, flow >= FlowTier.FLOW.ordinal, winStreak)
+        if (daily) prestige.onDailyDone()
+        prestige.refresh(unlockedLevel)
         val teaser = if (daily) null else com.korkoor.pardos.domain.flow.NextLevelTeaser.after(level)
         return ok(
-            "coins" to coins, "rawCoins" to rawCoins, "streakPct" to streakPct, "albumPct" to albumPct,
+            "coins" to coins, "rawCoins" to rawCoins, "streakPct" to streakPct, "flowPct" to flowPct, "albumPct" to albumPct,
             "eventMult" to eventMult, "vipBonus" to wallet.vip, "boostActive" to (wallet.boostWins > 0),
             "firstClear" to firstClear, "firstWinCoins" to bonus.firstWinCoins, "piggyGems" to bonus.piggyGems,
             "seasonPoints" to bonus.seasonPoints, "newBest" to newBest, "stars" to st, "winStreak" to winStreak,
@@ -218,8 +229,10 @@ class MetaSession {
     fun towerInfo(): String = modes.towerJson()
     fun towerEnd() { modes.towerEnd() }
 
-    fun towerWin(maxTile: Int, merges: Int): String {
+    fun towerWin(maxTile: Int, merges: Int, kind: String, boss: Boolean, flow: Int): String {
         val c = modes.towerWin(maxTile, merges)
+        prestige.onLevelWon(kind, boss, flow >= FlowTier.FLOW.ordinal, store.int("win_streak"))
+        prestige.refresh(unlockedLevel)
         return ok("coins" to c.coins, "gems" to c.gems, "heart" to c.heart, "hearts" to c.hearts, "floor" to modes.towerFloor)
     }
 
@@ -243,6 +256,37 @@ class MetaSession {
     fun duelResult(score1: Int, score2: Int): String = modes.duelResultJson(score1, score2)
     fun customFinished(score: Int, won: Boolean, merges: Int, maxTile: Int) { modes.customFinished(score, won, merges, maxTile) }
     fun records(): String = modes.recordsJson()
+
+
+    // ------------------------------------------------------------------ logros y prestigio
+
+    /** Mira los logros con el estado del tablero (se llama después de cada jugada). Devuelve los que se desbloquearon. */
+    fun checkAchievements(
+        completed: Boolean, level: Int, moves: Int, elapsedMs: Long, score: Int, combo: Int, empty: Int, hasMoves: Boolean,
+        size: Int, mode: String, tiles: String
+    ): String {
+        val ctx = parseAchContext(completed, level, moves, elapsedMs, score, combo, empty, hasMoves, size, mode, tiles)
+        val fresh = ach.check(ctx)
+        if (fresh.isNotEmpty()) prestige.refresh(unlockedLevel)
+        return obj("unlocked" to fresh.map {
+            robj("id" to it.id, "title" to it.title, "desc" to it.description, "rarity" to it.rarity.name, "coins" to it.coins, "gems" to it.gems, "chest" to it.chest?.name)
+        })
+    }
+
+    fun achievementsList(): String = obj("list" to ach.listJson(), "done" to ach.unlocked.size, "total" to com.korkoor.pardos.domain.achievements.AchievementCatalog.all.size)
+
+    fun prestigeState(): String {
+        prestige.refresh(unlockedLevel)
+        return prestige.stateJson(unlockedLevel)
+    }
+
+    /** Avisos de prestigio pendientes (hitos, rangos, títulos, Platino); se entregan una sola vez. */
+    fun takePrestigeEvents(): String = arr(prestige.takeEvents())
+
+    fun equipTitle(id: String): String = if (prestige.equip(id, unlockedLevel)) ok() else no("Aún no tienes ese título")
+    fun buyTitle(id: String): String = if (prestige.buy(id)) ok() else no("No alcanzan las gemas")
+
+    private fun afterChange() { prestige.refresh(unlockedLevel) }
 
     // ------------------------------------------------------------------ al abrir la app
 
@@ -298,6 +342,7 @@ class MetaSession {
             )
         }
         val reveals = ret.checkHiddenSkins().map { it.id }
+        afterChange()
         return ok("drops" to drops.map { Raw(it) }, "pieces" to col.owned.size, "was" to before.size, "reveals" to reveals)
     }
 
@@ -331,12 +376,12 @@ class MetaSession {
 
     fun craftPiece(id: String): String {
         val c = CollectibleCatalog.byId(id) ?: return no("Pieza desconocida")
-        return if (col.craft(c)) ok() else no("No alcanza la esencia")
+        return if (col.craft(c)) { afterChange(); ok() } else no("No alcanza la esencia")
     }
 
     fun foilPiece(id: String): String {
         val c = CollectibleCatalog.byId(id) ?: return no("Pieza desconocida")
-        return if (col.upgradeFoil(c)) ok() else no("No alcanza la esencia")
+        return if (col.upgradeFoil(c)) { afterChange(); ok() } else no("No alcanza la esencia")
     }
 
     fun buyShardPack(): String = if (col.buyShardPack(clock.today)) ok() else no("No alcanzan las gemas o llegaste al tope de hoy")
@@ -345,6 +390,7 @@ class MetaSession {
     fun claimSeriesReward(seriesId: String): String {
         val s = Series.entries.firstOrNull { it.id == seriesId } ?: return no("Serie desconocida")
         val r = col.claimSeries(s) ?: return no("Aún no está completa")
+        afterChange()
         return ok("coins" to r.first, "gems" to r.second)
     }
 
@@ -563,7 +609,9 @@ class MetaSession {
             "badges" to ret.pendingBadges() + (if (dr != null) 1 else 0),
             "repair" to (if (ret.pendingRepair() > 0) Raw(obj("lost" to ret.pendingRepair(), "cost" to ret.repairCost())) else null),
             "coinPercent" to AlbumBonus.coinPercent(col.owned, col.foil),
-            "dayOfWeek" to EventCalendar.dayOfWeek(today)
+            "dayOfWeek" to EventCalendar.dayOfWeek(today),
+            "title" to com.korkoor.pardos.domain.prestige.ProfileTitles.byId(prestige.equippedTitleId).name,
+            "rank" to prestige.rank(unlockedLevel).title, "prestige" to prestige.score(unlockedLevel)
         )
     }
 

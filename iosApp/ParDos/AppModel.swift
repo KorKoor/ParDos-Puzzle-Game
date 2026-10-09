@@ -41,6 +41,8 @@ enum Sheet: Identifiable {
     case lowFunds
     case custom
     case records
+    case achievements
+    case prestige
 
     var id: String {
         switch self {
@@ -53,6 +55,8 @@ enum Sheet: Identifiable {
         case .lowFunds: return "lowFunds"
         case .custom: return "custom"
         case .records: return "records"
+        case .achievements: return "achievements"
+        case .prestige: return "prestige"
         }
     }
 }
@@ -104,6 +108,8 @@ final class AppModel: ObservableObject {
 
     // Modos de juego y poderes
     @Published var mode: PlayMode = .campaign
+    @Published var achBanner: AchUnlock?
+    var achQueue: [AchUnlock] = []
     @Published var tower: TowerInfo?
     @Published var towerWinInfo: TowerWinInfo?
     @Published var towerLossInfo: TowerLossInfo?
@@ -234,6 +240,7 @@ final class AppModel: ObservableObject {
         }
         album = decodeJSON(AlbumStateData.self, meta.albumState())
         store = decodeJSON(StoreCatalogData.self, meta.storeProducts())
+        deliverPrestigeEvents()
         persist()
     }
 
@@ -663,6 +670,7 @@ final class AppModel: ObservableObject {
         let moved = session.move(direction: Int32(direction))
         refresh(animated: true)
         guard let now = snap else { return }
+        if moved { checkAchievements(now) }
         if moved {
             let merged = now.tiles.contains(where: { $0.merged })
             sounds.play(merged ? "better_pop" : "move_pop")
@@ -763,7 +771,8 @@ final class AppModel: ObservableObject {
             let json = act { m in
                 m.onWin(
                     level: Int32(s.level), daily: s.daily, stars: Int32(s.stars), moves: Int32(s.moves),
-                    timeMs: Int64(s.elapsedMs), maxTile: Int32(s.maxTile), merges: Int32(s.merges), usedHelp: usedHelp
+                    timeMs: Int64(s.elapsedMs), maxTile: Int32(s.maxTile), merges: Int32(s.merges), usedHelp: usedHelp,
+                    kind: s.kind, boss: s.kind == "BOSS", flow: Int32(s.flow)
                 )
             }
             reward = decodeJSON(WinReward.self, json)
