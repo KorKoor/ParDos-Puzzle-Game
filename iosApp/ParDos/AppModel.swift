@@ -7,6 +7,21 @@ enum AppScreen {
     case game
 }
 
+enum PlayMode {
+    case campaign
+    case daily
+    case tower
+    case race
+    case duel
+    case custom
+}
+
+enum DuelPhase {
+    case playing
+    case handover
+    case result
+}
+
 enum MainTab: Int {
     case home
     case play
@@ -24,6 +39,8 @@ enum Sheet: Identifiable {
     case league
     case settings
     case lowFunds
+    case custom
+    case records
 
     var id: String {
         switch self {
@@ -34,6 +51,8 @@ enum Sheet: Identifiable {
         case .league: return "league"
         case .settings: return "settings"
         case .lowFunds: return "lowFunds"
+        case .custom: return "custom"
+        case .records: return "records"
         }
     }
 }
@@ -66,10 +85,10 @@ enum Celebration: Identifiable {
 /// Estado de la app. La partida la lleva `GameSession` y todo lo demás (monedas, tienda, cofres, álbum, misiones, pase, liga)
 /// lo lleva `MetaSession`: las dos son Kotlin compartido con Android. Aquí solo se guarda el texto de estado y se traduce a vistas.
 final class AppModel: ObservableObject {
-    private let session = GameSession()
-    private let meta = MetaSession()
-    private let defaults = UserDefaults.standard
-    private let sounds = SoundManager.shared
+    let session = GameSession()
+    let meta = MetaSession()
+    let defaults = UserDefaults.standard
+    let sounds = SoundManager.shared
 
     @Published var screen: AppScreen = .main
     @Published var tab: MainTab = .home
@@ -83,6 +102,31 @@ final class AppModel: ObservableObject {
     @Published var loss: LossInfo?
     @Published var queue: [Celebration] = []
 
+    // Modos de juego y poderes
+    @Published var mode: PlayMode = .campaign
+    @Published var tower: TowerInfo?
+    @Published var towerWinInfo: TowerWinInfo?
+    @Published var towerLossInfo: TowerLossInfo?
+    @Published var raceStage: RaceStageInfo?
+    @Published var raceCleared = 0
+    @Published var raceFlash: Int?
+    @Published var raceEnd: RaceEndInfo?
+    @Published var duelPlayer = 1
+    @Published var duelScores: [Int] = [0, 0]
+    @Published var duelPhase: DuelPhase = .playing
+    @Published var duelResult: DuelResultInfo?
+    @Published var assistMessage: String?
+    @Published var selectMode: String?
+    @Published var firstPick: String?
+    @Published var lastClean: Date?
+    @Published var lastMerge: Date?
+    var raceMerges = 0
+    var raceMaxTile = 0
+    var duelSeed: Int64 = 0
+    var customSize = 4
+    var customTarget = 512
+    var customTimed = false
+
     @Published var state: MetaState?
     @Published var album: AlbumStateData?
     private(set) var stateAt = Date()
@@ -95,20 +139,20 @@ final class AppModel: ObservableObject {
     private(set) var albumCatalog = AlbumCatalogData(series: [], pieces: [])
     private(set) var tiers: [SeasonTierInfo] = []
     private(set) var wheelSlices: [WheelSliceInfo] = []
-    private(set) var gemPacks: [GemPackInfo] = []
+    @Published var store: StoreCatalogData?
     private(set) var eco: EconomyInfo?
 
-    private var cards: [Int: LevelCard] = [:]
-    private var idleSeconds: Double = 0
-    private var lastPhase: Int = 1
-    private var rewardedKey: String = ""
-    private var usedHelp = false
-    private var lastDailyDay: Int = 0
-    private var skinByID: [String: SkinItem] = [:]
-    private var pieceByID: [String: AlbumPiece] = [:]
-    private var avatarByID: [Int: AvatarItem] = [:]
-    private var bannerByID: [Int: BannerItem] = [:]
-    private var seriesByID: [String: AlbumSeries] = [:]
+    var cards: [Int: LevelCard] = [:]
+    var idleSeconds: Double = 0
+    var lastPhase: Int = 1
+    var rewardedKey: String = ""
+    var usedHelp = false
+    var lastDailyDay: Int = 0
+    var skinByID: [String: SkinItem] = [:]
+    var pieceByID: [String: AlbumPiece] = [:]
+    var avatarByID: [Int: AvatarItem] = [:]
+    var bannerByID: [Int: BannerItem] = [:]
+    var seriesByID: [String: AlbumSeries] = [:]
 
     init() {
         loadCatalogs()
@@ -125,14 +169,13 @@ final class AppModel: ObservableObject {
 
     // MARK: Carga
 
-    private func loadCatalogs() {
+    func loadCatalogs() {
         skins = decodeJSON([SkinItem].self, meta.skinCatalog()) ?? []
         fxs = decodeJSON([FxItem].self, meta.fxCatalog()) ?? []
         avatars = decodeJSON([AvatarItem].self, meta.avatarCatalog()) ?? []
         banners = decodeJSON([BannerItem].self, meta.bannerCatalog()) ?? []
         albumCatalog = decodeJSON(AlbumCatalogData.self, meta.albumCatalog()) ?? AlbumCatalogData(series: [], pieces: [])
         wheelSlices = decodeJSON([WheelSliceInfo].self, meta.wheelSlices()) ?? []
-        gemPacks = decodeJSON([GemPackInfo].self, meta.gemPacks()) ?? []
         eco = decodeJSON(EconomyInfo.self, meta.economyInfo())
         for skin in skins { skinByID[skin.id] = skin }
         for piece in albumCatalog.pieces { pieceByID[piece.id] = piece }
@@ -142,7 +185,7 @@ final class AppModel: ObservableObject {
     }
 
     /// El progreso de la primera versión (UserDefaults) pasa a la memoria compartida, una sola vez.
-    private func migrateLegacyProgress() {
+    func migrateLegacyProgress() {
         if defaults.bool(forKey: "meta_migrated") { return }
         let unlockedOld = defaults.integer(forKey: "unlocked")
         if unlockedOld > 1 {
@@ -169,17 +212,17 @@ final class AppModel: ObservableObject {
         return Int(floor(seconds / 86400.0))
     }
 
-    private func minuteOfDay() -> Int {
+    func minuteOfDay() -> Int {
         let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
         return (c.hour ?? 0) * 60 + (c.minute ?? 0)
     }
 
-    private func tickClock() {
+    func tickClock() {
         let ms = Int64(Date().timeIntervalSince1970 * 1000.0)
         meta.tick(epochDay: Int32(localDay()), nowMs: ms, minuteOfDay: Int32(minuteOfDay()))
     }
 
-    private func persist() {
+    func persist() {
         defaults.set(meta.save(), forKey: "meta_state_v1")
     }
 
@@ -190,12 +233,13 @@ final class AppModel: ObservableObject {
             stateAt = Date()
         }
         album = decodeJSON(AlbumStateData.self, meta.albumState())
+        store = decodeJSON(StoreCatalogData.self, meta.storeProducts())
         persist()
     }
 
     /// Ejecuta una acción de la memoria compartida, guarda y vuelve a leer el estado.
     @discardableResult
-    private func act(_ block: (MetaSession) -> String) -> String {
+    func act(_ block: (MetaSession) -> String) -> String {
         tickClock()
         let json = block(meta)
         persist()
@@ -254,7 +298,7 @@ final class AppModel: ObservableObject {
 
     // MARK: Ajustes
 
-    private func buzz(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+    func buzz(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         if hapticsOn {
             UIImpactFeedbackGenerator(style: style).impactOccurred()
         }
@@ -281,7 +325,7 @@ final class AppModel: ObservableObject {
 
     // MARK: Al abrir la app
 
-    private func openToday() {
+    func openToday() {
         let json = act { $0.openApp() }
         guard let opened = decodeJSON(OpenAppResult.self, json) else { return }
         var list: [Celebration] = []
@@ -397,13 +441,11 @@ final class AppModel: ObservableObject {
     func claimAllTiers() { run { $0.claimAllTiers() } }
     func buySeasonTier() { run { $0.buySeasonTier() } }
 
-    /// Pase premium de la temporada: la versión de prueba no cobra, lo abre directamente.
+    /// Pase premium de la temporada: en la versión de prueba la "compra" no cobra.
     func unlockPremium() {
-        act { m in
-            m.unlockSeasonPremium()
-            return "{\"ok\":true}"
+        if run({ $0.testBuyProduct(id: "season_pass") }) {
+            showToast("Pase premium activado (versión de prueba)")
         }
-        showToast("Pase premium activado (versión de prueba)")
     }
 
     func loadTiers() {
@@ -432,7 +474,7 @@ final class AppModel: ObservableObject {
     func exchangeGems(_ gems: Int) { run { $0.exchangeGems(gems: Int32(gems)) } }
     func buyDailyOffer() { run { $0.buyDailyOffer() } }
     func buyEventSkin(_ eventID: String) { run { $0.buyEventSkin(eventId: eventID) } }
-    func testBuyGemPack(_ id: String) { run { $0.testBuyGemPack(id: id) } }
+    func testBuyProduct(_ id: String) { run { $0.testBuyProduct(id: id) } }
 
     func setAvatar(_ id: Int) {
         tickClock()
@@ -513,24 +555,35 @@ final class AppModel: ObservableObject {
     var dailyStars: Int { defaults.integer(forKey: "daily_stars_\(localDay())") }
 
     func start(_ level: Int) {
+        mode = .campaign
         session.tutorialEnabled = level == 1 && !(state?.tutorialDone ?? false)
-        session.start(level: Int32(level))
+        let json = act { $0.prepareLevel(level: Int32(level)) }
+        let assist = decodeJSON(AssistInfo.self, json)
+        session.startAssisted(level: Int32(level), percent: Int32(assist?.percent ?? 100))
+        assistMessage = assist?.message
         begin(introFor: card(level), key: "level_\(level)")
     }
 
     func startDaily() {
+        mode = .daily
         if localDay() != lastDailyDay { refreshDaily() }
         session.tutorialEnabled = false
         session.startDaily(epochDay: Int32(localDay()))
+        assistMessage = nil
         begin(introFor: dailyCard, key: "daily_\(localDay())")
     }
 
-    private func begin(introFor card: LevelCard?, key: String) {
+    func begin(introFor card: LevelCard?, key: String) {
         sheet = nil
         hint = nil
         toast = nil
         reward = nil
         loss = nil
+        towerWinInfo = nil
+        towerLossInfo = nil
+        raceFlash = nil
+        selectMode = nil
+        firstPick = nil
         idleSeconds = 0
         lastPhase = 1
         rewardedKey = ""
@@ -539,10 +592,11 @@ final class AppModel: ObservableObject {
         intro = needsIntro(card) ? card : nil
         screen = .game
         syncMusic()
+        if let message = assistMessage { showToast(message) }
     }
 
     /// La primera vez que sale cada tipo de regla se explica; los jefes se explican una vez cada uno.
-    private func needsIntro(_ card: LevelCard?) -> Bool {
+    func needsIntro(_ card: LevelCard?) -> Bool {
         guard let card = card, card.kind != "ZEN" else { return false }
         let key = card.boss ? "seen_boss_\(card.id)_\(card.title)" : "seen_kind_\(card.kind)"
         return !defaults.bool(forKey: key)
@@ -559,15 +613,30 @@ final class AppModel: ObservableObject {
 
     func restart() {
         guard let current = snap else { return }
-        if current.daily { startDaily() } else { start(current.level) }
+        switch mode {
+        case .tower: startTowerFloor()
+        case .race: startRace()
+        case .duel: startDuelRound()
+        case .custom: startCustom(size: customSize, target: customTarget, timed: customTimed)
+        case .daily: startDaily()
+        case .campaign: start(current.level)
+        }
     }
 
     func nextLevel() {
         guard let current = snap else { return }
-        if current.daily {
-            backToMenu()
-        } else {
+        switch mode {
+        case .tower:
+            act { m in
+                _ = m.towerNext()
+                return "{}"
+            }
+            tower = decodeJSON(TowerInfo.self, meta.towerInfo())
+            startTowerFloor()
+        case .campaign:
             start(min(current.level + 1, levelCount))
+        default:
+            backToMenu()
         }
     }
 
@@ -659,7 +728,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func refresh(animated: Bool) {
+    func refresh(animated: Bool) {
         guard let fresh = decodeJSON(BoardSnap.self, session.snapshot()) else { return }
         let before = snap?.status
         if animated {
@@ -676,10 +745,20 @@ final class AppModel: ObservableObject {
     }
 
     /// Al terminar la partida se pagan los premios (una sola vez por partida).
-    private func finish(_ s: BoardSnap) {
-        let key = s.daily ? "daily_\(localDay())_\(s.moves)" : "level_\(s.level)_\(s.moves)_\(s.score)"
+    func finish(_ s: BoardSnap) {
+        let key = "\(s.daily)_\(s.level)_\(s.moves)_\(s.score)_\(s.status)"
         guard rewardedKey != key else { return }
         rewardedKey = key
+        switch mode {
+        case .tower: finishTower(s)
+        case .race: finishRace(s)
+        case .duel: finishDuel(s)
+        case .custom: finishCustom(s)
+        default: finishCampaign(s)
+        }
+    }
+
+    func finishCampaign(_ s: BoardSnap) {
         if s.status == "won" {
             let json = act { m in
                 m.onWin(

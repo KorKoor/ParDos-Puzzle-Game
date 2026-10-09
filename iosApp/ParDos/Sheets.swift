@@ -231,7 +231,7 @@ struct SeasonSheet: View {
                 Button(action: { model.unlockPremium() }) {
                     HStack(spacing: 8) {
                         SpriteImage(name: "ico_crown", size: 26)
-                        Text("Activar vía Premium (gratis en esta versión de prueba)")
+                        Text("Pase premium · " + (model.store?.specials.first(where: { $0.id == "season_pass" })?.price ?? "$4.99") + " (prueba: gratis)")
                             .font(.system(size: 12, weight: .heavy, design: .rounded))
                     }
                     .foregroundColor(Theme.ink)

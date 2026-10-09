@@ -3,6 +3,7 @@ package com.korkoor.pardos.domain.session
 import com.korkoor.pardos.domain.level.GoalStats
 import com.korkoor.pardos.domain.level.LevelCatalog
 import com.korkoor.pardos.domain.level.LevelGoal
+import com.korkoor.pardos.domain.level.LevelKind
 import com.korkoor.pardos.domain.level.LevelRules
 import com.korkoor.pardos.domain.level.LevelSpec
 import com.korkoor.pardos.domain.level.SpawnRules
@@ -58,6 +59,10 @@ class GameSession(seed: Long) {
     private var mergePairs = 0
     private var peakTile = 0
     private var extraTimeMs = 0L
+    private var comboTimeBonus = true
+    private var powersAllowed = true
+    private var customLabel = ""
+    private var assistPercent = 100
 
     /** Si es `true`, el nivel 1 enseña con el guion del tutorial (la app lo apaga cuando ya se completó). */
     var tutorialEnabled: Boolean = false
@@ -89,8 +94,39 @@ class GameSession(seed: Long) {
     // ------------------------------------------------------------------ partida
 
     fun start(level: Int) {
+        startAssisted(level, 100)
+    }
+
+    /**
+     * Empieza un nivel con la ayuda por intentos fallidos: [percent] (100 = sin ayuda) agranda el límite de movimientos y el
+     * reloj, como la `AssistPolicy` de Android.
+     */
+    fun startAssisted(level: Int, percent: Int) {
         daily = false
-        begin(LevelCatalog.spec(level))
+        assistPercent = percent.coerceIn(100, 200)
+        val base = LevelCatalog.spec(level)
+        begin(if (assistPercent == 100) base else base.copy(
+            moveLimit = base.moveLimit?.let { it * assistPercent / 100 },
+            timeLimitMs = base.timeLimitMs?.let { it * assistPercent / 100 }
+        ))
+        comboTimeBonus = true
+        powersAllowed = true
+        customLabel = ""
+    }
+
+    /**
+     * Partida suelta con tablero y meta a elección (Carrera, Duelo, Torre sin piedras, Personalizado). [timeLimitMs] = 0 no
+     * pone reloj; [seed] = 0 usa una semilla al azar. [comboBonus] activa los segundos extra por combinación (solo contrarreloj).
+     */
+    fun startCustom(size: Int, target: Int, timeLimitMs: Long, seed: Long, levelNumber: Int, label: String, comboBonus: Boolean, powers: Boolean) {
+        daily = false
+        assistPercent = 100
+        if (seed != 0L) rng = Random(seed)
+        val limit = if (timeLimitMs > 0L) timeLimitMs else null
+        begin(LevelSpec(levelNumber, LevelKind.ZEN, label.ifEmpty { "Partida libre" }, size.coerceIn(3, 6), goalValue = target, timeLimitMs = limit))
+        comboTimeBonus = comboBonus
+        powersAllowed = powers
+        customLabel = label
     }
 
     /** Empieza el reto de un día (días desde 1970): el mismo tablero y las mismas fichas para todo el mundo ese día. */
@@ -98,7 +134,12 @@ class GameSession(seed: Long) {
         val config = DailyChallenge.forDay(epochDay)
         daily = true
         rng = Random(config.seed)
+        assistPercent = 100
         begin(config.spec)
+        comboTimeBonus = true
+        powersAllowed = false
+        customLabel = ""
+
     }
 
     private fun begin(level: LevelSpec) {
@@ -186,7 +227,7 @@ class GameSession(seed: Long) {
 
         // El reloj de los niveles contrarreloj regala segundos con las combinaciones
         timeLeftMs?.let { left ->
-            val bonus = when {
+            val bonus = if (!comboTimeBonus) 0L else when {
                 pairs >= 4 -> 10_000L
                 pairs >= 3 -> 7_000L
                 pairs >= 2 -> 4_000L
@@ -268,6 +309,67 @@ class GameSession(seed: Long) {
         } else timeLeftMs = next
     }
 
+
+    // ------------------------------------------------------------------ poderes
+
+    /** Limpiar: se queda con las 3 fichas más grandes (como el poder "Limpiar" de Android). */
+    fun powerClean(): Boolean {
+        if (!powersAllowed || status != PLAYING || tiles.size <= 3) return false
+        undo = null
+        tiles = tiles.sortedByDescending { it.value }.take(3).map { it.copy(isNew = false, isMerged = false) }
+        started = true
+        afterPower()
+        return true
+    }
+
+    /** Fusión: junta al azar una pareja de fichas iguales (la primera que encuentra). */
+    fun powerMerge(): Boolean {
+        if (!powersAllowed || status != PLAYING) return false
+        val pair = tiles.groupBy { it.value }.values.firstOrNull { it.size >= 2 } ?: return false
+        return mergeInternal(pair[0], pair[1])
+    }
+
+    /** Escoba: quita la ficha elegida. */
+    fun powerBroom(tileId: String): Boolean {
+        if (!powersAllowed || status != PLAYING) return false
+        if (tiles.none { it.id == tileId }) return false
+        undo = null
+        tiles = tiles.filter { it.id != tileId }.map { it.copy(isNew = false, isMerged = false) }
+        started = true
+        afterPower()
+        return true
+    }
+
+    /** Unir: fusiona las dos fichas elegidas si valen lo mismo. */
+    fun powerLink(firstId: String, secondId: String): Boolean {
+        if (!powersAllowed || status != PLAYING || firstId == secondId) return false
+        val a = tiles.firstOrNull { it.id == firstId } ?: return false
+        val b = tiles.firstOrNull { it.id == secondId } ?: return false
+        if (a.value != b.value) return false
+        return mergeInternal(a, b)
+    }
+
+    private fun mergeInternal(a: TileModel, b: TileModel): Boolean {
+        undo = null
+        val value = b.value * 2
+        tiles = tiles.filter { it.id != a.id && it.id != b.id }.map { it.copy(isNew = false, isMerged = false) } +
+            b.copy(value = value, isMerged = true, isNew = false)
+        score += value
+        mergePairs += 1
+        peakTile = maxOf(peakTile, value)
+        started = true
+        afterPower()
+        return true
+    }
+
+    private fun afterPower() {
+        if (LevelRules.isGoalReached(spec, tiles, score, stats)) {
+            win()
+            return
+        }
+        if (engine.isGameOver(tiles)) lose(BOARD_FULL)
+    }
+
     // ------------------------------------------------------------------ pistas y tutorial
 
     /** Hacia dónde deslizar para la jugada recomendada (teniendo en cuenta los giros de control). */
@@ -314,7 +416,8 @@ class GameSession(seed: Long) {
             "coachDir" to coachDir?.let { directionInt(it) }, "coachCells" to coach?.cells?.map { listOf(it.first, it.second) },
             "coachDone" to coach?.mergesDone, "coachNeeded" to coach?.mergesNeeded,
             "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
-            "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs
+            "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs,
+            "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent
         )
     }
 

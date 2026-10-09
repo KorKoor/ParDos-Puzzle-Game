@@ -9,7 +9,7 @@ struct BoardView: View {
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle)
+            BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle, selecting: model.selectMode != nil, picked: model.firstPick, onTap: { id in model.tapTile(id) })
                 .frame(width: side, height: side)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
@@ -35,6 +35,9 @@ struct BoardCanvas: View {
     let hint: GuideHint?
     let side: CGFloat
     let style: BoardStyle
+    var selecting: Bool = false
+    var picked: String? = nil
+    var onTap: (String) -> Void = { _ in }
 
     private var gap: CGFloat { snap.size >= 5 ? 6 : 8 }
     private var cell: CGFloat { (side - gap * CGFloat(snap.size + 1)) / CGFloat(snap.size) }
@@ -80,9 +83,20 @@ struct BoardCanvas: View {
         ZStack {
             ForEach(snap.tiles) { tile in
                 TileView(tile: tile, size: cell, style: style)
+                    .overlay(selectRing(tile))
+                    .contentShape(Rectangle())
+                    .onTapGesture { if selecting { onTap(tile.id) } }
                     .position(x: x(tile.c), y: y(tile.r))
                     .transition(.scale)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func selectRing(_ tile: TileSnap) -> some View {
+        if selecting {
+            RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
+                .stroke(picked == tile.id ? Theme.gold : Theme.energy.opacity(0.85), lineWidth: picked == tile.id ? 5 : 3)
         }
     }
 

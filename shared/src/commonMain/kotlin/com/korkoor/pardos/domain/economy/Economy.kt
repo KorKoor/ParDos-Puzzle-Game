@@ -23,6 +23,10 @@ object Economy {
     const val EXTRA_TIME_PRICE_COINS = 90
     const val STREAK_FREEZE_PRICE_COINS = 350
     const val MAX_STREAK_FREEZES = 3
+    /** Poderes manuales (Escoba y Unir): en Android piden un anuncio; en iPhone se pagan con monedas. */
+    const val MANUAL_POWER_PRICE_COINS = 80
+    /** Espera entre usos de Limpiar y Fusión. */
+    const val POWER_COOLDOWN_MS: Long = 15L * 60 * 1000
     /** Segundos que regala "Tiempo extra" en modos con reloj. */
     const val EXTRA_TIME_SECONDS = 20
 

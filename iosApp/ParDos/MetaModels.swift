@@ -325,6 +325,9 @@ struct WheelSliceInfo: Decodable {
 
 struct EconomyInfo: Decodable {
     let undoPrice: Int
+    let powerPrice: Int
+    let powerCooldownMs: Int
+    let extraTimeSeconds: Int
     let extraTimePrice: Int
     let freezePrice: Int
     let maxFreezes: Int
@@ -351,12 +354,30 @@ struct EconomyInfo: Decodable {
     let albumGems: Int
 }
 
-struct GemPackInfo: Decodable, Identifiable {
+struct StorePack: Decodable, Identifiable {
     let id: String
+    let name: String
     let gems: Int
     let usdCents: Int
+    let price: String
     let bonus: Int
     let first: Bool
+    let best: Bool
+}
+
+struct StoreSpecial: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let blurb: String
+    let usdCents: Int
+    let price: String
+    let owned: Bool
+    let available: Bool
+}
+
+struct StoreCatalogData: Decodable {
+    let packs: [StorePack]
+    let specials: [StoreSpecial]
 }
 
 struct PerkInfo: Decodable, Identifiable {
@@ -530,4 +551,87 @@ struct MissionClaimResult: Decodable {
     let coins: Int?
     let allDone: Bool?
     let perfectGems: Int?
+}
+
+// MARK: - Modos de juego
+
+struct AssistInfo: Decodable {
+    let ok: Bool
+    let percent: Int
+    let message: String?
+    let tier: Int
+    let undos: Int
+}
+
+struct TowerInfo: Decodable {
+    let floor: Int
+    let hearts: Int
+    let best: Int
+    let levelId: Int
+    let boss: Bool
+    let label: String
+    let runCoins: Int
+    let runGems: Int
+    let maxHearts: Int
+    let active: Bool
+}
+
+struct TowerWinInfo: Decodable {
+    let ok: Bool
+    let coins: Int
+    let gems: Int
+    let heart: Bool
+    let hearts: Int
+    let floor: Int
+}
+
+struct TowerLossInfo: Decodable {
+    let ok: Bool
+    let hearts: Int
+    let over: Bool
+    let newRecord: Bool
+    let floor: Int
+    let best: Int
+}
+
+struct RaceStageInfo: Decodable {
+    let n: Int
+    let size: Int
+    let target: Int
+    let bonusMs: Int
+    let startMs: Int
+    let maxMs: Int
+}
+
+struct RaceEndInfo: Decodable {
+    let ok: Bool
+    let coins: Int
+    let best: Int
+    let newRecord: Bool
+    let stages: Int
+}
+
+struct DuelConfigInfo: Decodable {
+    let size: Int
+    let target: Int
+    let roundMs: Int
+}
+
+struct DuelResultInfo: Decodable {
+    let ok: Bool
+    let winner: String
+    let margin: Int
+    let best: Int
+}
+
+struct RecordsInfo: Decodable {
+    let tower: Int
+    let race: Int
+    let duel: Int
+    let custom: Int
+    let bestStreak: Int
+    let bestTile: Int
+    let totalWins: Int
+    let totalStars: Int
+    let daysPlayed: Int
 }

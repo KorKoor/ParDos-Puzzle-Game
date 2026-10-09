@@ -181,7 +181,7 @@ class GameSessionTest {
         val snapshotKeys = listOf(
             "level", "daily", "title", "kind", "kindLabel", "rule", "tip", "goal", "size", "progress", "score", "moves", "movesLeft", "timeLeftMs",
             "status", "lostReason", "stars", "tiles", "stones", "storm", "twist", "twistHint", "blocked", "phase", "phaseTitle", "chips",
-            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs"
+            "coach", "coachKind", "coachDir", "coachCells", "coachDone", "coachNeeded", "tutorialDone", "canUndo", "merges", "maxTile", "elapsedMs", "powers", "label", "assist"
         )
         val st = session.state()
         snapshotKeys.forEach { assertTrue(it in st.keys, "falta '$it' en el estado") }
@@ -237,5 +237,52 @@ class GameSessionTest {
             val tiles = Regex(""""[vrc]":([^,}]+)""").findAll(raw).map { it.groupValues[1] }.toList()
             assertTrue(tiles.all { Regex("""-?\d+""").matches(it) }, "fichas con decimales: $tiles")
         }
+    }
+
+    @Test fun powersChangeTheBoardOnlyWhileTheyAreAllowed() {
+        val session = GameSession(77L)
+        session.startCustom(size = 4, target = 4096, timeLimitMs = 0L, seed = 5L, levelNumber = 1, label = "Prueba", comboBonus = false, powers = true)
+        repeat(30) { session.move(it % 4) }
+        val before = session.state()
+        if (before["status"] == "playing" && before.list("tiles").size > 3) {
+            assertTrue(session.powerClean())
+            assertEquals(3, session.state().list("tiles").size)
+        }
+        val s2 = GameSession(78L)
+        s2.startDaily(20_800)          // el reto diario no deja usar poderes
+        assertTrue(!s2.powerClean())
+        assertTrue(!s2.powerMerge())
+    }
+
+    @Test fun broomAndLinkWorkOnChosenTiles() {
+        val session = GameSession(3L)
+        session.startCustom(size = 4, target = 4096, timeLimitMs = 0L, seed = 9L, levelNumber = 1, label = "", comboBonus = false, powers = true)
+        val tiles = session.state().list("tiles").map { it as Map<*, *> }
+        val first = tiles.first()["id"] as String
+        assertTrue(session.powerBroom(first))
+        assertTrue(session.state().list("tiles").none { (it as Map<*, *>)["id"] == first })
+        assertTrue(!session.powerBroom("no-existe"))
+        assertTrue(!session.powerLink("a", "b"))
+    }
+
+    @Test fun customGamesCarryTheirTimeAndLabel() {
+        val session = GameSession(1L)
+        session.startCustom(size = 5, target = 512, timeLimitMs = 90_000L, seed = 4L, levelNumber = 3, label = "Etapa 3", comboBonus = false, powers = false)
+        val st = session.state()
+        assertEquals(5, st.int("size"))
+        assertEquals("Etapa 3", st["label"])
+        assertEquals(90_000, st.int("timeLeftMs"))
+        assertEquals(false, st["powers"])
+        assertNull(st["coach"])
+    }
+
+    @Test fun assistedStartsGiveMoreRoomOnLimitedLevels() {
+        val level = LevelCatalog.all().first { it.moveLimit != null }
+        val plain = GameSession(1L)
+        plain.start(level.id)
+        val helped = GameSession(1L)
+        helped.startAssisted(level.id, 130)
+        assertTrue(helped.state().int("movesLeft") > plain.state().int("movesLeft"))
+        assertEquals(130, helped.state().int("assist"))
     }
 }

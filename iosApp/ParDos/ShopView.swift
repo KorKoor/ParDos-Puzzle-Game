@@ -18,15 +18,16 @@ struct ShopView: View {
                 header
                 if let state = model.state {
                     OfferCard(offer: state.offer)
+                    specials
+                    gemsSection
                     chests
                     helps(state)
                     skinsSection(state)
                     fxSection(state)
-                    gemsSection
                     essence
                     piggy(state)
                 }
-                Text("En esta versión de prueba las compras con dinero real no cobran: sirven para ver cómo se ve la tienda.")
+                Text("Versión de prueba: las compras con dinero real no cobran (con la App Store, el precio saldrá en tu moneda).")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.4))
                     .multilineTextAlignment(.center)
@@ -240,44 +241,132 @@ struct ShopView: View {
 
     private var gemsSection: some View {
         VStack(spacing: 10) {
-            SectionTitle(text: "Gemas", detail: "versión de prueba: sin cobro")
-            VStack(spacing: 0) {
-                ForEach(0..<model.gemPacks.count, id: \.self) { i in
-                    gemRow(model.gemPacks[i])
-                    if i < model.gemPacks.count - 1 { Divider() }
-                }
-                Divider()
-                HStack(spacing: 12) {
-                    GemIcon(size: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Cambiar gemas por monedas").font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
-                        Text("5 gemas = \(5 * (model.eco?.coinsPerGem ?? 40)) monedas").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
+            SectionTitle(text: "Gemas", detail: "primera compra de cada pack: ¡doble!")
+            if let packs = model.store?.packs {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    ForEach(packs) { pack in
+                        packCard(pack)
                     }
-                    Spacer()
-                    smallButton("CAMBIAR") { model.exchangeGems(5) }
                 }
-                .padding(.vertical, 10)
             }
-            .padding(.horizontal, 14)
+            HStack(spacing: 12) {
+                GemIcon(size: 26)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cambiar gemas por monedas").font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
+                    Text("5 gemas = \(5 * (model.eco?.coinsPerGem ?? 40)) monedas").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
+                }
+                Spacer()
+                smallButton("CAMBIAR") { model.exchangeGems(5) }
+            }
+            .padding(14)
             .card()
         }
     }
 
-    private func gemRow(_ pack: GemPackInfo) -> some View {
-        HStack(spacing: 12) {
-            GemIcon(size: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(pack.first ? pack.gems * 2 : pack.gems) gemas")
-                    .font(.system(size: 14, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
-                Text(pack.first ? "¡Doble en tu primera compra!" : (pack.bonus > 0 ? "+\(pack.bonus)% de bono" : "Pack básico"))
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundColor(pack.first ? Theme.energy : Theme.ink.opacity(0.5))
+    private func packCard(_ pack: StorePack) -> some View {
+        let shown = pack.first ? pack.gems * 2 : pack.gems
+        return VStack(spacing: 6) {
+            ZStack(alignment: .top) {
+                HStack(spacing: -8) {
+                    GemIcon(size: 30)
+                    GemIcon(size: 38)
+                    if pack.gems >= 1000 { GemIcon(size: 30) }
+                }
+                .padding(.top, 14)
+                if pack.best {
+                    Text("MEJOR VALOR")
+                        .font(.system(size: 8, weight: .black))
+                        .kerning(1)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Theme.energy))
+                        .offset(y: -4)
+                }
             }
-            Spacer()
-            smallButton(String(format: "$%.2f", Double(pack.usdCents) / 100.0)) { model.testBuyGemPack(pack.id) }
+            .frame(height: 56)
+            Text("\(shown)")
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .foregroundColor(Theme.ink)
+            Text(pack.name)
+                .font(.system(size: 11, weight: .heavy))
+                .foregroundColor(Theme.ink.opacity(0.5))
+            Text(pack.first ? "¡Doble la 1.ª vez!" : (pack.bonus > 0 ? "+\(pack.bonus)% de bono" : "Pack básico"))
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(pack.first ? Theme.energy : Theme.ink.opacity(0.45))
+            Button(action: { model.testBuyProduct(pack.id) }) {
+                Text(pack.price)
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .background(Capsule().fill(pack.best ? Theme.energy : Theme.accent))
+            }
         }
-        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 12)
+        .card(radius: 20)
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(pack.best ? Theme.energy : Color.clear, lineWidth: 2.5))
+    }
+
+    private var specials: some View {
+        VStack(spacing: 10) {
+            SectionTitle(text: "Ofertas especiales")
+            if let items = model.store?.specials {
+                ForEach(items) { item in
+                    specialRow(item)
+                }
+            }
+        }
+    }
+
+    private func specialRow(_ item: StoreSpecial) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Theme.gold.opacity(0.18))
+                    .frame(width: 54, height: 54)
+                specialIcon(item.id)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.name)
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.ink)
+                Text(item.blurb)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Theme.ink.opacity(0.55))
+                    .lineLimit(3)
+            }
+            Spacer(minLength: 4)
+            if item.owned {
+                Text("TUYO")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundColor(Theme.accent)
+            } else {
+                Button(action: { model.testBuyProduct(item.id) }) {
+                    Text(item.price)
+                        .font(.system(size: 13, weight: .black, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(Capsule().fill(item.available ? Theme.accent : Color.gray.opacity(0.5)))
+                }
+                .disabled(!item.available)
+            }
+        }
+        .padding(12)
+        .card()
+    }
+
+    @ViewBuilder
+    private func specialIcon(_ id: String) -> some View {
+        switch id {
+        case "starter_pack": SpriteImage(name: "ico_gift", size: 40)
+        case "season_pass": SpriteImage(name: "ico_crown", size: 40)
+        case "vip_forever": SpriteImage(name: "ico_star", size: 40)
+        default: Image(systemName: "dollarsign.circle.fill").font(.system(size: 34)).foregroundColor(Color(hex: 0xF29BB5))
+        }
     }
 
     private var essence: some View {
@@ -318,7 +407,7 @@ struct ShopView: View {
             Image(systemName: "dollarsign.circle.fill").font(.system(size: 28)).foregroundColor(Color(hex: 0xF29BB5))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Hucha de gemas").font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
-                Text("Guarda gemas cada vez que ganas (\(state.piggy)/300). Se rompe con una compra: aquí no está disponible.").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
+                Text("Guarda gemas cada vez que ganas (\(state.piggy)/300). Se rompe en «Ofertas especiales».").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
             }
             Spacer()
             HStack(spacing: 3) { GemIcon(size: 16); Text("\(state.piggy)") }

@@ -17,17 +17,30 @@ struct GameView: View {
             if let snap = model.snap {
                 VStack(spacing: 12) {
                     topBar(snap, style)
+                    if model.mode == .tower { TowerHearts() }
                     GoalCard(snap: snap)
                     RuleChips(snap: snap)
                     BoardView(snap: snap, hint: currentGuide(snap))
                         .padding(.horizontal, 14)
                     StatsRow(snap: snap)
+                    if model.selectMode != nil { SelectBanner() }
                     bottom(snap)
                     Spacer(minLength: 0)
                 }
                 .padding(.top, 6)
                 if snap.status != "playing" {
-                    ResultOverlay(snap: snap)
+                    if model.mode == .campaign || model.mode == .daily {
+                        ResultOverlay(snap: snap)
+                    } else {
+                        ModeResultOverlay(snap: snap)
+                    }
+                }
+                if let flash = model.raceFlash {
+                    Text("+\(flash) s")
+                        .font(.system(size: 44, weight: .black, design: .rounded))
+                        .foregroundColor(Theme.gold)
+                        .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        .transition(.scale)
                 }
                 if let card = model.intro {
                     RuleIntroView(card: card) { model.dismissIntro() }
@@ -71,11 +84,11 @@ struct GameView: View {
                     .background(Circle().fill(Color.white))
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(snap.daily ? "RETO DIARIO · \(snap.kindLabel.uppercased())" : snap.kindLabel.uppercased())
+                Text(headerKicker(snap))
                     .font(.system(size: 10, weight: .heavy))
                     .kerning(2)
-                    .foregroundColor(kindColor(snap.kind))
-                Text(snap.daily ? "Reto de hoy" : "Nivel \(snap.level)")
+                    .foregroundColor(model.mode == .campaign ? kindColor(snap.kind) : Theme.accent)
+                Text(headerTitle(snap))
                     .font(.system(size: 24, weight: .black, design: .rounded))
                     .foregroundColor(style.ink ?? Theme.ink)
             }
@@ -91,6 +104,28 @@ struct GameView: View {
         .padding(.horizontal, 16)
     }
 
+    private func headerKicker(_ snap: BoardSnap) -> String {
+        switch model.mode {
+        case .daily: return "RETO DIARIO · " + snap.kindLabel.uppercased()
+        case .tower: return model.tower?.label ?? "TORRE"
+        case .race: return "CARRERA · \(model.raceCleared) SUPERADAS"
+        case .duel: return "DUELO LOCAL"
+        case .custom: return "PARTIDA LIBRE"
+        case .campaign: return snap.kindLabel.uppercased()
+        }
+    }
+
+    private func headerTitle(_ snap: BoardSnap) -> String {
+        switch model.mode {
+        case .daily: return "Reto de hoy"
+        case .tower: return "Piso \(model.tower?.floor ?? 1)"
+        case .race: return "Etapa \(model.raceStage?.n ?? 1)"
+        case .duel: return "Jugador \(model.duelPlayer)"
+        case .custom: return "\(snap.size)×\(snap.size) · \(snap.goal)"
+        case .campaign: return "Nivel \(snap.level)"
+        }
+    }
+
     @ViewBuilder
     private func bottom(_ snap: BoardSnap) -> some View {
         if let text = snap.coach, !text.isEmpty {
@@ -104,6 +139,9 @@ struct GameView: View {
                 }
             }
             .padding(.horizontal, 16)
+            if snap.powers && model.selectMode == nil && snap.status == "playing" {
+                PowerBar()
+            }
         }
     }
 

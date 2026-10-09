@@ -25,8 +25,11 @@ MAPPING = {
     "missionClaim": "MissionClaimResult", "tierClaim": "TierClaimResult", "fail": "ActionResult",
     "skinCatalog": "[SkinItem]", "fxCatalog": "[FxItem]", "avatarCatalog": "[AvatarItem]", "bannerCatalog": "[BannerItem]",
     "albumCatalog": "AlbumCatalogData", "seasonTiers": "[SeasonTierInfo]", "wheelSlices": "[WheelSliceInfo]",
-    "economy": "EconomyInfo", "gemPacks": "[GemPackInfo]", "board": "BoardSnap", "board2": "BoardSnap",
+    "economy": "EconomyInfo", "store": "StoreCatalogData", "board": "BoardSnap", "board2": "BoardSnap",
     "levelCard": "LevelCard", "dailyCard": "LevelCard", "hint": "GuideHint",
+    "assist": "AssistInfo", "towerStart": "TowerInfo", "towerNext": "TowerInfo", "towerWin": "TowerWinInfo", "towerLose": "TowerLossInfo",
+    "raceStage": "RaceStageInfo", "raceFinish": "RaceEndInfo", "duelConfig": "DuelConfigInfo", "duelResult": "DuelResultInfo",
+    "records": "RecordsInfo",
 }
 
 

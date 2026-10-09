@@ -28,6 +28,7 @@ import com.korkoor.pardos.domain.shop.DailyOffer
 import com.korkoor.pardos.domain.shop.DailyOffers
 import com.korkoor.pardos.domain.shop.EventSkins
 import com.korkoor.pardos.domain.shop.GemPacks
+import com.korkoor.pardos.domain.shop.IosStore
 import com.korkoor.pardos.domain.shop.MergeFx
 import com.korkoor.pardos.domain.shop.MergeFxInventory
 import com.korkoor.pardos.domain.shop.OfferItem
@@ -51,6 +52,7 @@ class MetaSession {
     private val wallet = Wallet(store)
     private val col = CollectionOps(store, wallet)
     private val ret = Retention(store, wallet, col, clock)
+    private val modes = Modes(store, wallet, col, ret, clock)
 
     // ------------------------------------------------------------------ guardado y reloj
 
@@ -116,6 +118,7 @@ class MetaSession {
      */
     fun onWin(level: Int, daily: Boolean, stars: Int, moves: Int, timeMs: Long, maxTile: Int, merges: Int, usedHelp: Boolean): String {
         val st = stars.coerceIn(1, 3)
+        if (!daily) modes.clearLevelAttempts(level)
         val firstClear = !daily && starsOf(level) == 0
         val spec = if (daily) null else LevelCatalog.spec(level)
         val rawCoins = CoinRewards.forLevelWin(st, firstClear) + (spec?.let { LevelRules.coinBonus(it) } ?: 0)
@@ -192,6 +195,7 @@ class MetaSession {
     /** Derrota o abandono con jugadas hechas. */
     fun onLoss(level: Int, daily: Boolean, maxTile: Int, merges: Int): String {
         store.setInt("win_streak", WinStreak.afterLoss(store.int("win_streak")))
+        if (!daily) modes.registerLevelFailure(level)
         ret.onGameFinished(won = false, dailyChallenge = daily)
         ret.updateMission(MissionType.PLAY_GAMES, 1)
         ret.updateMission(MissionType.MERGE_PAIRS, merges)
@@ -200,6 +204,45 @@ class MetaSession {
         ret.addWeekly(com.korkoor.pardos.domain.retention.WeeklyType.MERGE_PAIRS, merges)
         return ok("winStreak" to store.int("win_streak"), "nextGoal" to ret.nextGoal()?.let { Raw(obj("title" to it.title, "detail" to it.detail, "progress" to it.progress.toDouble(), "kind" to it.kind.name)) })
     }
+
+
+    // ------------------------------------------------------------------ ayuda, torre, carrera, duelo
+
+    /** Ayuda por intentos fallidos: `percent` agranda movimientos y reloj; también regala los Deshacer que falten. */
+    fun prepareLevel(level: Int): String {
+        val a = modes.prepareLevel(level)
+        return ok("percent" to a.percent, "message" to a.message, "tier" to a.tier, "undos" to a.undos)
+    }
+
+    fun towerStart(): String { modes.towerStart(); return modes.towerJson() }
+    fun towerInfo(): String = modes.towerJson()
+    fun towerEnd() { modes.towerEnd() }
+
+    fun towerWin(maxTile: Int, merges: Int): String {
+        val c = modes.towerWin(maxTile, merges)
+        return ok("coins" to c.coins, "gems" to c.gems, "heart" to c.heart, "hearts" to c.hearts, "floor" to modes.towerFloor)
+    }
+
+    fun towerNext(): String { modes.towerNext(); return modes.towerJson() }
+
+    fun towerLose(): String {
+        val l = modes.towerLose()
+        return ok("hearts" to l.hearts, "over" to l.over, "newRecord" to l.newRecord, "floor" to modes.towerFloor, "best" to modes.towerBest)
+    }
+
+    fun raceStage(n: Int): String = modes.raceStageJson(n)
+    fun raceNextTime(n: Int, remainingMs: Long): Long = modes.raceAfterStage(n, remainingMs)
+    fun raceStageCleared() { modes.raceStageCleared() }
+
+    fun raceFinish(stages: Int, merges: Int, maxTile: Int): String {
+        val r = modes.raceFinish(stages, merges, maxTile)
+        return ok("coins" to r.coins, "best" to r.best, "newRecord" to r.newRecord, "stages" to stages)
+    }
+
+    fun duelConfig(): String = modes.duelConfigJson()
+    fun duelResult(score1: Int, score2: Int): String = modes.duelResultJson(score1, score2)
+    fun customFinished(score: Int, won: Boolean, merges: Int, maxTile: Int) { modes.customFinished(score, won, merges, maxTile) }
+    fun records(): String = modes.recordsJson()
 
     // ------------------------------------------------------------------ al abrir la app
 
@@ -396,6 +439,9 @@ class MetaSession {
     fun grantCoins(n: Int) { wallet.addCoins(n) }
 
     fun useUndo(): Boolean = wallet.useUndo()
+
+    /** Paga un poder manual (Escoba o Unir) con monedas. */
+    fun buyManualPower(): String = if (wallet.spendCoins(Economy.MANUAL_POWER_PRICE_COINS)) ok() else no("No alcanzan las monedas")
     fun useExtraTime(): Boolean = wallet.useExtraTime()
 
     // ------------------------------------------------------------------ misiones, pase, liga
@@ -551,19 +597,57 @@ class MetaSession {
         return result
     }
 
-    /** Paquetes de gemas con su bono, para enseñar en la tienda (la versión de prueba no cobra). */
-    fun gemPacks(): String = arr(com.korkoor.pardos.domain.shop.ShopCatalog.products
-        .filter { it.kind == com.korkoor.pardos.domain.shop.ProductKind.GEMS }
-        .map { robj("id" to it.id, "gems" to it.gems, "usdCents" to it.usdCents, "bonus" to GemPacks.bonusPercent(it), "first" to !store.bool("purchased_${it.id}")) })
+    /** Tienda de pago de iPhone: packs de gemas (escalones de precio de Apple) y ofertas especiales, con lo que ya tienes. */
+    fun storeProducts(): String {
+        val packs = IosStore.gemPacks.map { p ->
+            robj(
+                "id" to p.id, "name" to IosStore.packName(p.id), "gems" to p.gems, "usdCents" to p.usdCents,
+                "price" to IosStore.priceText(p.usdCents), "bonus" to IosStore.bonusPercent(p),
+                "first" to !store.bool("purchased_${p.id}"), "best" to (p.id == IosStore.BEST_VALUE_ID)
+            )
+        }
+        val specials = IosStore.specials.map { sp ->
+            val owned = when (sp.id) {
+                com.korkoor.pardos.domain.shop.ShopCatalog.STARTER_PACK -> wallet.starterClaimed
+                com.korkoor.pardos.domain.shop.ShopCatalog.VIP_FOREVER -> wallet.vip
+                com.korkoor.pardos.domain.shop.ShopCatalog.SEASON_PASS -> ret.seasonPremium
+                else -> false
+            }
+            val available = when (sp.id) {
+                com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK -> ret.canBreakPiggy()
+                else -> true
+            }
+            robj(
+                "id" to sp.id, "name" to sp.name, "blurb" to sp.blurb, "usdCents" to sp.usdCents,
+                "price" to IosStore.priceText(sp.usdCents), "owned" to owned, "available" to available
+            )
+        }
+        return obj("packs" to packs, "specials" to specials)
+    }
 
-    /** Simula la compra de un pack de gemas (versión de prueba, sin cobro). */
-    fun testBuyGemPack(id: String): String {
-        val p = com.korkoor.pardos.domain.shop.ShopCatalog.byId(id) ?: return no("Producto desconocido")
-        val first = !store.bool("purchased_$id")
-        val gems = GemPacks.gemsForPurchase(p, first)
-        store.setBool("purchased_$id", true)
-        wallet.addGems(gems)
-        return ok("gems" to gems)
+    /** Simula la compra de un producto (la versión de prueba no cobra; con StoreKit esto lo confirma la App Store). */
+    fun testBuyProduct(id: String): String {
+        val pack = IosStore.gemPack(id)
+        if (pack != null) {
+            val first = !store.bool("purchased_$id")
+            val gems = GemPacks.gemsForPurchase(pack, first)
+            store.setBool("purchased_$id", true)
+            wallet.addGems(gems)
+            return ok("gems" to gems)
+        }
+        return when (id) {
+            com.korkoor.pardos.domain.shop.ShopCatalog.STARTER_PACK ->
+                if (wallet.claimStarterPack(col)) ok("gems" to Economy.STARTER_GEMS) else no("Ya reclamaste el pack inicial")
+            com.korkoor.pardos.domain.shop.ShopCatalog.VIP_FOREVER ->
+                if (wallet.vip) no("Ya eres VIP") else { wallet.setVip(true); ok() }
+            com.korkoor.pardos.domain.shop.ShopCatalog.SEASON_PASS ->
+                if (ret.seasonPremium) no("Ya tienes el pase premium de este mes") else { ret.unlockPremium(); ok() }
+            com.korkoor.pardos.domain.shop.ShopCatalog.PIGGY_BREAK -> {
+                val gems = ret.breakPiggy()
+                if (gems > 0) ok("gems" to gems) else no("La hucha todavía está vacía")
+            }
+            else -> no("Producto desconocido")
+        }
     }
 
     fun resetAll() { store.clear() }

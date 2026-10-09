@@ -25,6 +25,8 @@ internal class Wallet(private val s: MetaStore) {
     val undos: Int get() = s.int("undos")
     val extraTimes: Int get() = s.int("extra_times")
     val vip: Boolean get() = s.bool("vip")
+    fun setVip(value: Boolean) { s.setBool("vip", value) }
+    val starterClaimed: Boolean get() = s.bool("starter_claimed")
     val boostWins: Int get() = s.int("boost_wins")
 
     fun addCoins(n: Int) { if (n > 0) coins += n }

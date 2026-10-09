@@ -15,6 +15,8 @@ struct MapView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        ModesSection()
+                            .padding(.bottom, 6)
                         ForEach(1...visibleCount, id: \.self) { level in
                             VStack(spacing: 0) {
                                 if (level - 1) % Chapters.size == 0 {

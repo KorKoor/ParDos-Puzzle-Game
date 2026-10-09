@@ -76,6 +76,10 @@ struct RootView: View {
             SettingsView()
         case .lowFunds:
             LowFundsSheet()
+        case .custom:
+            CustomGameSheet()
+        case .records:
+            RecordsSheet()
         }
     }
 }

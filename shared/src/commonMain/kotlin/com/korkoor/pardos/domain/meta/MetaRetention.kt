@@ -543,6 +543,15 @@ internal class Retention(
     fun onChestOpened() { addWeekly(WeeklyType.OPEN_CHESTS, 1) }
 
     val piggy: Int get() = s.int("piggy")
+
+    /** Rompe la hucha (tras la compra): entrega las gemas guardadas y vuelve a empezar. */
+    fun breakPiggy(): Int {
+        val gems = piggy
+        if (gems <= 0) return 0
+        wallet.addGems(gems)
+        s.setInt("piggy", 0)
+        return gems
+    }
     fun canBreakPiggy(): Boolean = PiggyBank.canBreak(piggy)
     fun dailyChallengeDoneToday(): Boolean = s.int("daily_ch_day", -1) == today
 

@@ -49,6 +49,9 @@ struct BoardSnap: Decodable {
     let merges: Int
     let maxTile: Int
     let elapsedMs: Int
+    let powers: Bool
+    let label: String
+    let assist: Int
 }
 
 struct GuideHint: Decodable {

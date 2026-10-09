@@ -28,9 +28,9 @@ class MetaSessionTest {
         assertEquals(320, album.list("pieces").size)
         assertEquals(32, album.list("series").size)
         jsonObject(m.economyInfo())
-        jsonArray(m.gemPacks())
+        jsonObject(m.storeProducts())
         // cada elemento de una lista tiene que ser un objeto (no un texto con JSON dentro)
-        listOf(m.skinCatalog(), m.fxCatalog(), m.avatarCatalog(), m.bannerCatalog(), m.seasonTiers(), m.wheelSlices(), m.gemPacks()).forEach { json ->
+        listOf(m.skinCatalog(), m.fxCatalog(), m.avatarCatalog(), m.bannerCatalog(), m.seasonTiers(), m.wheelSlices()).forEach { json ->
             assertTrue(jsonArray(json).all { it is Map<*, *> }, "los elementos deben ser objetos: ${json.take(80)}")
         }
         assertTrue(album.list("pieces").all { it is Map<*, *> })
@@ -246,5 +246,54 @@ class MetaSessionTest {
         m.tick(day + 8, (day + 8) * 86_400_000L, noon)
         val lg = m.st().map("league")
         assertTrue(lg["pending"] != null || lg["id"] == "BRONZE")
+    }
+
+    @Test fun towerRunPaysFloorsLosesHeartsAndEnds() {
+        val m = fresh()
+        val start = jsonObject(m.towerStart())
+        assertEquals(1, start.int("floor"))
+        assertEquals(3, start.int("hearts"))
+        val before = m.st().int("coins")
+        val win = ok(m.towerWin(maxTile = 128, merges = 30))
+        assertTrue(win.int("coins") > 0)
+        assertTrue(m.st().int("coins") >= before + win.int("coins"))
+        assertEquals(2, jsonObject(m.towerNext()).int("floor"))
+        assertEquals(2, jsonObject(m.towerInfo()).int("best"))
+        assertEquals(2, ok(m.towerLose()).int("hearts"))
+        ok(m.towerLose())
+        val last = ok(m.towerLose())
+        assertEquals(true, last["over"])
+    }
+
+    @Test fun raceStagesGrowAndFinishPaysByStagesCleared() {
+        val m = fresh()
+        assertEquals(3, jsonObject(m.raceStage(1)).int("size"))
+        assertTrue(m.raceNextTime(1, 10_000L) > 10_000L)
+        assertTrue(m.raceNextTime(9, 179_000L) <= 180_000L)
+        val before = m.st().int("coins")
+        val end = ok(m.raceFinish(stages = 3, merges = 40, maxTile = 128))
+        assertEquals(true, end["newRecord"])
+        assertTrue(m.st().int("coins") >= before + 60)
+        assertEquals(3, jsonObject(m.records()).int("race"))
+    }
+
+    @Test fun duelPicksTheHigherScore() {
+        val m = fresh()
+        assertEquals("PLAYER_2", jsonObject(m.duelResult(100, 250))["winner"])
+        assertEquals("TIE", jsonObject(m.duelResult(80, 80))["winner"])
+    }
+
+    @Test fun failingALevelRepeatedlyGivesAssistAndFreeUndos() {
+        val m = fresh()
+        assertEquals(100, jsonObject(m.prepareLevel(5)).int("percent"))
+        repeat(4) { m.onLoss(level = 5, daily = false, maxTile = 16, merges = 3) }
+        val a = jsonObject(m.prepareLevel(5))
+        assertTrue(a.int("percent") > 100)
+        assertTrue(a.int("undos") > 0)
+        assertEquals(a.int("undos"), m.st().int("undos"))
+        // pedir la ayuda otra vez no regala más
+        assertEquals(0, jsonObject(m.prepareLevel(5)).int("undos"))
+        m.onWin(level = 5, daily = false, stars = 1, moves = 20, timeMs = 1000, maxTile = 64, merges = 10, usedHelp = true)
+        assertEquals(100, jsonObject(m.prepareLevel(5)).int("percent"))
     }
 }
