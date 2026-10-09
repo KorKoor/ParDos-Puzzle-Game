@@ -464,7 +464,7 @@ private fun HintsCard(
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionPill("SOBRE · ${SeriesPackRules.COINS}", Icons.Rounded.MonetizationOn, Gold, coins >= SeriesPackRules.COINS, Modifier.weight(1f)) { onPack(first.series, false) }
             ActionPill("SOBRE · ${SeriesPackRules.GEMS}", Icons.Rounded.Diamond, GemBlue, gems >= SeriesPackRules.GEMS, Modifier.weight(1f)) { onPack(first.series, true) }
-            ActionPill("PEDIR A UN AMIGO", Icons.Rounded.SwapHoriz, Color(0xFF6A4CE0), true, Modifier.weight(1.1f), onTrade)
+            ActionPill("CAMBIAR", Icons.Rounded.SwapHoriz, Color(0xFF6A4CE0), true, Modifier.weight(1.1f), onTrade)
         }
         Text("El sobre trae 3 cartas de esa serie y siempre incluye una nueva.", fontSize = 9.5.sp, color = InkSecondary, modifier = Modifier.padding(top = 6.dp))
         if (hints.size > 1) {
