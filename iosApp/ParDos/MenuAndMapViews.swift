@@ -9,10 +9,14 @@ struct MapView: View {
         min(model.levelCount, model.unlocked + 30)
     }
 
+    private var chapterCount: Int {
+        (model.unlocked - 1) / Chapters.size + 1
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            topBar
-            ScrollViewReader { proxy in
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                topBar(proxy)
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ModesSection()
@@ -36,7 +40,7 @@ struct MapView: View {
         }
     }
 
-    private var topBar: some View {
+    private func topBar(_ proxy: ScrollViewProxy) -> some View {
         VStack(spacing: 10) {
             HStack {
                 Text("Campaña")
@@ -53,7 +57,38 @@ struct MapView: View {
                 .padding(.vertical, 8)
                 .background(Capsule().fill(Color.white))
             }
-            CurrencyBar()
+            HStack(spacing: 8) {
+                CurrencyBar()
+                Spacer()
+                Button(action: { withAnimation { proxy.scrollTo(model.unlocked, anchor: .center) } }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                        Text("Mi nivel")
+                    }
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Theme.accent))
+                }
+                Menu {
+                    ForEach(0..<chapterCount, id: \.self) { chapter in
+                        Button("Capítulo \(chapter + 1) · \(Chapters.theme(chapter).name)") {
+                            withAnimation { proxy.scrollTo(chapter * Chapters.size + 1, anchor: .top) }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "list.bullet")
+                        Text("Capítulos")
+                    }
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundColor(Theme.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.white))
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 26)
@@ -64,6 +99,23 @@ struct MapView: View {
 struct ChapterBanner: View {
     @EnvironmentObject var model: AppModel
     let chapter: Int
+
+    /// El cofre que se abre al superar el último nivel del capítulo.
+    private var chestBadge: some View {
+        let claimed = model.chapterChestClaimed(chapter)
+        return VStack(spacing: 2) {
+            ZStack(alignment: .bottomTrailing) {
+                ChestIcon(type: chapter >= 3 ? "RARE" : "COMMON", size: 40).opacity(claimed ? 0.6 : 1)
+                if claimed {
+                    Image(systemName: "checkmark.circle.fill").font(.system(size: 16)).foregroundColor(.white)
+                }
+            }
+            Text(claimed ? "COBRADO" : "AL FINAL")
+                .font(.system(size: 8, weight: .heavy))
+                .kerning(1)
+                .foregroundColor(Color.white.opacity(0.85))
+        }
+    }
 
     var body: some View {
         let theme = Chapters.theme(chapter)
@@ -84,6 +136,7 @@ struct ChapterBanner: View {
             .foregroundColor(Color.white.opacity(0.85))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(chestBadge, alignment: .trailing)
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -109,6 +162,7 @@ struct LevelRow: View {
         let sway = CGFloat(sin(Double(level) * 0.85)) * 86
         let theme = Chapters.theme(Chapters.index(of: level))
         let tint = kind == "ZEN" ? theme.color : kindColor(kind)
+        let decoration = level % 3 == 0 ? theme.emoji : ""
         return Button(action: { if !locked { model.openPreview(level) } }) {
             VStack(spacing: 4) {
                 ZStack {
@@ -143,6 +197,13 @@ struct LevelRow: View {
             .offset(x: sway)
             .frame(height: 92)
             .frame(maxWidth: .infinity)
+            .background(theme.color.opacity(0.07))
+            .overlay(
+                Text(decoration)
+                    .font(.system(size: 30))
+                    .opacity(0.55)
+                    .offset(x: -sway * 1.3 + (level % 2 == 0 ? 20 : -20))
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .onAppear {
@@ -309,6 +370,23 @@ struct SettingsView: View {
             .padding(14)
             .frame(maxWidth: .infinity)
             .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            VStack(spacing: 0) {
+                Button(action: { model.sheet = .backup }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "externaldrive.fill").frame(width: 24).foregroundColor(Theme.accent)
+                        Text("Copia de seguridad").font(.system(size: 16, weight: .bold, design: .rounded)).foregroundColor(Theme.ink)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundColor(Theme.ink.opacity(0.3))
+                    }
+                    .padding(.vertical, 12)
+                }
+                Divider()
+                linkRow("camera.fill", "Síguenos en Instagram", "https://www.instagram.com/kourkoour/")
+                Divider()
+                linkRow("cup.and.saucer.fill", "Invítame un café (Ko-fi)", "https://ko-fi.com/korkor0209")
+            }
+            .padding(.horizontal, 16)
+            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
             if !decodeDiagnostics.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("DIAGNÓSTICO")
@@ -342,6 +420,20 @@ struct SettingsView: View {
                 primaryButton: .destructive(Text("Borrar")) { model.resetProgress() },
                 secondaryButton: .cancel(Text("Cancelar"))
             )
+        }
+    }
+
+    private func linkRow(_ symbol: String, _ title: String, _ url: String) -> some View {
+        Button(action: {
+            if let target = URL(string: url) { UIApplication.shared.open(target) }
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol).frame(width: 24).foregroundColor(Theme.accent)
+                Text(title).font(.system(size: 16, weight: .bold, design: .rounded)).foregroundColor(Theme.ink)
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundColor(Theme.ink.opacity(0.3))
+            }
+            .padding(.vertical, 12)
         }
     }
 

@@ -46,6 +46,7 @@ enum Sheet: Identifiable {
     case prestige
     case studio
     case remote
+    case backup
 
     var id: String {
         switch self {
@@ -62,6 +63,7 @@ enum Sheet: Identifiable {
         case .prestige: return "prestige"
         case .studio: return "studio"
         case .remote: return "remote"
+        case .backup: return "backup"
         }
     }
 }
@@ -78,6 +80,7 @@ enum Celebration: Identifiable {
     case info(String, String, String)
     case notifPrimer
     case whatsNew
+    case profileSetup
 
     var id: String {
         switch self {
@@ -91,6 +94,7 @@ enum Celebration: Identifiable {
         case .info(let title, _, _): return "info\(title)"
         case .notifPrimer: return "notifPrimer"
         case .whatsNew: return "whatsNew"
+        case .profileSetup: return "profileSetup"
         }
     }
 }
@@ -314,6 +318,7 @@ final class AppModel: ObservableObject {
     func best(_ level: Int) -> Int { Int(meta.bestMovesOf(level: Int32(level))) }
 
     func chapterStars(_ chapter: Int) -> Int { Int(meta.chapterStars(chapter: Int32(chapter))) }
+    func chapterChestClaimed(_ chapter: Int) -> Bool { meta.chapterChestClaimed(chapter: Int32(chapter)) }
 
     /// Milisegundos que faltan para el cofre gratis, contando el tiempo que pasó desde la última lectura.
     func freeChestRemaining(now: Date) -> Int {
@@ -336,7 +341,7 @@ final class AppModel: ObservableObject {
 
     func resetProgress() {
         let prefixes = ["stars_", "best_", "daily_", "seen_", "streak_", "meta_"]
-        let exact = ["unlocked", "tutorial_done"]
+        let exact = ["unlocked", "tutorial_done", "profile_setup_done"]
         for key in defaults.dictionaryRepresentation().keys {
             if exact.contains(key) || prefixes.contains(where: { key.hasPrefix($0) }) {
                 defaults.removeObject(forKey: key)
@@ -814,6 +819,8 @@ final class AppModel: ObservableObject {
                 for skinID in won.newSkins { push(.reveal(skinID)) }
             }
             maybeAskForNotifications()
+            maybeAskForProfile(s)
+            maybeAskForReview()
         } else {
             let json = act { m in
                 m.onLoss(level: Int32(s.level), daily: s.daily, maxTile: Int32(s.maxTile), merges: Int32(s.merges))

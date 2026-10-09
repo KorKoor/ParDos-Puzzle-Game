@@ -38,6 +38,8 @@ struct CelebrationOverlay: View {
             NotifPrimerView()
         case .whatsNew:
             WhatsNewView()
+        case .profileSetup:
+            ProfileSetupView()
         }
     }
 }

@@ -22,6 +22,7 @@ struct RootView: View {
             Theme.background.ignoresSafeArea()
             SeasonBackdrop()
             content
+                .frame(maxWidth: 640)
             if let message = model.toast {
                 ToastView(text: message)
                     .zIndex(30)
@@ -90,6 +91,8 @@ struct RootView: View {
             StudioSheet()
         case .remote:
             RemoteSheet()
+        case .backup:
+            BackupSheet()
         }
     }
 }

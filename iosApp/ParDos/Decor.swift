@@ -162,16 +162,42 @@ struct ConfettiView: View {
     }
 }
 
-/// Portada breve al abrir la app.
+/// Portada breve al abrir la app: una escena con luna, estrellas y bichitos que flotan, y el título de siempre.
 struct SplashView: View {
     @State private var shown = false
+    @State private var glow = false
 
     var body: some View {
         ZStack {
-            (Theme.halloween ? Color(hex: 0x1B0F33) : Theme.cream).ignoresSafeArea()
+            background
+            SeasonBackdrop()
+            if Theme.halloween {
+                moon
+                HStack(spacing: 40) {
+                    FloatingSprite(name: "ico_bat", size: 46, tilt: -10, phase: 0.2)
+                    FloatingSprite(name: "ico_bat", size: 34, tilt: 8, phase: 0.6)
+                }
+                .offset(x: 30, y: -250)
+                HStack {
+                    FloatingSprite(name: "ico_ghost", size: 54, tilt: -6, phase: 0.4)
+                    Spacer()
+                    FloatingSprite(name: "ico_spider", size: 40, tilt: 5, phase: 0.8)
+                }
+                .padding(.horizontal, 36)
+                .offset(y: 190)
+            } else {
+                HStack {
+                    FloatingSprite(name: "ico_sparkles", size: 44, tilt: -6, phase: 0.3)
+                    Spacer()
+                    FloatingSprite(name: "ico_star", size: 36, tilt: 8, phase: 0.7)
+                }
+                .padding(.horizontal, 40)
+                .offset(y: -210)
+            }
             VStack(spacing: 14) {
                 SpriteImage(name: Theme.halloween ? "ico_pumpkin" : "ico_star", size: 120)
                     .scaleEffect(shown ? 1 : 0.4)
+                    .shadow(color: Theme.halloween ? Color(hex: 0xFFA23A).opacity(glow ? 0.8 : 0.2) : Color.clear, radius: 24, x: 0, y: 0)
                 Text("PARDOS")
                     .font(.system(size: 50, weight: .black, design: .rounded))
                     .kerning(8)
@@ -183,7 +209,31 @@ struct SplashView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.5)) {
                 shown = true
             }
+            withAnimation(Animation.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                glow = true
+            }
         }
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        if Theme.halloween {
+            LinearGradient(colors: [Color(hex: 0x120A26), Color(hex: 0x2A1650), Color(hex: 0x4A2468)], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+        } else {
+            LinearGradient(colors: [Theme.cream, Theme.paper], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
+        }
+    }
+
+    private var moon: some View {
+        ZStack {
+            Circle().fill(Color(hex: 0xFFF1B5).opacity(0.18)).frame(width: 150, height: 150)
+            Circle().fill(Color(hex: 0xFFF1B5).opacity(0.35)).frame(width: 112, height: 112)
+            Circle().fill(Color(hex: 0xFFF6D6)).frame(width: 84, height: 84)
+        }
+        .offset(x: 110, y: -240)
+        .opacity(shown ? 1 : 0)
     }
 }
 

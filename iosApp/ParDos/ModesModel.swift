@@ -221,7 +221,7 @@ extension AppModel {
     func beginSelect(_ kind: String) {
         guard let current = snap, current.status == "playing", current.powers else { return }
         let price = eco?.powerPrice ?? 80
-        if coins < price {
+        if coins < price && !(state?.vip ?? false) {
             showToast("Necesitas \(price) monedas")
             sheet = .lowFunds
             return

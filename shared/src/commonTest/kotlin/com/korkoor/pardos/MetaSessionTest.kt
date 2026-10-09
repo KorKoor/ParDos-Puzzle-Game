@@ -143,8 +143,10 @@ class MetaSessionTest {
 
     @Test fun lastLevelOfAChapterOpensItsChestOnce() {
         val m = fresh()
+        assertEquals(false, m.chapterChestClaimed(0))
         val win = ok(m.onWin(level = 20, daily = false, stars = 1, moves = 40, timeMs = 90_000, maxTile = 64, merges = 30, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertNotNull(win["chapterChest"])
+        assertEquals(true, m.chapterChestClaimed(0))
         val again = ok(m.onWin(level = 20, daily = false, stars = 1, moves = 40, timeMs = 90_000, maxTile = 64, merges = 30, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertEquals(null, again["chapterChest"])
     }
@@ -409,5 +411,22 @@ class MetaSessionTest {
         val later = jsonObject(m.tablesInfo())
         assertEquals(4, later.int("level"))
         assertEquals(later.int("base") * 16, later.int("target"))
+    }
+
+    @Test fun backupRoundTripsTheWholeProgress() {
+        val a = fresh()
+        a.openApp(); a.claimDailyReward(); a.grantCoins(777)
+        a.onWin(level = 1, daily = false, stars = 3, moves = 10, timeMs = 1000, maxTile = 64, merges = 5, usedHelp = false, kind = "ZEN", boss = false, flow = 0)
+        a.state()
+        val code = a.exportBackup()
+        assertTrue(code.startsWith("PARDOS1."))
+        val b = MetaSession().also { it.tick(day, day * 86_400_000L, noon) }
+        val result = ok(b.importBackup("Mi copia de ParDos:\n$code\n¡gracias!"))
+        assertEquals(a.st().int("coins"), result.int("coins"))
+        assertEquals(a.save(), b.save())
+        fails(b.importBackup("PARDOS1.AAAA.zzzz"))
+        fails(b.importBackup("hola"))
+        val broken = code.dropLast(3) + "xyz"
+        fails(b.importBackup(broken))
     }
 }

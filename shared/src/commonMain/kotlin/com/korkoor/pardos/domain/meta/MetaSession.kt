@@ -563,7 +563,10 @@ class MetaSession {
     fun buyRevive(): String = if (wallet.spendGems(Economy.REVIVE_PRICE_GEMS)) ok() else no("No alcanzan las gemas")
 
     /** Paga un poder manual (Escoba o Unir) con monedas. */
-    fun buyManualPower(): String = if (wallet.spendCoins(Economy.MANUAL_POWER_PRICE_COINS)) ok() else no("No alcanzan las monedas")
+    fun buyManualPower(): String = if (wallet.vip || wallet.spendCoins(Economy.MANUAL_POWER_PRICE_COINS)) ok() else no("No alcanzan las monedas")
+
+    /** ¿Ya se cobró el cofre de este capítulo (0 = el primero)? */
+    fun chapterChestClaimed(chapter: Int): Boolean = store.bool("chapter_chest_$chapter")
     fun useExtraTime(): Boolean = wallet.useExtraTime()
 
     // ------------------------------------------------------------------ misiones, pase, liga
@@ -809,6 +812,17 @@ class MetaSession {
         com.korkoor.pardos.domain.shop.StudioSkin.config = c
         store.setStr("studio_cfg", c.encode())
         return ok()
+    }
+
+    /** Copia de seguridad en texto (para compartirla o guardarla en Notas). */
+    fun exportBackup(): String = MetaBackup.encode(store.export())
+
+    /** Restaura una copia pegada (se busca dentro del mensaje). Reemplaza el progreso actual. */
+    fun importBackup(text: String): String {
+        val state = MetaBackup.decode(text) ?: return no("No encontré una copia válida en ese texto")
+        if (!state.contains("\t")) return no("La copia está vacía")
+        load(state)
+        return ok("coins" to wallet.coins, "unlocked" to unlockedLevel)
     }
 
     fun resetAll() { store.clear() }
