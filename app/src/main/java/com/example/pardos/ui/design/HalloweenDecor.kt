@@ -38,8 +38,7 @@ import kotlin.math.sin
 @Composable
 fun HalloweenGarland(modifier: Modifier = Modifier, height: Dp = 46.dp, bulbs: Int = 12) {
     if (!Season.halloween) return
-    val clock = rememberInfiniteTransition(label = "garland")
-    val t = clock.animateFloat(0f, 1f, infiniteRepeatable(tween(5000, easing = LinearEasing)), label = "t")
+    val t = rememberThrottledPhase(5000)
     val colors = listOf(Color(0xFFFFB347), Color(0xFFB27BFF), Color(0xFFFF7A59), Color(0xFFFFE08A), Color(0xFF7DE0A6))
     Canvas(modifier.fillMaxWidth().height(height)) {
         val w = size.width

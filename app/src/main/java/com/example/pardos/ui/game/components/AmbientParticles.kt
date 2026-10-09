@@ -40,7 +40,7 @@ fun AmbientParticles(
 
     // PETALS conserva la animación original del juego
     if (kind == ParticleKind.PETALS) {
-        SakuraBackgroundAnimation(density = 0.5f * density)
+        SakuraBackgroundAnimation(density = 0.5f * density * com.korkoor.pardos.ui.design.PowerProfile.particleScale())
         return
     }
 
@@ -61,7 +61,7 @@ fun AmbientParticles(
         ParticleKind.SPARKLES -> 22
         ParticleKind.METEORS -> 5
         else -> 20
-    } * density).toInt().coerceAtLeast(6)
+    } * density * com.korkoor.pardos.ui.design.PowerProfile.particleScale()).toInt().coerceAtLeast(4)
 
     val particles = remember(kind, count) {
         val r = Random(kind.ordinal * 977L)
@@ -74,11 +74,7 @@ fun AmbientParticles(
         }
     }
 
-    val t by rememberInfiniteTransition(label = "particles").animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(24_000, easing = LinearEasing), RepeatMode.Restart),
-        label = "particlesClock"
-    )
+    val t by com.korkoor.pardos.ui.design.rememberThrottledPhase(24_000)
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width

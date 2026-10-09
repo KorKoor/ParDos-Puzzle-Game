@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.design
 
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -68,8 +69,20 @@ val LocalCozyClock = staticCompositionLocalOf<State<Float>> { object : State<Flo
 
 @Composable
 fun CozyClockProvider(content: @Composable () -> Unit) {
-    val transition = rememberInfiniteTransition(label = "cozyClock")
-    val t = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart), label = "t")
+    val context = androidx.compose.ui.platform.LocalContext.current
+    remember { PowerProfile.start(context) }
+    // Un solo latido para toda la app: 30 fotogramas por segundo (menos con ahorro de batería o si el teléfono se calienta)
+    // y solo mientras la app está a la vista.
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.LaunchedEffect(owner) {
+        owner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+            while (true) {
+                PowerProfile.nowMs.longValue = android.os.SystemClock.uptimeMillis()
+                kotlinx.coroutines.delay(PowerProfile.frameMs())
+            }
+        }
+    }
+    val t = rememberThrottledPhase(3000)
     CompositionLocalProvider(LocalCozyClock provides t) { content() }
 }
 

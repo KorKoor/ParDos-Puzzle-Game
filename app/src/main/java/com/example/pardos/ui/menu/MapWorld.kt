@@ -88,10 +88,10 @@ fun MapBackdrop(chapter: Int, scrollPx: () -> Float, modifier: Modifier = Modifi
     )
     val tint by animateColorAsState(theme.color, tween(900), label = "skyTint")
 
-    val clock = rememberInfiniteTransition(label = "world")
-    val cloudsA by clock.animateFloat(0f, 1f, infiniteRepeatable(tween(70_000, easing = LinearEasing)), label = "cloudA")
-    val cloudsB by clock.animateFloat(0f, 1f, infiniteRepeatable(tween(110_000, easing = LinearEasing)), label = "cloudB")
-    val sunBob by clock.animateFloat(0f, 1f, infiniteRepeatable(tween(5200, easing = LinearEasing), RepeatMode.Reverse), label = "sun")
+    val cloudsA by com.korkoor.pardos.ui.design.rememberThrottledPhase(70_000)
+    val cloudsB by com.korkoor.pardos.ui.design.rememberThrottledPhase(110_000)
+    val sunPhase by com.korkoor.pardos.ui.design.rememberThrottledPhase(10_400)
+    val sunBob = if (sunPhase < 0.5f) sunPhase * 2f else (1f - sunPhase) * 2f
 
     Box(modifier.fillMaxSize().background(Brush.verticalGradient(listOf(top, bottom)))) {
         Canvas(Modifier.fillMaxSize()) {
@@ -162,8 +162,7 @@ fun MapBackdrop(chapter: Int, scrollPx: () -> Float, modifier: Modifier = Modifi
 @Composable
 internal fun ChapterLandmark(chapter: Int, modifier: Modifier = Modifier) {
     val theme = chapterTheme(chapter)
-    val clock = rememberInfiniteTransition(label = "landmark")
-    val t by clock.animateFloat(0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing)), label = "t")
+    val t by com.korkoor.pardos.ui.design.rememberThrottledPhase(6000)
     Canvas(modifier.fillMaxWidth().height(116.dp)) {
         val s = size.height * 0.95f
         val onRight = chapter % 2 == 0
