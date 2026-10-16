@@ -199,8 +199,8 @@ class NewMechanicsTest {
         assertTrue(withPhase.map { it.phase2!!.title }.toSet().size >= 5, "las fases son variadas")
     }
 
-    @Test fun thereAreSixteenBossRecipes() {
-        assertEquals(16, LevelGenerator.bossNames.size)
+    @Test fun thereAreTwentyFourBossRecipes() {
+        assertEquals(24, LevelGenerator.bossNames.size)
         assertTrue(LevelCatalog.all().filter { it.isBoss }.map { it.title }.toSet().size >= 14)
     }
 }

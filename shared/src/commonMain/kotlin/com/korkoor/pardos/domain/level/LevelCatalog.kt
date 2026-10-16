@@ -406,7 +406,10 @@ internal object LevelGenerator {
         Recipe("Relojería", 0), Recipe("Duelo de puntos", 0), Recipe("Rompecabezas", 0),
         Recipe("Escalera real", 6), Recipe("Pesadilla", 3), Recipe("Espejismo", 10),
         Recipe("Ojo del huracán", 20), Recipe("Gran maratón", 14), Recipe("Reacción en cadena", 26),
-        Recipe("Cosecha de oro", 8), Recipe("Lluvia de meteoros", 17), Recipe("Callejón sin salida", 13)
+        Recipe("Cosecha de oro", 8), Recipe("Lluvia de meteoros", 17), Recipe("Callejón sin salida", 13),
+        // Jefes nuevos (v3.2): mezclan reglas que el motor ya tiene
+        Recipe("El Laberinto", 5), Recipe("Fábrica de combos", 9), Recipe("Cronista", 11), Recipe("Dragón de piedra", 16),
+        Recipe("Doble tormenta", 22), Recipe("Gran cosecha", 18), Recipe("Torre de cristal", 24), Recipe("Ojo de la tormenta", 30)
     )
 
     /** Nombres de todos los jefes (para las pruebas y la interfaz). */
@@ -435,9 +438,11 @@ internal object LevelGenerator {
         @Suppress("NAME_SHADOWING")
         val base = base.copy(moveLimit = base.moveLimit?.let { (it * 1.12).toInt() })
         return when (recipe) {
-            0, 3, 6, 9, 13 -> B.withPhase(base, "¡Cae una tormenta!", storm = storm)
-            1, 5, 12 -> B.withPhase(base, "¡Llueven los 4!", spawn = SpawnStyle.FOURS)
-            2, 10, 14 -> B.withPhase(base, "¡Controles cambiados!", twist = Twist.MIRROR_H)
+            0, 3, 6, 9, 13, 16, 19 -> B.withPhase(base, "¡Cae una tormenta!", storm = storm)
+            1, 5, 12, 17, 21 -> B.withPhase(base, "¡Llueven los 4!", spawn = SpawnStyle.FOURS)
+            2, 10, 14, 18 -> B.withPhase(base, "¡Controles cambiados!", twist = Twist.MIRROR_H)
+            20, 23 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_UP)
+            22 -> B.withPhase(base, "¡Arriba y abajo se cambian!", twist = Twist.MIRROR_V)
             4 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_UP)
             7 -> B.withPhase(base, "¡Arriba y abajo se cambian!", twist = Twist.MIRROR_V)
             8 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_DOWN)
@@ -471,7 +476,23 @@ internal object LevelGenerator {
             12 -> boss(combo(level, 3, 2, if (chapter >= 40) 5 else 4, 2.4), name)
             13 -> boss(harvest(level, 32, (24 + chapter / 4).coerceAtMost(40), 5, StonePatterns.pick(5, 1, rnd)), name)
             14 -> boss(doubleDrop(level, tileOf((e - 1).coerceIn(7, 9)), 5, StonePatterns.pick(5, 1, rnd)), name)
-            else -> boss(twisted(zen(level, tileOf((e - 2).coerceIn(6, 8)), 4), listOf(Twist.NO_UP, Twist.NO_DOWN, Twist.NO_LEFT, Twist.NO_RIGHT).random(rnd)), name)
+            15 -> boss(twisted(zen(level, tileOf((e - 2).coerceIn(6, 8)), 4), listOf(Twist.NO_UP, Twist.NO_DOWN, Twist.NO_LEFT, Twist.NO_RIGHT).filter { it in twistsFor(chapter) }.random(rnd)), name)
+            // El Laberinto: tablero de 5 con piedras y poco margen de movimientos
+            16 -> boss(sprint(level, tileOf((e - 1).coerceIn(7, 9)), 5, slack = sprintSlack(chapter) + 0.3, stones = StonePatterns.pick(5, 1, rnd)), name)
+            // Fábrica de combos: cuatro pares de un solo deslizamiento
+            17 -> boss(combo(level, 4, 1, 5, 2.6, StonePatterns.pick(5, 1, rnd)), name)
+            // Cronista: reloj apretado en un tablero de 5
+            18 -> boss(clock(level, tileOf((e - 2).coerceIn(6, 8)), 5, secondsPerMove = clockSeconds(chapter) + 0.5, stones = StonePatterns.pick(5, 1, rnd)), name)
+            // Dragón de piedra: pieza pesada con un pilar
+            19 -> boss(heavy(level, tileOf((e - 2).coerceIn(7, 8)), 4, pillar).let { it.copy(moveLimit = LevelMath.moveLimit(it, 2.6)) }, name)
+            // Doble tormenta: piedras que caen y fichas dobles
+            20 -> boss(storm(level, tileOf((e - 2).coerceIn(7, 8)), 5, stormFor(chapter, false).let { it.copy(everyMoves = (it.everyMoves + 1).coerceAtMost(8)) }, StonePatterns.pick(5, 1, rnd)), name)
+            // Gran cosecha: muchas fichas de 64
+            21 -> boss(harvest(level, 64, (10 + chapter / 6).coerceAtMost(18), 5, StonePatterns.pick(5, 1, rnd)), name)
+            // Torre de cristal: escalera larga
+            22 -> boss(ladder(level, tileOf(if (chapter >= 30) 9 else 8), 4, 5, null, slack = 1.75), name)
+            // Ojo de la tormenta: ráfaga de piedras con controles girados
+            else -> boss(twisted(storm(level, tileOf((e - 2).coerceIn(7, 8)), 5, stormFor(chapter, false).let { it.copy(everyMoves = (it.everyMoves + 2).coerceAtMost(9)) }, StonePatterns.pick(5, 1, rnd)), Twist.MIRROR_H), name)
         }
     }
 }

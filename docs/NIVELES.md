@@ -66,3 +66,7 @@ Solo en builds de depuración:
 ```
 adb shell am start -n com.korkoor.pardos.debug/com.korkoor.pardos.MainActivity --ei debug_level 47
 ```
+
+## Jefes (v3.2)
+
+Hay 24 recetas de jefe. Las 8 nuevas llegan por capítulo: El Laberinto (5), Fábrica de combos (9), Cronista (11), Dragón de piedra (16), Gran cosecha (18), Doble tormenta (22), Torre de cristal (24) y Ojo de la tormenta (30). Todas se arman con las reglas que ya existen y pasan la prueba del robot (`LevelFeasibilityTest`), que comprueba que se pueden ganar. Arreglo de paso: el jefe "Callejón sin salida" ya no usa giros de dirección que aún no han llegado a ese capítulo.
