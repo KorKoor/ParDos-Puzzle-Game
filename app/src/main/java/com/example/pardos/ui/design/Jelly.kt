@@ -442,16 +442,17 @@ fun ToyAlertDialog(
                 }
                 if (title != null) { title(); androidx.compose.foundation.layout.Spacer(Modifier.height(10.dp)) }
                 if (text != null) { text(); androidx.compose.foundation.layout.Spacer(Modifier.height(18.dp)) }
-                androidx.compose.foundation.layout.Row(
+                // Los botones van apilados: el principal arriba y el secundario debajo. En fila, un botón que llena el ancho
+                // empujaba al otro fuera de la tarjeta y solo se veía uno.
+                androidx.compose.foundation.layout.Column(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End,
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                    horizontalAlignment = androidx.compose.ui.Alignment.End
                 ) {
-                    if (dismissButton != null) {
-                        dismissButton()
-                        androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-                    }
                     confirmButton()
+                    if (dismissButton != null) {
+                        androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
+                        dismissButton()
+                    }
                 }
             }
         }

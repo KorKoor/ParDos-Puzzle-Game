@@ -63,16 +63,17 @@ private fun rememberBestiary(): BestiarySnapshot? {
 @Composable
 fun BestiaryCard(modifier: Modifier = Modifier, onClick: () -> Unit) {
     val snap = rememberBestiary()
-    JellySurface(modifier = modifier.fillMaxWidth(), onClick = onClick, shape = RoundedCornerShape(20.dp), color = androidx.compose.ui.graphics.Color.White) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+    JellySurface(modifier = modifier.fillMaxWidth(), onClick = onClick, shape = RoundedCornerShape(18.dp), color = androidx.compose.ui.graphics.Color.White) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("BESTIARIO", fontSize = 11.sp, fontWeight = FontWeight.Black, color = InkTertiary, letterSpacing = 2.sp)
-                Text("Jefes y guardianes", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Navy)
-                Text("Véncelos para completar sus fichas.", fontSize = 12.sp, color = InkSecondary)
+                Text("Bestiario", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Navy)
+                Text("Jefes y guardianes que has vencido", fontSize = 11.sp, color = InkSecondary)
             }
             val done = snap?.entries?.count { it.second } ?: 0
             val total = snap?.entries?.size ?: 0
-            Text(if (snap == null) "…" else "$done/$total", fontSize = 18.sp, fontWeight = FontWeight.Black, color = Navy)
+            Text(if (snap == null) "…" else "$done/$total", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Navy)
+            Spacer(Modifier.width(6.dp))
+            Text("›", fontSize = 20.sp, fontWeight = FontWeight.Black, color = InkTertiary)
         }
     }
 }

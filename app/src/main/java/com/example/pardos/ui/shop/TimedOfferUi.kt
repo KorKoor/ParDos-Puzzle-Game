@@ -1,5 +1,6 @@
 package com.korkoor.pardos.ui.shop
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +46,8 @@ private fun OfferContents.lines(): List<String> = buildList {
     if (freezes > 0) add("$freezes × Escudo de racha")
     if (rareChests > 0) add(if (rareChests == 1) "1 cofre raro" else "$rareChests cofres raros")
 }
+
+private val Gilt = Color(0xFFE9B949)
 
 private fun formatLeft(ms: Long): String {
     val totalMin = ms / 60_000L
@@ -77,28 +81,31 @@ private fun OfferCard(offer: TimedOffer, store: TimedOfferStore, gems: Int, onMe
             delay(30_000)
         }
     }
-    JellySurface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = Color.White) {
-        Column(Modifier.padding(16.dp)) {
+    JellySurface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = Color(0xFF2E1F55)) {
+        Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("OFERTA POR TIEMPO LIMITADO", fontSize = 10.sp, fontWeight = FontWeight.Black, color = InkTertiary, letterSpacing = 2.sp)
-                    Text(offer.title, fontSize = 18.sp, fontWeight = FontWeight.Black, color = Navy)
-                }
-                Text(if (left > 0) "Termina en ${formatLeft(left)}" else "Terminó", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = InkSecondary)
+                Text("OFERTA · TIEMPO LIMITADO", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Gilt, letterSpacing = 1.5.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                Text(
+                    if (left > 0) "Termina en ${formatLeft(left)}" else "Terminó", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color(0xFF2E1F55),
+                    maxLines = 1, softWrap = false,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Gilt).padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
+            Spacer(Modifier.height(6.dp))
+            Text(offer.title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Color.White)
             Spacer(Modifier.height(4.dp))
-            Text(offer.blurb, fontSize = 12.sp, color = InkSecondary)
+            Text(offer.blurb, fontSize = 12.sp, color = Color.White.copy(alpha = 0.75f))
             Spacer(Modifier.height(8.dp))
-            Text(offer.contents.lines().joinToString("  ·  "), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Navy)
+            Text(offer.contents.lines().joinToString("  ·  "), fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFE9B0))
             Spacer(Modifier.height(4.dp))
             Text(
                 "Por separado: ${offer.contents.gemValue} ◆ · Aquí: ${offer.priceGems} ◆ (ahorras ${offer.savingPercent} %). Solo se compra una vez.",
-                fontSize = 11.sp, color = InkTertiary
+                fontSize = 11.sp, color = Color.White.copy(alpha = 0.6f)
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             when {
-                bought -> Text("Ya la compraste. ¡Que la disfrutes!", fontSize = 13.sp, fontWeight = FontWeight.Black, color = GemBlue)
-                left <= 0 -> Text("Esta oferta ya terminó.", fontSize = 13.sp, color = InkTertiary)
+                bought -> Text("Ya la compraste. ¡Que la disfrutes!", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Gilt)
+                left <= 0 -> Text("Esta oferta ya terminó.", fontSize = 13.sp, color = Color.White.copy(alpha = 0.6f))
                 else -> DialogButton(
                     if (gems >= offer.priceGems) "COMPRAR · ${offer.priceGems} ◆" else "Te faltan ${offer.priceGems - gems} ◆",
                     GemBlue, enabled = gems >= offer.priceGems
