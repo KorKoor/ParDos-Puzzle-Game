@@ -853,12 +853,13 @@ class MetaSession {
         wallet.addCoins(P.coinsFor(b))
         wallet.addGems(P.gemsFor(b))
         var chest = ""
+        val roomDone = P.rooms[b.room].bosses.all { panStars(it.id) > 0 }
         if (b.isRoomBoss) {
             val type = if (b.room >= 8) com.korkoor.pardos.domain.collection.ChestType.EPIC else com.korkoor.pardos.domain.collection.ChestType.RARE
             col.addChests(type, 1)
             chest = type.name
         }
-        return ok("first" to true, "coins" to P.coinsFor(b), "gems" to P.gemsFor(b), "chest" to chest, "room" to b.name)
+        return ok("first" to true, "coins" to P.coinsFor(b), "gems" to P.gemsFor(b), "chest" to chest, "room" to P.rooms[b.room].name, "roomDone" to roomDone)
     }
 
     private fun weeklyBossLevel(): Int? {
@@ -930,9 +931,16 @@ class MetaSession {
         val bosses = com.korkoor.pardos.domain.level.Bestiary.bosses.map { entry(it) }
         val guardians = com.korkoor.pardos.domain.level.Bestiary.guardians.map { entry(it) }
         val all = com.korkoor.pardos.domain.level.Bestiary.bosses + com.korkoor.pardos.domain.level.Bestiary.guardians
+        val pantheon = com.korkoor.pardos.domain.level.Pantheon.bosses.map { b ->
+            robj(
+                "name" to b.name, "motif" to b.motif.name, "taunt" to b.taunt, "levels" to listOf(b.id), "first" to b.room + 1,
+                "defeated" to (panStars(b.id) > 0), "guardian" to false
+            )
+        }
+        val pantheonBeaten = com.korkoor.pardos.domain.level.Pantheon.bosses.count { panStars(it.id) > 0 }
         return obj(
-            "bosses" to bosses, "guardians" to guardians,
-            "defeated" to all.count { e -> e.defeated { starsOf(it) } }, "total" to all.size
+            "bosses" to bosses, "guardians" to guardians, "pantheon" to pantheon,
+            "defeated" to all.count { e -> e.defeated { starsOf(it) } } + pantheonBeaten, "total" to all.size + pantheon.size
         )
     }
 

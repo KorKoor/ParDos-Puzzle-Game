@@ -7,7 +7,10 @@ struct MainShell: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
+                LivingBackdrop()
                 tabContent
+                    .id(model.tab)
+                    .transition(.opacity.combined(with: .scale(scale: 0.985)))
                 HalloweenGarland()
                 if model.state == nil {
                     StateErrorCard()

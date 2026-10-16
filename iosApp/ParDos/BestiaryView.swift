@@ -16,6 +16,7 @@ struct BestiaryEntry: Decodable, Identifiable {
 struct BestiaryData: Decodable {
     let bosses: [BestiaryEntry]
     let guardians: [BestiaryEntry]
+    let pantheon: [BestiaryEntry]?
     let defeated: Int
     let total: Int
 }
@@ -224,6 +225,7 @@ struct BestiarySheet: View {
                         .padding(.horizontal, 30)
                     section("Jefes", d.bosses)
                     section("Guardianes", d.guardians)
+                    if let p = d.pantheon { section("Panteón", p) }
                 } else {
                     Text("No se pudo cargar").foregroundColor(Theme.ink.opacity(0.5))
                 }
@@ -255,7 +257,7 @@ struct BestiarySheet: View {
                 .foregroundColor(Theme.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(e.defeated ? "\u{201C}\(e.taunt)\u{201D}" : "Nivel \(e.first)")
+            Text(e.defeated ? "\u{201C}\(e.taunt)\u{201D}" : (e.levels.first.map { $0 > 100_000 } == true ? "Sala \(e.first)" : "Nivel \(e.first)"))
                 .font(.system(size: 11, weight: .medium, design: e.defeated ? .serif : .default))
                 .foregroundColor(Theme.ink.opacity(0.55))
                 .multilineTextAlignment(.center)

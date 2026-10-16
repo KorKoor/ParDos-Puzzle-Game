@@ -36,6 +36,7 @@ struct PantheonWin: Decodable {
     let gems: Int
     let chest: String
     let room: String?
+    let roomDone: Bool?
 }
 
 extension AppModel {
@@ -49,6 +50,7 @@ extension AppModel {
         if let r = decodeJSON(PantheonWin.self, json), r.ok, r.first {
             var text = "Jefe vencido: +\(r.coins) monedas, +\(r.gems) gemas"
             if !r.chest.isEmpty { text += " y un cofre" }
+            if r.roomDone == true, let room = r.room { text = "¡Sala completada: \(room)! " + text; Haptics.success(); sounds.play(.stars_3) }
             showToast(text)
         }
         maybeAskForReview()
