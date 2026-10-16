@@ -52,6 +52,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -97,6 +98,13 @@ fun GameScreen(
     val haptic = com.korkoor.pardos.ui.design.rememberGameHaptics()
     val context = LocalContext.current
     val activity = context as? Activity
+    val lowResourceMode by com.korkoor.pardos.ui.design.PowerProfile.lowResourceMode
+    val gameSettings = remember(context) { com.korkoor.pardos.data.local.SettingsManager(context) }
+    val gameUiScale by gameSettings.gameUiScale.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
+    val gameDensity = remember(density, gameUiScale) {
+        androidx.compose.ui.unit.Density(density.density, density.fontScale * gameUiScale)
+    }
     val adEconomy = remember { com.korkoor.pardos.data.local.EconomyManager(context) }
     val gemsNow by adEconomy.gems.collectAsState()
     val isVipNow by adEconomy.isVip.collectAsState()
@@ -108,6 +116,7 @@ fun GameScreen(
     var selectedShapeType by rememberSaveable { mutableStateOf("Cuadrado") }
     var showExitDialog by remember { mutableStateOf(false) }
     var showThemeMenu by remember { mutableStateOf(false) }
+    var showReplayDialog by remember { mutableStateOf(false) }
     var displayedLevel by remember { mutableIntStateOf(state.currentLevel) }
 
     LaunchedEffect(state.currentLevel) {
@@ -160,6 +169,7 @@ fun GameScreen(
     LaunchedEffect(state.moveCount, state.merges, tutorialOn) {
         if (tutorialOn && com.korkoor.pardos.domain.logic.TutorialCoach.isFinished(state.moveCount, state.merges)) {
             tutorialPrefs.edit().putBoolean("tutorial_v2_done", true).apply()
+            com.korkoor.pardos.data.local.Analytics.tutorialComplete()
             tutorialDone = true
         }
     }
@@ -187,7 +197,7 @@ fun GameScreen(
 
     val isTimeLow = state.maxTime != null && state.elapsedTime <= 10_000L
     val extraTimes by viewModel.extraTimeCount.collectAsState()
-    val autoNextOn by remember { com.korkoor.pardos.data.local.SettingsManager(context).autoNextEnabled }.collectAsState()
+    val autoNextOn by gameSettings.autoNextEnabled.collectAsStateWithLifecycle()
     val remoteTitle = when (viewModel.remoteRole) {
         RemoteRole.CREATOR -> "TU RETO"
         RemoteRole.CHALLENGED -> "EL RETO"
@@ -197,7 +207,7 @@ fun GameScreen(
 
     val shouldBlur = viewModel.showLevelSummary || state.isGameOver || showExitDialog || showThemeMenu
     val blurRadius by animateDpAsState(
-        targetValue = if (shouldBlur) 16.dp else 0.dp,
+        targetValue = if (shouldBlur && !lowResourceMode) 16.dp else 0.dp,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "DynamicBlur"
     )
@@ -208,6 +218,7 @@ fun GameScreen(
         if (state.moveCount > 0) showExitDialog = true else onBackToMenu()
     }
 
+    CompositionLocalProvider(LocalDensity provides gameDensity) {
     Column(modifier = modifier.fillMaxSize().background(bgGradient)) {
 
         Box(modifier = Modifier.weight(1f)) {
@@ -225,12 +236,10 @@ fun GameScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(blurRadius)
+                    .then(if (lowResourceMode) Modifier else Modifier.blur(blurRadius))
             ) {
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val maxHeight = maxHeight
-                    val maxWidth = maxWidth
-
+                    val compactGameLayout = !isLandscape && maxHeight < 760.dp
                     if (isLandscape) {
                         Row(
                             modifier = Modifier
@@ -250,7 +259,8 @@ fun GameScreen(
                                 GameTopBar(
                                     selectedShapeType = selectedShapeType,
                                     onShapeSelected = { selectedShapeType = it },
-                                    onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() }
+                                    onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() },
+                                    uiScale = gameUiScale
                                 )
 
                                 Spacer(modifier = Modifier.height(16.dp))
@@ -277,24 +287,27 @@ fun GameScreen(
                                             titleOverride = remoteTitle,
                                             winStreak = if (inCampaign) viewModel.winStreak else 0,
                                             towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null,
-                                            starLimits = if (tutorialOn) null else starLimits
+                                            starLimits = if (tutorialOn) null else starLimits,
+                                            compact = compactGameLayout
                                         )
                                     }
                                 }
                             }
 
-                            Box(
+                            BoxWithConstraints(
                                 modifier = Modifier
                                     .weight(2.2f)
                                     .fillMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val boardSize = minOf(maxHeight.value, maxWidth.value * 0.7f).dp * (if (isLargeGrid) 0.98f else 0.92f)
+                                // Calcularlo con el espacio real de esta columna; el ancho total de
+                                // pantalla hacía que el tablero se encogiera al ser limitado aquí.
+                                val boardSize = minOf(maxHeight, maxWidth) * 0.98f
 
                                 Box(
                                     modifier = Modifier
                                         .size(boardSize)
-                                        .impactShake(viewModel.impact)
+                                        .then(if (lowResourceMode) Modifier else Modifier.impactShake(viewModel.impact))
                                         .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -354,7 +367,10 @@ fun GameScreen(
                                 if (coachStep != null) {
                                     CoachCard(coachStep, Modifier.padding(horizontal = 0.dp))
                                 } else if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                    PowerUpSection(viewModel, haptic, activity, labelColor = currentTheme.inkColor)
+                                    PowerUpSection(
+                                        viewModel, haptic, activity, labelColor = currentTheme.inkColor,
+                                        compact = compactGameLayout, uiScale = gameUiScale
+                                    )
                                 }
                             }
                         }
@@ -364,7 +380,6 @@ fun GameScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .statusBarsPadding()
                                 .navigationBarsPadding(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -372,7 +387,8 @@ fun GameScreen(
                                 GameTopBar(
                                     selectedShapeType = selectedShapeType,
                                     onShapeSelected = { selectedShapeType = it },
-                                    onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() }
+                                    onBackToMenu = { if (state.moveCount > 0) showExitDialog = true else onBackToMenu() },
+                                    uiScale = gameUiScale
                                 )
                             }
 
@@ -380,7 +396,7 @@ fun GameScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxWidth()
-                                    .padding(horizontal = if (isLargeGrid) 10.dp else 20.dp),
+                                    .padding(horizontal = 10.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
@@ -392,7 +408,7 @@ fun GameScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             showThemeMenu = true
                                         }
-                                        .padding(bottom = if (isLargeGrid) 8.dp else 16.dp)
+                                        .padding(bottom = 8.dp)
                                 ) {
                                     AnimatedContent(
                                         targetState = if (state.currentLevel > displayedLevel) state.currentLevel else displayedLevel,
@@ -410,7 +426,8 @@ fun GameScreen(
                                             titleOverride = remoteTitle,
                                             winStreak = if (inCampaign) viewModel.winStreak else 0,
                                             towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null,
-                                            starLimits = if (tutorialOn) null else starLimits
+                                            starLimits = if (tutorialOn) null else starLimits,
+                                            compact = compactGameLayout
                                         )
                                     }
 
@@ -422,31 +439,40 @@ fun GameScreen(
                                     )
                                 }
 
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f, fill = false)
-                                        .aspectRatio(1f)
-                                        .fillMaxWidth(if (isLargeGrid) 0.98f else 0.92f)
-                                        .impactShake(viewModel.impact)
-                                        .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
+                                BoxWithConstraints(
+                                    modifier = Modifier.weight(1f).fillMaxWidth(),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    GameBoard(
-                                        state = state,
-                                        selectedShapeType = selectedShapeType,
-                                        viewModel = viewModel,
-                                        haptic = haptic,
-                                        currentTheme = currentTheme,
-                                        onMoveSound = { },
-                                        modifier = Modifier.fillMaxSize(),
-                                        guide = guide
+                                    // El área ponderada es exactamente lo que queda entre cabecera y
+                                    // controles: así el cuadrado crece al máximo y nunca se recorta.
+                                    val boardSide = minOf(
+                                        maxWidth * 0.98f,
+                                        maxHeight,
+                                        520.dp
                                     )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(boardSide)
+                                            .then(if (lowResourceMode) Modifier else Modifier.impactShake(viewModel.impact))
+                                            .shadow(30.dp, RoundedCornerShape(24.dp), spotColor = Color.Black.copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        GameBoard(
+                                            state = state,
+                                            selectedShapeType = selectedShapeType,
+                                            viewModel = viewModel,
+                                            haptic = haptic,
+                                            currentTheme = currentTheme,
+                                            onMoveSound = { },
+                                            modifier = Modifier.fillMaxSize(),
+                                            guide = guide
+                                        )
 
-                                    ComboIndicator(
-                                        count = viewModel.comboCount.value,
-                                        accentColor = currentTheme.accentColor
-                                    )
-
+                                        ComboIndicator(
+                                            count = viewModel.comboCount.value,
+                                            accentColor = currentTheme.accentColor
+                                        )
+                                    }
                                 }
                             }
 
@@ -457,13 +483,21 @@ fun GameScreen(
                                         .padding(bottom = 12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    GameFooter(state = state)
+                                    GameFooter(
+                                        state = state,
+                                        compact = compactGameLayout,
+                                        uiScale = gameUiScale
+                                    )
 
                                     if (coachStep != null) {
                                         Spacer(Modifier.height(14.dp))
                                         CoachCard(coachStep)
                                     } else if (state.allowPowerUps && !viewModel.showLevelSummary && !state.isGameOver && !state.isLevelCompleted) {
-                                        PowerUpSection(viewModel, haptic, activity, Modifier.fillMaxWidth(), labelColor = currentTheme.inkColor)
+                                        PowerUpSection(
+                                            viewModel, haptic, activity, Modifier.fillMaxWidth(),
+                                            labelColor = currentTheme.inkColor, compact = compactGameLayout,
+                                            uiScale = gameUiScale
+                                        )
                                     }
                                 }
                             }
@@ -512,10 +546,11 @@ fun GameScreen(
                     onDouble = {
                         // VIP: gratis, sin anuncio
                         if (isVipNow) viewModel.grantDoubleCoins()
-                        else activity?.let { act -> AdManager.showRewardedAd(act) { viewModel.grantDoubleCoins() } }
+                        else activity?.let { act -> AdManager.showRewardedAd(act, placement = "game") { viewModel.grantDoubleCoins() } }
                     },
                     vip = isVipNow,
                     newRecord = viewModel.lastRunWasRecord,
+                    onReview = if (viewModel.lastReplay != null) ({ showReplayDialog = true }) else null,
                     onRetry = { viewModel.retryLevel() },
                     onAutoNext = { viewModel.nextLevel() },
                     onDismiss = {
@@ -611,7 +646,7 @@ fun GameScreen(
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             if (isVipNow) viewModel.grantAdReward("REVIVE")
                             else activity?.let { act ->
-                                AdManager.showRewardedAd(act) {
+                                AdManager.showRewardedAd(act, placement = "game") {
                                     viewModel.grantAdReward("REVIVE")
                                 }
                             }
@@ -641,12 +676,18 @@ fun GameScreen(
                         coinsEarned = viewModel.lastCoinsEarned,
                         nearMiss = viewModel.nearMissMessage,
                         footnote = if (viewModel.towerActive) "Pierdes un corazón · te quedan ${viewModel.towerHearts}" else null,
-                        reason = state.gameOverReason()
+                        reason = state.gameOverReason(),
+                        onReview = if (viewModel.lastReplay != null) ({ showReplayDialog = true }) else null
                     )
                 }
             }
 
             AchievementManagerPopup(viewModel = viewModel)
+            if (showReplayDialog) {
+                viewModel.lastReplay?.let { replay ->
+                    ReplayViewerDialog(replay) { showReplayDialog = false }
+                }
+            }
 
             // Ayuda adaptativa a la vista: "Te echamos una mano…" al empezar un nivel que se atascó
             AssistBanner(viewModel.assistMessage, Modifier.align(Alignment.TopCenter).padding(top = 92.dp))
@@ -783,6 +824,7 @@ fun GameScreen(
                 )
             }
         }
+    }
     }
 }
 

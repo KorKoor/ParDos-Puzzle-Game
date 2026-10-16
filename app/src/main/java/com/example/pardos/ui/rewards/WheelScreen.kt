@@ -265,7 +265,7 @@ fun WheelScreen(onBack: () -> Unit) {
                         if (isVip) "Girar de nuevo (VIP)" else "Girar con anuncio (${allowance.adLeft})",
                         onClick = {
                             if (isVip) startSpin(true)
-                            else activity?.let { act -> AdManager.showRewardedAd(act) { startSpin(true) } }
+                            else activity?.let { act -> AdManager.showRewardedAd(act, placement = "wheel") { startSpin(true) } }
                         },
                         icon = Icons.Rounded.PlayCircle, enabled = !spinning
                     )

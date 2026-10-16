@@ -26,10 +26,10 @@ object FreeChest {
     fun typeFor(claimedBefore: Int): ChestType =
         if ((claimedBefore + 1) % Economy.FREE_CHEST_RARE_EVERY == 0) ChestType.RARE else ChestType.COMMON
 
-    /** Gemas para saltar la espera: 1 por cada media hora que falte (mínimo 1, máximo 8). */
+    /** Gemas para saltar la espera: 1 por cada 20 minutos que falten (mínimo 1, máximo [Economy.FREE_CHEST_SKIP_MAX_GEMS]). */
     fun skipCostGems(remainingMs: Long): Int {
         if (remainingMs <= 0L) return 0
-        return ceil(remainingMs / (30.0 * 60_000.0)).toInt().coerceIn(1, Economy.FREE_CHEST_SKIP_MAX_GEMS)
+        return ceil(remainingMs / (20.0 * 60_000.0)).toInt().coerceIn(1, Economy.FREE_CHEST_SKIP_MAX_GEMS)
     }
 }
 
@@ -57,13 +57,13 @@ data class WheelSlice(val kind: WheelKind, val amount: Int, val chest: ChestType
 /** Ruleta diaria: un giro gratis al día y giros extra viendo anuncios. */
 object DailyWheel {
     val slices: List<WheelSlice> = listOf(
-        WheelSlice(WheelKind.COINS, 60, weight = 26),
-        WheelSlice(WheelKind.GEMS, 3, weight = 14),
-        WheelSlice(WheelKind.COINS, 120, weight = 20),
+        WheelSlice(WheelKind.COINS, 50, weight = 26),
+        WheelSlice(WheelKind.GEMS, 2, weight = 14),
+        WheelSlice(WheelKind.COINS, 100, weight = 20),
         WheelSlice(WheelKind.CHEST, 1, ChestType.COMMON, weight = 16),
-        WheelSlice(WheelKind.COINS, 300, weight = 9),
+        WheelSlice(WheelKind.COINS, 250, weight = 9),
         WheelSlice(WheelKind.SEASON_POINTS, 50, weight = 9),
-        WheelSlice(WheelKind.GEMS, 10, weight = 3),
+        WheelSlice(WheelKind.GEMS, 6, weight = 3),
         WheelSlice(WheelKind.CHEST, 1, ChestType.RARE, weight = 3)
     )
 

@@ -113,7 +113,7 @@ fun PromoStrip(
             }
             PromoKind.FREE_GEMS -> FreeGemsRow(freeGemsLeft) {
                 (context as? android.app.Activity)?.let { act ->
-                    com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) {
+                    com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act, placement = "promo") {
                         economy.addGems(AdRewards.FREE_GEMS)
                         adFreq.consume(AdFrequency.SLOT_FREE_GEMS)
                         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.GEM)

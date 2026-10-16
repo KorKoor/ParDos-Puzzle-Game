@@ -123,6 +123,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         _boardState.update {
             it.copy(tiles = snap.tiles, score = snap.score, moveCount = snap.moves, goalStats = snap.stats, stormStones = snap.stormStones, blocked = snap.blocked)
         }
+        recordReplayFrame("UNDO")
         lastSnapshot = null
         canUndo = false
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.UNDO)
@@ -333,6 +334,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
         missionManager.updateProgress(MissionType.WIN_LEVELS, 1)
         retention.onGameFinished(won = true, dailyChallenge = false)
+        logLevelEnd(true)
         com.korkoor.pardos.data.local.PrestigeManager(getApplication()).onLevelWon(
             activeSpec?.kind ?: com.korkoor.pardos.domain.level.LevelKind.ZEN, activeSpec?.isBoss == true, peakFlowTier, winStreak
         )
@@ -418,6 +420,37 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var activeSpec: LevelSpec? = null
     var currentSeed: Long? = null
         private set
+    val replayFrames = mutableStateListOf<com.korkoor.pardos.data.local.ReplayFrame>()
+    var lastReplay by mutableStateOf<com.korkoor.pardos.data.local.SavedGameReplay?>(null)
+        private set
+    private var replaySavedAt = 0L
+
+    private fun recordReplayFrame(direction: String = "START") {
+        val state = _boardState.value
+        if (state.boardSize !in 3..6) return
+        replayFrames.add(
+            com.korkoor.pardos.data.local.ReplayFrame(
+                move = replayFrames.size,
+                direction = direction,
+                score = state.score,
+                tiles = state.tiles.map { com.korkoor.pardos.data.local.ReplayTile(it.row, it.col, it.value) }
+            )
+        )
+        if (replayFrames.size > 400) replayFrames.removeAt(1)
+    }
+
+    private fun saveReplay() {
+        if (replayFrames.size < 2 || replaySavedAt == 0L) return
+        val replay = com.korkoor.pardos.data.local.SavedGameReplay(
+            boardSize = _boardState.value.boardSize,
+            target = _boardState.value.levelLimit,
+            finalScore = _boardState.value.score,
+            frames = replayFrames.toList(),
+            savedAt = replaySavedAt
+        )
+        com.korkoor.pardos.data.local.GameReplayStore(getApplication()).save(replay)
+        lastReplay = replay
+    }
     private var gameEngine = GameEngine(boardSize = 3)
     private var isMoving = false
     private var timerJob: Job? = null
@@ -521,6 +554,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Empieza (o reinicia) un nivel de la campaña con todas sus reglas: tablero, piedras, límites y meta. */
     fun startCampaignLevel(level: Int, initialScore: Int = 0) {
+        com.korkoor.pardos.data.local.Analytics.levelStart("CAMPANA", level)
         currentMode = GameMode.CLASICO
         dailyChallengeThemeIndex = null
         currentMultiplierBase = 2
@@ -548,6 +582,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
      * Cuenta atrás si hay maxTime, hacia arriba si no. Respeta bonus de tiempo y
      * evita bucles duplicados (un solo Job).
      */
+    private fun logLevelEnd(won: Boolean) {
+        val st = _boardState.value
+        com.korkoor.pardos.data.local.Analytics.levelEnd(currentMode.name, st.currentLevel, won, st.moveCount)
+    }
+
     fun startLevelTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
@@ -590,6 +629,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private fun handleGameOver() {
         timerJob?.cancel()
         _boardState.update { it.copy(isGameOver = true) }
+        saveReplay()
         prefs.edit().remove(KEY_SAVED_SCORE).apply()
 
         // 💀 PIEDAD: Si pierdes, aumentamos el contador de intentos (y se enfría la racha)
@@ -598,6 +638,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         // 🔥 INTEGRACIÓN MISIONES DIARIAS: Partida jugada (incluso si se pierde) 🔥
         missionManager.updateProgress(MissionType.PLAY_GAMES, 1)
         lastGameBonus = retention.onGameFinished(won = false, dailyChallenge = dailyChallengeThemeIndex != null)
+        logLevelEnd(false)
 
         if (currentMode == GameMode.CARRERA) finishRace()
         if (currentMode == GameMode.DUELO) finishDuelRound()
@@ -819,6 +860,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         currentMode = mode
+        com.korkoor.pardos.data.local.Analytics.levelStart(mode.name, 0)
 
         if (mode != GameMode.DESAFIO) {
             dailyChallengeThemeIndex = null
@@ -900,6 +942,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         floatingScores.clear()
         _comboCount.value = 0
         showLevelSummary = false
+        replayFrames.clear()
+        replaySavedAt = System.currentTimeMillis()
+        lastReplay = null
 
         // 2. INICIALIZACIÓN DEL MOTOR
         lastSnapshot = null
@@ -999,6 +1044,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // 7. GENERACIÓN DE FICHAS INICIALES
         spawnInitialTiles(level, spec?.scaleTile ?: target)
+        recordReplayFrame()
     }
 
     fun onMove(direction: Direction, onHapticFeedback: (HapticFeedbackType) -> Unit) {
@@ -1155,6 +1201,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         goalStats = newStats, stormStones = stormStones, blocked = blockedNow
                     )
                 }
+                recordReplayFrame(direction.name)
                 if (!reachedTarget) {
                     maybeStartPhase2(currentState.moveCount + 1)
                     // La meta se acerca: un ping suave cada vez más agudo al cruzar el 50, 75 y 90 %
@@ -1267,6 +1314,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             tiles = filteredTiles,
             isGameOver = false
         )
+        recordReplayFrame("REVIVE")
         // 🔊 Al revivir
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.REVIVE)
         com.korkoor.pardos.audio.GameAudio.music.intensity(1)
@@ -1294,6 +1342,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     // Registramos que el tablero cambió para efectos visuales
                     state.copy(tiles = updatedTiles)
                 }
+                recordReplayFrame("LIMPIAR")
                 com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.HAMMER)
                 cancelSelectMode()
             }
@@ -1337,6 +1386,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     }
                     cancelSelectMode()
+                    recordReplayFrame("FUSIÓN MANUAL")
                 }
             }
         }
@@ -1401,6 +1451,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             stateForAchievements = newState
             newState
         }
+        saveReplay()
 
         if (_boardState.value.starsEarned > 0) {
             val currentLvl = _boardState.value.currentLevel
@@ -1446,6 +1497,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             // Retención: pase de temporada, semanales, hucha y bonus de la primera victoria del día
             val isDaily = dailyChallengeThemeIndex != null
             lastGameBonus = retention.onGameFinished(won = true, dailyChallenge = isDaily)
+            logLevelEnd(true)
             retention.onStars(_boardState.value.starsEarned)
             if (isDaily) {
                 retention.onDailyChallengeCompleted()
@@ -1562,6 +1614,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             timerManager.stop()
             stopTimer()
             _boardState.update { it.copy(isGameOver = true) }
+            saveReplay()
             registerLoss()
 
             com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.FAIL)
@@ -1818,6 +1871,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         if (currentTiles.isEmpty()) return
         val topTiles = currentTiles.sortedByDescending { it.value }.take(3)
         _boardState.update { it.copy(tiles = topTiles) }
+        recordReplayFrame("LIMPIAR")
         lastCleanTime = System.currentTimeMillis()
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOARD_CLEAR)
         fireImpact(0.55f)
@@ -1848,6 +1902,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 state.copy(tiles = list, score = state.score + newValue)
             } else state
         }
+        recordReplayFrame("FUSIÓN")
         // la fusión manual también suena como cualquier otra (su nota)
         if (mergedValue > 0) com.korkoor.pardos.audio.GameAudio.merges(listOf(mergedValue), 0)
         checkGameState(_boardState.value.tiles)

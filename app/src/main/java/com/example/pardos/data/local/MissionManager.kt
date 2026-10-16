@@ -86,5 +86,6 @@ class MissionManager(context: Context) {
     fun claimMissionReward(missionId: Int) {
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.CLAIM)
         prefs.edit().putBoolean("mission_${missionId}_claimed", true).apply()
+        Analytics.missionClaim(missionId)
     }
 }

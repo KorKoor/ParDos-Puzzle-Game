@@ -409,4 +409,5 @@
     <string name="duel_rematch">REVANCHA</string>
     <string name="duel_exit">SALIR</string>
     <string name="ad_not_ready">El anuncio todavía no está listo. Prueba otra vez en unos segundos.</string>
+    <string name="game_services_project_id" translatable="false">547423992451</string>
 </resources>

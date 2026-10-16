@@ -57,30 +57,39 @@ fun PowerUpBar(
     viewModel: GameViewModel,
     activity: Activity?,
     modifier: Modifier = Modifier,
-    labelColor: Color = com.korkoor.pardos.ui.design.Navy
+    labelColor: Color = com.korkoor.pardos.ui.design.Navy,
+    compact: Boolean = false,
+    uiScale: Float = 1f
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val isVip by remember { com.korkoor.pardos.data.local.EconomyManager(context).isVip }.collectAsState()
     // VIP: los poderes que piden anuncio se activan directo
     fun withAd(action: () -> Unit) {
-        if (isVip) action() else activity?.let { act -> AdManager.showRewardedAd(act) { action() } }
+        if (isVip) action() else activity?.let { act -> AdManager.showRewardedAd(act, placement = "powerup") { action() } }
     }
     val undos by viewModel.undoCount.collectAsState()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.Top
-    ) {
-        // Deshacer (consumible comprable en la tienda): solo si hay una jugada que revertir
-        // Sin "Deshacer" en la mochila, justo después de una jugada, se puede deshacer a cambio de un anuncio (VIP: gratis; 2 por nivel)
-        val adUndo = undos == 0 && viewModel.canUndo && viewModel.adUndoAllowed &&
+    // Deshacer (consumible comprable en la tienda): solo si hay una jugada que revertir.
+    val showUndo = undos > 0 || viewModel.canUndo
+    val adUndo = undos == 0 && viewModel.canUndo && viewModel.adUndoAllowed &&
             viewModel.adUndosUsed < com.korkoor.pardos.domain.shop.AdRewards.UNDO_ADS_PER_LEVEL
-        if (undos > 0 || viewModel.canUndo) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+      val columns = if (showUndo) 5 else 4
+      val baseWidth = 64.dp * columns.toFloat() + 6.dp * (columns - 1).toFloat() + 8.dp
+      val widthLimit = (maxWidth / baseWidth).coerceIn(0.8f, 1.1f)
+      val controlScale = minOf(uiScale.coerceIn(0.8f, 1.1f), widthLimit)
+      Row(
+        modifier = Modifier.fillMaxWidth().padding(
+            horizontal = 4.dp * controlScale,
+            vertical = (if (compact) 6.dp else 16.dp) * controlScale
+        ),
+        horizontalArrangement = Arrangement.spacedBy(6.dp * controlScale, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.Top
+      ) {
+        if (showUndo) {
             UndoButton(
                 count = undos, enabled = (viewModel.canUndo && undos > 0) || adUndo, labelColor = labelColor,
-                adBadge = if (adUndo) (if (isVip) Badge.CROWN else Badge.PLAY) else null
+                adBadge = if (adUndo) (if (isVip) Badge.CROWN else Badge.PLAY) else null,
+                compact = compact, uiScale = controlScale
             ) { if (undos > 0) viewModel.undoLastMove() else withAd { viewModel.undoLastMoveFree() } }
         }
         PowerUpButton(
@@ -90,6 +99,8 @@ fun PowerUpBar(
             lastUseTime = viewModel.lastCleanTime,
             viewModel = viewModel,
             labelColor = labelColor,
+            compact = compact,
+            uiScale = controlScale,
             onClick = onCleanClick
         )
         PowerUpButton(
@@ -99,6 +110,8 @@ fun PowerUpBar(
             lastUseTime = viewModel.lastMergeTime,
             viewModel = viewModel,
             labelColor = labelColor,
+            compact = compact,
+            uiScale = controlScale,
             onClick = onMergeClick
         )
         PowerUpButton(
@@ -110,6 +123,8 @@ fun PowerUpBar(
             forceAdMode = true,
             vip = isVip,
             labelColor = labelColor,
+            compact = compact,
+            uiScale = controlScale,
             onClick = { withAd { viewModel.activateSelectMode("SINGLE_CLEAN") } }
         )
         PowerUpButton(
@@ -121,8 +136,11 @@ fun PowerUpBar(
             forceAdMode = true,
             vip = isVip,
             labelColor = labelColor,
+            compact = compact,
+            uiScale = controlScale,
             onClick = { withAd { viewModel.activateSelectMode("MANUAL_MERGE") } }
         )
+      }
     }
 }
 
@@ -142,6 +160,8 @@ private fun PowerUpButton(
     forceAdMode: Boolean = false,
     vip: Boolean = false,
     labelColor: Color,
+    compact: Boolean,
+    uiScale: Float,
     onClick: () -> Unit
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
@@ -155,16 +175,16 @@ private fun PowerUpButton(
         centerText = if (isCooldown) remainingText else null,
         ringFraction = if (isCooldown) remainingFraction else null,
         badge = if (forceAdMode) (if (vip) Badge.CROWN else Badge.PLAY) else null,
-        labelColor = labelColor, onClick = onClick
+        labelColor = labelColor, compact = compact, uiScale = uiScale, onClick = onClick
     )
 }
 
 @Composable
-private fun UndoButton(count: Int, enabled: Boolean, labelColor: Color, adBadge: Badge? = null, onClick: () -> Unit) {
+private fun UndoButton(count: Int, enabled: Boolean, labelColor: Color, adBadge: Badge? = null, compact: Boolean, uiScale: Float, onClick: () -> Unit) {
     PowerOrb(
         label = "DESHACER", glyph = PowerGlyph.UNDO, color = Color(0xFFE07A5F), ready = enabled,
-        badge = adBadge, countBadge = if (adBadge == null) count else null,
-        labelColor = labelColor, onClick = onClick, enabled = enabled, labelSize = 8
+        badge = adBadge, countBadge = if (adBadge == null) count else null, compact = compact,
+        labelColor = labelColor, onClick = onClick, enabled = enabled, labelSize = 8, uiScale = uiScale
     )
 }
 
@@ -183,7 +203,9 @@ private fun PowerOrb(
     badge: Badge? = null,
     countBadge: Int? = null,
     enabled: Boolean = true,
-    labelSize: Int = 10
+    labelSize: Int = 10,
+    compact: Boolean = false,
+    uiScale: Float = 1f
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -202,7 +224,7 @@ private fun PowerOrb(
     val shape = RoundedCornerShape(22.dp)
     val tint = if (ready && enabled) color else Color(0xFF9A9AA8)
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp).scale(pressScale)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp * uiScale).scale(pressScale)) {
         Box(contentAlignment = Alignment.Center) {
             Surface(
                 onClick = onClick,
@@ -212,7 +234,7 @@ private fun PowerOrb(
                 shape = shape,
                 shadowElevation = 0.dp,
                 modifier = Modifier
-                    .size(58.dp)
+                    .size((if (compact) 52.dp else 58.dp) * uiScale)
                     .shadow(
                         elevation = if (ready && enabled) (6f + 8f * glow).dp else 1.dp, shape = shape,
                         spotColor = tint, ambientColor = tint
@@ -250,26 +272,26 @@ private fun PowerOrb(
                     }
                     PowerGlyphIcon(
                         glyph = glyph, color = color, enabled = ready && enabled,
-                        modifier = Modifier.size(if (centerText != null) 34.dp else 46.dp).then(if (centerText != null) Modifier.padding(bottom = 6.dp) else Modifier),
+                        modifier = Modifier.size((if (centerText != null) 34.dp else 46.dp) * uiScale).then(if (centerText != null) Modifier.padding(bottom = 6.dp * uiScale) else Modifier),
                         animate = ready && enabled
                     )
                     if (centerText != null) {
                         Text(
                             text = centerText, fontSize = 10.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f),
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp * uiScale)
                         )
                     }
                 }
             }
             // Insignias en la esquina
             when {
-                badge == Badge.PLAY -> CornerBadge(color) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.ad_label), tint = Color.White, modifier = Modifier.size(13.dp))
+                badge == Badge.PLAY -> CornerBadge(color, uiScale) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.ad_label), tint = Color.White, modifier = Modifier.size(13.dp * uiScale))
                 }
-                badge == Badge.CROWN -> CornerBadge(Color(0xFFE0A93B)) {
-                    Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                badge == Badge.CROWN -> CornerBadge(Color(0xFFE0A93B), uiScale) {
+                    Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp * uiScale))
                 }
-                countBadge != null -> CornerBadge(color) {
+                countBadge != null -> CornerBadge(color, uiScale) {
                     Text("$countBadge", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.White)
                 }
             }
@@ -280,19 +302,19 @@ private fun PowerOrb(
             fontWeight = FontWeight.Black,
             color = labelColor.copy(alpha = if (ready && enabled) 0.88f else 0.5f),
             maxLines = 1,
-            modifier = Modifier.padding(top = 6.dp),
+            modifier = Modifier.padding(top = (if (compact) 3.dp else 6.dp) * uiScale),
             letterSpacing = 0.4.sp
         )
     }
 }
 
 @Composable
-private fun BoxScope.CornerBadge(color: Color, content: @Composable () -> Unit) {
+private fun BoxScope.CornerBadge(color: Color, uiScale: Float, content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
             .align(Alignment.TopEnd)
-            .offset(x = 4.dp, y = (-4).dp)
-            .size(20.dp)
+            .offset(x = 4.dp * uiScale, y = (-4).dp * uiScale)
+            .size(20.dp * uiScale)
             .shadow(3.dp, CircleShape)
             .background(Brush.linearGradient(listOf(color.copy(alpha = 0.9f), color)), CircleShape)
             .then(Modifier),

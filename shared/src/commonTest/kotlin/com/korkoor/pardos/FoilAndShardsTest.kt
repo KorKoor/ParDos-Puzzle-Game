@@ -52,9 +52,9 @@ class FoilAndShardsTest {
     }
 
     @Test fun gemsToShardsRateIsReasonable() {
-        // 25 gemas = 100 esencia: crear una legendaria (600) sale en ~150 gemas
+        // 40 gemas = 100 esencia (v3.1: gemas a 2/3 de valor): crear una legendaria (600) sale en ~240 gemas
         val legendary = CollectibleCatalog.ofRarity(Rarity.LEGENDARY).first()
         val gemsForLegendary = CraftRules.cost(legendary) * ShardShop.GEMS_PER_PACK / ShardShop.SHARDS_PER_PACK
-        assertTrue(gemsForLegendary in 100..200, "gemas=$gemsForLegendary")
+        assertTrue(gemsForLegendary in 150..260, "gemas=$gemsForLegendary")
     }
 }

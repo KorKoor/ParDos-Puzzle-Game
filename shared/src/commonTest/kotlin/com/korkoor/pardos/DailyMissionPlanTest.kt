@@ -35,7 +35,7 @@ class DailyMissionPlanTest {
     }
 
     @Test fun milestonesAndAliveRule() {
-        assertEquals(3, PerfectDays.milestoneFor(3)?.gems)
+        assertEquals(2, PerfectDays.milestoneFor(3)?.gems)
         assertNull(PerfectDays.milestoneFor(4))
         assertEquals(7, PerfectDays.nextMilestone(3)?.days)
         assertNull(PerfectDays.nextMilestone(30))

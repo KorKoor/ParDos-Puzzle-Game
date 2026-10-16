@@ -101,7 +101,8 @@ internal fun GameHeader(
     /** Corazones que quedan en la torre (null = no se está en la torre). */
     towerHearts: Int? = null,
     /** Movimientos máximos para 3 y para 2 estrellas (null = no se enseñan las estrellas en vivo). */
-    starLimits: Pair<Int, Int>? = null
+    starLimits: Pair<Int, Int>? = null,
+    compact: Boolean = false
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -119,6 +120,7 @@ internal fun GameHeader(
             level = state.currentLevel,
             textColor = currentTheme.inkColor,
             titleOverride = titleOverride,
+            compact = compact,
             labelRes = when (state.gameMode) {
                 GameMode.CARRERA -> R.string.stage_label
                 GameMode.DUELO -> R.string.player_label
@@ -126,7 +128,7 @@ internal fun GameHeader(
             }
         )
 
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(if (compact) 2.dp else 6.dp))
 
         // En el duelo no hay meta que mostrar: solo cuenta el puntaje
         if (state.gameMode != GameMode.DUELO) {
@@ -142,9 +144,9 @@ internal fun GameHeader(
                 tileValues = state.tiles.mapTo(HashSet()) { it.value },
                 liveStars = if (starLimits != null && !state.isLevelCompleted && !state.isGameOver) Triple(state.moveCount, starLimits.first, starLimits.second) else null
             )
-            LevelRuleChips(state, Modifier.padding(top = 6.dp))
-            if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = 6.dp))
-            if (towerHearts != null) TowerHearts(towerHearts, Modifier.padding(top = 6.dp))
+            LevelRuleChips(state, Modifier.padding(top = if (compact) 2.dp else 6.dp))
+            if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = if (compact) 2.dp else 6.dp))
+            if (towerHearts != null) TowerHearts(towerHearts, Modifier.padding(top = if (compact) 2.dp else 6.dp))
         }
 
         if (state.maxTime != null) {
@@ -364,14 +366,16 @@ internal fun GameBoard(
 @Composable
 internal fun GameFooter(
     state: BoardState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    uiScale: Float = 1f
 ) {
     // En modos con tiempo, el reloj grande ya está en el encabezado: aquí solo mostramos movimientos y puntos
     val showClock = state.maxTime == null
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = (if (compact) 12.dp else 20.dp) * uiScale),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -380,7 +384,9 @@ internal fun GameFooter(
             value = state.moveCount.toString(),
             label = stringResource(R.string.moves_label),
             color = Sage,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            compact = compact,
+            uiScale = uiScale
         )
         if (showClock) {
             StatCard(
@@ -389,7 +395,9 @@ internal fun GameFooter(
                 label = stringResource(R.string.time_label),
                 color = GemBlue,
                 modifier = Modifier.weight(1f),
-                animateValue = false
+                animateValue = false,
+                compact = compact,
+                uiScale = uiScale
             )
         }
         StatCard(
@@ -397,7 +405,9 @@ internal fun GameFooter(
             value = state.score.toString(),
             label = stringResource(R.string.points_label),
             color = Gold,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            compact = compact,
+            uiScale = uiScale
         )
     }
 }
@@ -408,7 +418,8 @@ internal fun AnimatedLevelDisplay(
     modifier: Modifier = Modifier,
     textColor: Color,
     labelRes: Int = R.string.level_label,
-    titleOverride: String? = null
+    titleOverride: String? = null,
+    compact: Boolean = false
 ) {
     AnimatedContent(
         targetState = level,
@@ -421,7 +432,7 @@ internal fun AnimatedLevelDisplay(
         Text(
             text = titleOverride ?: stringResource(labelRes, targetLevel),
             modifier = modifier,
-            fontSize = 34.sp,
+            fontSize = if (compact) 30.sp else 34.sp,
             fontWeight = FontWeight.Black,
             color = textColor,
             letterSpacing = 1.sp
@@ -587,16 +598,18 @@ internal fun StatCard(
     label: String,
     color: Color,
     modifier: Modifier = Modifier,
-    animateValue: Boolean = true
+    animateValue: Boolean = true,
+    compact: Boolean = false,
+    uiScale: Float = 1f
 ) {
     JellySurface(
         modifier = modifier,
         color = Color.White,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(20.dp * uiScale),
         shadowElevation = 4.dp
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
+            modifier = Modifier.padding(vertical = (if (compact) 6.dp else 10.dp) * uiScale, horizontal = 8.dp * uiScale),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -604,9 +617,9 @@ internal fun StatCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp * uiScale)
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(5.dp * uiScale))
                 if (animateValue) {
                     BouncingText(text = value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = Navy)
                 } else {

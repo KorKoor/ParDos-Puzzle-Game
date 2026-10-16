@@ -10,7 +10,7 @@ object EventSkins {
     /** Victorias necesarias durante el evento para llevarse la skin. */
     const val WINS_REQUIRED = 3
     /** Precio con gemas mientras el evento está activo. */
-    const val GEM_PRICE = 100
+    const val GEM_PRICE = 150
 
     fun skinFor(type: EventType): TileSkin? = when (type) {
         EventType.VALENTINE -> TileSkin.VALENTINE

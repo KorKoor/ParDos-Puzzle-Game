@@ -26,6 +26,14 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function mutualFriends(uidA, uidB) {
+      let a = /databases/$(database)/documents/players/$(uidA);
+      let b = /databases/$(database)/documents/players/$(uidB);
+      return exists(a) && exists(b)
+        && get(a).data.friendsUids is list && get(a).data.friendsUids.hasAny([uidB])
+        && get(b).data.friendsUids is list && get(b).data.friendsUids.hasAny([uidA]);
+    }
+
     // Validación básica del perfil para frenar datos basura o abusivos
     function validProfile() {
       let d = request.resource.data;
@@ -64,6 +72,103 @@ service cloud.firestore {
         && ((resource.data.to == request.auth.uid && request.resource.data.status in ['accepted', 'declined'])
             || (resource.data.from == request.auth.uid && request.resource.data.status == 'cancelled'));
       allow delete: if false;
+    }
+
+    // ---- Invitaciones de duelo entre amigos ----
+    // Solo contiene el código de reto que ya genera la app; no concede premios ni modifica progreso.
+    match /friend_challenges/{challengeId} {
+      allow get: if signedIn()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow list: if signedIn()
+        && (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid)
+        && request.query.limit <= 20;
+      // Spark: Firestore Rules comprueba la amistad mutua; el ID por pareja evita invitaciones pendientes duplicadas.
+      allow create: if signedIn()
+        && challengeId == request.auth.uid + '~' + request.resource.data.to
+        && request.resource.data.from == request.auth.uid
+        && request.resource.data.to is string && request.resource.data.to != request.auth.uid
+        && mutualFriends(request.auth.uid, request.resource.data.to)
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly(['from', 'fromName', 'to', 'code', 'status', 'createdAt'])
+        && request.resource.data.fromName is string && request.resource.data.fromName.size() <= 30
+        && request.resource.data.code is string && request.resource.data.code.size() <= 80
+        && request.resource.data.createdAt is int;
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.to == request.auth.uid;
+    }
+
+    // Torneo y reto comunitario compatibles con Spark. Las reglas limitan escrituras y atan
+    // el resultado, la repetición y la contribución a la misma cuenta; no pueden reproducir el motor.
+    match /weekly_tournaments/{week} {
+      allow read, write: if false;
+      match /scores/{uid} {
+        allow get: if signedIn();
+        allow list: if signedIn() && request.query.limit <= 20;
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['uid', 'week', 'score', 'name', 'actions', 'createdAt'])
+          && request.resource.data.uid == uid && request.resource.data.week == week
+          && request.resource.data.score is int && request.resource.data.score >= 0 && request.resource.data.score <= 10000000
+          && request.resource.data.name is string && request.resource.data.name.size() <= 30
+          && request.resource.data.actions is list && request.resource.data.actions.size() <= 200
+          && request.resource.data.createdAt is timestamp
+          && exists(/databases/$(database)/documents/weekly_tournaments/$(week)/runs/$(uid))
+          && get(/databases/$(database)/documents/weekly_tournaments/$(week)/runs/$(uid)).data.submitted == false
+          && getAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/runs/$(uid)).data.submitted == true
+          && getAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/runs/$(uid)).data.score == request.resource.data.score
+          && getAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/runs/$(uid)).data.actions == request.resource.data.actions;
+        allow update, delete: if false;
+      }
+      match /runs/{uid} {
+        allow get: if isOwner(uid);
+        allow list, delete: if false;
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['roundId', 'startedAt', 'submitted'])
+          && request.resource.data.roundId is string && request.resource.data.roundId.size() <= 64
+          && request.resource.data.startedAt is timestamp
+          && request.resource.data.submitted == false
+          && !exists(/databases/$(database)/documents/weekly_tournaments/$(week)/scores/$(uid));
+        allow update: if isOwner(uid)
+          && resource.data.submitted == false
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['submitted', 'score', 'actions'])
+          && request.resource.data.submitted == true
+          && request.resource.data.score is int && request.resource.data.score >= 0 && request.resource.data.score <= 10000000
+          && request.resource.data.actions is list && request.resource.data.actions.size() <= 200
+          && existsAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/scores/$(uid))
+          && getAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/scores/$(uid)).data.score == request.resource.data.score
+          && getAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/scores/$(uid)).data.actions == request.resource.data.actions;
+      }
+    }
+
+    match /community_challenges/{week} {
+      allow get: if signedIn();
+      allow list, delete: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['week', 'goal', 'points'])
+        && request.resource.data.week == week && request.resource.data.goal == 100000
+        && request.resource.data.points is int && request.resource.data.points >= 0
+        && existsAfter(/databases/$(database)/documents/community_challenges/$(week)/contributors/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/community_challenges/$(week)/contributors/$(request.auth.uid)).data.score == request.resource.data.points;
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['points'])
+        && existsAfter(/databases/$(database)/documents/community_challenges/$(week)/contributors/$(request.auth.uid))
+        && !exists(/databases/$(database)/documents/community_challenges/$(week)/contributors/$(request.auth.uid))
+        && request.resource.data.points == resource.data.points
+          + getAfter(/databases/$(database)/documents/community_challenges/$(week)/contributors/$(request.auth.uid)).data.score;
+      match /contributors/{uid} {
+        allow get: if isOwner(uid);
+        allow list, update, delete: if false;
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['uid', 'week', 'score'])
+          && request.resource.data.uid == uid && request.resource.data.week == week
+          && request.resource.data.score is int && request.resource.data.score >= 0 && request.resource.data.score <= 10000000
+          && existsAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/scores/$(uid))
+          && getAfter(/databases/$(database)/documents/weekly_tournaments/$(week)/scores/$(uid)).data.score == request.resource.data.score
+          && ((exists(/databases/$(database)/documents/community_challenges/$(week))
+              && getAfter(/databases/$(database)/documents/community_challenges/$(week)).data.points
+                == get(/databases/$(database)/documents/community_challenges/$(week)).data.points + request.resource.data.score)
+            || (!exists(/databases/$(database)/documents/community_challenges/$(week))
+              && getAfter(/databases/$(database)/documents/community_challenges/$(week)).data.points == request.resource.data.score));
+      }
     }
 
     // ---- Legacy (app sin cuenta): abiertas, pero sin borrados ----

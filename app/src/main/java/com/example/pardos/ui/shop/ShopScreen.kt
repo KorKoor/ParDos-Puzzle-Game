@@ -91,7 +91,7 @@ fun ShopScreen(
     var adTick by remember { mutableIntStateOf(0) }
     val freeGemsLeft = remember(adTick) { AdRewards.left(adFreq.usedToday(com.korkoor.pardos.data.local.AdFrequency.SLOT_FREE_GEMS), AdRewards.FREE_GEMS_PER_DAY) }
     val watchForGems = {
-        com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(activity) {
+        com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(activity, placement = "shop") {
             economy.addGems(AdRewards.FREE_GEMS)
             adFreq.consume(com.korkoor.pardos.data.local.AdFrequency.SLOT_FREE_GEMS)
             adTick++

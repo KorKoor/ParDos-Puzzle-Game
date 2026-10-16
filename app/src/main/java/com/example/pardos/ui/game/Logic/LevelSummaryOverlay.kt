@@ -11,6 +11,7 @@ import com.korkoor.pardos.ui.design.actionColor
 
 import androidx.compose.material.icons.rounded.MonetizationOn
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Replay
 import android.content.res.Configuration
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -72,6 +73,7 @@ fun LevelSummaryOverlay(
     /** Avance automático (sin que el jugador toque): nunca debe mostrar un anuncio de pantalla completa. */
     onAutoNext: () -> Unit = onDismiss,
     onShare: (() -> Unit)? = null,
+    onReview: (() -> Unit)? = null,
     nextGoal: com.korkoor.pardos.domain.retention.NextGoal? = null,
     /** Cómo conseguir las 3 estrellas (solo se enseña si faltó alguna). */
     starHint: String? = null,
@@ -209,7 +211,7 @@ fun LevelSummaryOverlay(
                                 PersonalRecordsBox(currentTheme, bestMoves, bestTime)
                             }
                             Spacer(Modifier.height(14.dp))
-                            ActionButtons(currentTheme, onRetry, onDismiss, onShare)
+                            ActionButtons(currentTheme, onRetry, onDismiss, onShare, onReview)
                         }
                     }
                 } else {
@@ -251,7 +253,7 @@ fun LevelSummaryOverlay(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    ActionButtons(currentTheme, onRetry, onDismiss, onShare)
+                    ActionButtons(currentTheme, onRetry, onDismiss, onShare, onReview)
                 }
             }
         }
@@ -434,7 +436,7 @@ private fun PersonalRecordsBox(currentTheme: GameTheme, bestMoves: Int, bestTime
 }
 
 @Composable
-private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismiss: () -> Unit, onShare: (() -> Unit)?) {
+private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismiss: () -> Unit, onShare: (() -> Unit)?, onReview: (() -> Unit)?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -474,6 +476,19 @@ private fun ActionButtons(currentTheme: GameTheme, onRetry: () -> Unit, onDismis
                 )
             ) {
                 Icon(Icons.Default.Share, contentDescription = "Compartir", modifier = Modifier.size(24.dp))
+            }
+        }
+
+        if (onReview != null) {
+            OutlinedButton(
+                onClick = onReview,
+                modifier = Modifier.width(60.dp).height(60.dp),
+                contentPadding = PaddingValues(0.dp),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(2.dp, currentTheme.actionColor.copy(alpha = 0.2f)),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.Transparent, contentColor = currentTheme.actionColor)
+            ) {
+                Icon(Icons.Rounded.Replay, contentDescription = "Revisar partida", modifier = Modifier.size(24.dp))
             }
         }
 

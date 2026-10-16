@@ -34,9 +34,9 @@ data class BannerDef(
         get() = when {
             source == BannerSource.PRESTIGE -> com.korkoor.pardos.domain.collection.Rarity.LEGENDARY
             source == BannerSource.SEASON -> com.korkoor.pardos.domain.collection.Rarity.EPIC
-            gemPrice >= 100 -> com.korkoor.pardos.domain.collection.Rarity.LEGENDARY
-            gemPrice >= 85 -> com.korkoor.pardos.domain.collection.Rarity.EPIC
-            gemPrice > 0 || coinPrice >= 1_100 -> com.korkoor.pardos.domain.collection.Rarity.RARE
+            gemPrice >= Economy.BANNER_GEMS_LEGENDARY -> com.korkoor.pardos.domain.collection.Rarity.LEGENDARY
+            gemPrice >= Economy.BANNER_GEMS_EPIC -> com.korkoor.pardos.domain.collection.Rarity.EPIC
+            gemPrice > 0 || coinPrice >= Economy.BANNER_PRICE_RARE -> com.korkoor.pardos.domain.collection.Rarity.RARE
             else -> com.korkoor.pardos.domain.collection.Rarity.COMMON
         }
 
@@ -106,8 +106,8 @@ object Banners {
         shop(45, "Tormenta eléctrica", BannerPattern.RAIN, 0xFF141B33, 0xFF2A3A66, 0xFF8EC9FF, 0xFFEAF3FF, gems = Economy.BANNER_GEMS_EPIC),
         shop(46, "Bosque encantado", BannerPattern.FOREST, 0xFF0B1F1A, 0xFF16423A, 0xFFD6F26B, 0xFFE3F7E8, gems = Economy.BANNER_GEMS_EPIC),
         shop(47, "Cristales", BannerPattern.CRYSTALS, 0xFF1A1440, 0xFF3C2A8F, 0xFF8EE3FF, 0xFFEAF6FF, gems = Economy.BANNER_GEMS_EPIC),
-        shop(48, "Nebulosa rosa", BannerPattern.GALAXY, 0xFF1F0A2E, 0xFF6B1F5E, 0xFFFF8CC9, 0xFFFFE6F5, gems = 110),
-        shop(49, "Cumbre de lava", BannerPattern.MOUNTAINS, 0xFF2A0F0C, 0xFF7A2314, 0xFFFF7B3A, 0xFFFFE1C6, gems = 110)
+        shop(48, "Nebulosa rosa", BannerPattern.GALAXY, 0xFF1F0A2E, 0xFF6B1F5E, 0xFFFF8CC9, 0xFFFFE6F5, gems = Economy.BANNER_GEMS_LEGENDARY),
+        shop(49, "Cumbre de lava", BannerPattern.MOUNTAINS, 0xFF2A0F0C, 0xFF7A2314, 0xFFFF7B3A, 0xFFFFE1C6, gems = Economy.BANNER_GEMS_LEGENDARY)
     ).sortedWith(compareBy({ it.gemPrice > 0 }, { it.coinPrice }, { it.gemPrice }))
 
     /** Exclusivos del Pase, por pares: [par*2] en la vía gratis y [par*2+1] en la premium. */

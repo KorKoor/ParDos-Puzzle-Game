@@ -10,13 +10,13 @@ data class Reward(
 /** Calendario de 7 días: sube cada día y el séptimo es un cofre. Luego se repite. */
 object DailyRewards {
     val cycle: List<Reward> = listOf(
-        Reward(coins = 50),
-        Reward(coins = 75),
+        Reward(coins = 40),
+        Reward(coins = 60),
+        Reward(coins = 80),
         Reward(coins = 100),
-        Reward(coins = 125),
-        Reward(coins = 150, gems = 1),
-        Reward(coins = 200, gems = 2),
-        Reward(coins = 350, gems = 5, isChest = true)
+        Reward(coins = 120, gems = 1),
+        Reward(coins = 160, gems = 1),
+        Reward(coins = 280, gems = 4, isChest = true)
     )
 
     /** Día dentro del ciclo (1..7) para una racha dada (>= 1). */

@@ -1,5 +1,8 @@
 package com.korkoor.pardos.ui.menu
 
+import android.content.Intent
+import android.widget.Toast
+import com.korkoor.pardos.ui.design.Navy
 import com.korkoor.pardos.ui.design.ToyButton
 import com.korkoor.pardos.ui.design.ToyTextButton
 import com.korkoor.pardos.ui.design.JellySurface
@@ -189,7 +192,124 @@ fun CustomLevelScreen(
                     )
                 }
             }
+
+            CustomLevelSharing(
+                config = com.korkoor.pardos.domain.logic.CustomLevelConfig(size, target, allowPowerUps, selectedTimeMode),
+                accentColor = currentTheme.actionColor,
+                onApply = { shared ->
+                    size = shared.size
+                    target = shared.target
+                    allowPowerUps = shared.allowPowerUps
+                    selectedTimeMode = shared.difficulty
+                }
+            )
             Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+@Composable
+private fun CustomLevelSharing(
+    config: com.korkoor.pardos.domain.logic.CustomLevelConfig,
+    accentColor: Color,
+    onApply: (com.korkoor.pardos.domain.logic.CustomLevelConfig) -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val preferences = remember(context) {
+        context.getSharedPreferences("pardos_custom_levels", android.content.Context.MODE_PRIVATE)
+    }
+    var codeInput by remember { mutableStateOf("") }
+    var savedCodes by remember { mutableStateOf(preferences.getStringSet("saved_codes", emptySet()).orEmpty().toList().sorted()) }
+    val currentCode = remember(config) { com.korkoor.pardos.domain.logic.CustomLevelCode.encode(config).orEmpty() }
+
+    val weekly = remember { com.korkoor.pardos.domain.logic.WeeklyBoard.forDay(System.currentTimeMillis() / 86_400_000L) }
+    val weeklyCode = remember(weekly) { com.korkoor.pardos.domain.logic.CustomLevelCode.encode(weekly.config).orEmpty() }
+    SectionHeader(Icons.Default.GridView, "Tablero de la semana", accentColor)
+    JellySurface(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = Color.White.copy(alpha = 0.76f)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(weekly.name, fontSize = 16.sp, fontWeight = FontWeight.Black, color = Navy)
+            Text(
+                "${weekly.config.size}×${weekly.config.size} · meta ${weekly.config.target} · ${weekly.config.difficulty}" + if (weekly.config.allowPowerUps) " · con poderes" else " · sin poderes",
+                fontSize = 12.sp, color = Navy.copy(alpha = 0.6f)
+            )
+            Text("Cambia cada lunes. Es para probar algo distinto: no da premios.", fontSize = 11.sp, color = Navy.copy(alpha = 0.5f))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { onApply(weekly.config) }) { Text("Jugar", fontWeight = FontWeight.Bold) }
+                TextButton(onClick = {
+                    val updated = (savedCodes + weeklyCode).distinct().takeLast(12)
+                    savedCodes = updated
+                    preferences.edit().putStringSet("saved_codes", updated.toSet()).apply()
+                    Toast.makeText(context, "Guardado en tus tableros", Toast.LENGTH_SHORT).show()
+                }, enabled = weeklyCode.isNotBlank()) { Text("Guardar", fontWeight = FontWeight.Bold) }
+            }
+        }
+    }
+
+    SectionHeader(Icons.Default.GridView, "Guardar y compartir", accentColor)
+    JellySurface(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = Color.White.copy(alpha = 0.76f)
+    ) {
+        Column(Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = {
+                        val updated = (savedCodes + currentCode).distinct().takeLast(12)
+                        savedCodes = updated
+                        preferences.edit().putStringSet("saved_codes", updated.toSet()).apply()
+                        Toast.makeText(context, "Configuración guardada", Toast.LENGTH_SHORT).show()
+                    },
+                    enabled = currentCode.isNotBlank()
+                ) { Text("Guardar", fontWeight = FontWeight.Bold) }
+                TextButton(
+                    onClick = {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, "Prueba mi tablero personalizado de ParDos: $currentCode")
+                        }
+                        context.startActivity(Intent.createChooser(send, "Compartir tablero"))
+                    },
+                    enabled = currentCode.isNotBlank()
+                ) { Text("Compartir", fontWeight = FontWeight.Bold) }
+            }
+            if (savedCodes.isNotEmpty()) {
+                Text("TUS TABLEROS", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Navy.copy(alpha = 0.5f), letterSpacing = 1.sp)
+                savedCodes.forEach { code ->
+                    val saved = remember(code) { com.korkoor.pardos.domain.logic.CustomLevelCode.decode(code) }
+                    if (saved != null) {
+                        TextButton(onClick = { onApply(saved) }, modifier = Modifier.fillMaxWidth()) {
+                            Text("${saved.size}×${saved.size} · ${saved.target} · ${saved.difficulty}", color = Navy)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            OutlinedTextField(
+                value = codeInput,
+                onValueChange = { codeInput = it.take(100) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("Código de otro tablero") },
+                placeholder = { Text("PDC1-…") }
+            )
+            TextButton(
+                onClick = {
+                    val shared = com.korkoor.pardos.domain.logic.CustomLevelCode.decode(codeInput)
+                    if (shared == null) Toast.makeText(context, "El código no es válido", Toast.LENGTH_SHORT).show()
+                    else {
+                        onApply(shared)
+                        codeInput = ""
+                        Toast.makeText(context, "Tablero cargado", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                enabled = codeInput.isNotBlank(),
+                modifier = Modifier.align(Alignment.End)
+            ) { Text("Cargar código", fontWeight = FontWeight.Bold) }
         }
     }
 }

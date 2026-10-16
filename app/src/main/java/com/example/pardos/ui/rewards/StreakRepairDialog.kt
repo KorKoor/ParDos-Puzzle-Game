@@ -48,7 +48,7 @@ fun StreakRepairDialog(lostStreak: Int, onDone: () -> Unit) {
             val vip = com.korkoor.pardos.data.local.EconomyManager(androidx.compose.ui.platform.LocalContext.current).isVip.value
             DialogButton(if (vip) "Recuperar gratis (VIP)" else "Recuperar viendo un anuncio", Violet) {
                 if (vip) { if (profile.repairStreak(withGems = false)) onDone() }
-                else activity?.let { act -> AdManager.showRewardedAd(act) { if (profile.repairStreak(withGems = false)) onDone() } }
+                else activity?.let { act -> AdManager.showRewardedAd(act, placement = "streak_repair") { if (profile.repairStreak(withGems = false)) onDone() } }
             }
         }
         Spacer(Modifier.height(6.dp))

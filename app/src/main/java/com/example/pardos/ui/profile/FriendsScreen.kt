@@ -51,7 +51,7 @@ import kotlinx.coroutines.launch
 
 
 @Composable
-fun FriendsScreen(onBack: () -> Unit) {
+fun FriendsScreen(onBack: () -> Unit, onAcceptChallenge: (com.korkoor.pardos.domain.logic.RemoteChallenge) -> Unit = {}) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
@@ -62,6 +62,13 @@ fun FriendsScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var codeInput by remember { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
+    var challengeInvites by remember { mutableStateOf<List<com.korkoor.pardos.data.local.FriendChallengeInvite>>(emptyList()) }
+    val challengeManager = remember { com.korkoor.pardos.data.local.FriendChallengeManager(context) }
+
+    DisposableEffect(challengeManager) {
+        val registration = challengeManager.listenInbox { challengeInvites = it }
+        onDispose { registration?.remove() }
+    }
 
     fun reload(force: Boolean = false) {
         loading = true
@@ -116,6 +123,35 @@ fun FriendsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
+            if (challengeInvites.isNotEmpty()) {
+                item {
+                    SectionLabel("RETOS QUE TE ENVIARON")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        challengeInvites.forEach { invite ->
+                            JellySurface(
+                                onClick = {
+                                    challengeManager.markAccepted(invite.id) { deleted ->
+                                        if (deleted) onAcceptChallenge(invite.challenge)
+                                        else Toast.makeText(context, "No se pudo abrir el reto", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                shape = RoundedCornerShape(20.dp), color = Color.White, shadowElevation = 4.dp,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.SportsMma, null, tint = Terracotta, modifier = Modifier.size(26.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text("${invite.fromName} te retó", fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy)
+                                        Text("${invite.challenge.score} puntos · 60 s", fontSize = 11.sp, color = InkSecondary)
+                                    }
+                                    Icon(Icons.Rounded.ChevronRight, null, tint = Navy.copy(alpha = 0.5f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             if (me.friendCode.isBlank()) {
                 item { AccountCard(onChanged = { reload(force = true) }) }
             }

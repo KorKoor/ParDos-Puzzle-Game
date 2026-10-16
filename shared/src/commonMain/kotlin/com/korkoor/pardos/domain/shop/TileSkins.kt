@@ -83,7 +83,7 @@ enum class TileSkin(
         baseStyle = SkinStyle(TileFinish.JELLY, particles = ParticleKind.PETALS)
     ),
     FLAT(
-        "flat", "Papel", SkinRarity.COMMON, coinPrice = 450,
+        "flat", "Papel", SkinRarity.COMMON, coinPrice = 900,
         baseStyle = SkinStyle(
             TileFinish.FLAT,
             tilePalette = ColorRamp.ramp(12, 0xFFF3EBDD, 0xFFE8D5B5, 0xFFD9A66A, 0xFFC4704F, 0xFF8E4A3A, 0xFF4F3B33),
@@ -92,7 +92,7 @@ enum class TileSkin(
         )
     ),
     MINT(
-        "mint", "Menta", SkinRarity.COMMON, coinPrice = 600,
+        "mint", "Menta", SkinRarity.COMMON, coinPrice = 1_200,
         baseStyle = SkinStyle(
             TileFinish.PORCELAIN,
             tilePalette = ColorRamp.ramp(12, 0xFFF0FBF6, 0xFFC8EEDD, 0xFF8FDCC0, 0xFF52C2A2, 0xFF2E9A86, 0xFF1D6B66),
@@ -102,7 +102,7 @@ enum class TileSkin(
         )
     ),
     WOOD(
-        "wood", "Madera", SkinRarity.RARE, coinPrice = 1000,
+        "wood", "Madera", SkinRarity.RARE, coinPrice = 2_000,
         baseStyle = SkinStyle(
             TileFinish.WOOD,
             tilePalette = ColorRamp.ramp(12, 0xFFF0E4D0, 0xFFD9B98A, 0xFFB58250, 0xFF85521F, 0xFF5F3811),
@@ -112,7 +112,7 @@ enum class TileSkin(
         )
     ),
     SAKURA(
-        "sakura", "Cerezo", SkinRarity.RARE, coinPrice = 1200,
+        "sakura", "Cerezo", SkinRarity.RARE, coinPrice = 2_400,
         baseStyle = SkinStyle(
             TileFinish.PORCELAIN,
             tilePalette = ColorRamp.ramp(12, 0xFFFFF4F6, 0xFFF8CAD5, 0xFFE99AB1, 0xFFC76B8A, 0xFF8E3E66, 0xFF5B2547),
@@ -122,7 +122,7 @@ enum class TileSkin(
         )
     ),
     FOREST(
-        "forest", "Bosque", SkinRarity.RARE, coinPrice = 1200,
+        "forest", "Bosque", SkinRarity.RARE, coinPrice = 2_400,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFEFF7E6, 0xFFCFE8B9, 0xFF9CCB84, 0xFF5FA264, 0xFF2F7A52, 0xFF1B4D3A),
@@ -132,7 +132,7 @@ enum class TileSkin(
         )
     ),
     AUTUMN(
-        "autumn", "Otoño", SkinRarity.RARE, coinPrice = 1200,
+        "autumn", "Otoño", SkinRarity.RARE, coinPrice = 2_400,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFFFF3E0, 0xFFFAD7A0, 0xFFF0A860, 0xFFD97B3A, 0xFFA8502A, 0xFF6B3320),
@@ -142,7 +142,7 @@ enum class TileSkin(
         )
     ),
     LAVENDER(
-        "lavender", "Lavanda", SkinRarity.RARE, coinPrice = 1300,
+        "lavender", "Lavanda", SkinRarity.RARE, coinPrice = 2_600,
         baseStyle = SkinStyle(
             TileFinish.PORCELAIN,
             tilePalette = ColorRamp.ramp(12, 0xFFF7F2FF, 0xFFE0D2FA, 0xFFC4A9F0, 0xFFA283E0, 0xFF7C5CC4, 0xFF4F3A8F),
@@ -152,7 +152,7 @@ enum class TileSkin(
         )
     ),
     DESERT(
-        "desert", "Dunas", SkinRarity.RARE, coinPrice = 1400,
+        "desert", "Dunas", SkinRarity.RARE, coinPrice = 2_800,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFFFF4DC, 0xFFF6D9A0, 0xFFE9B96A, 0xFFD4904A, 0xFFB5663A, 0xFF7A3E2A),
@@ -162,7 +162,7 @@ enum class TileSkin(
         )
     ),
     GLASS(
-        "glass", "Hielo", SkinRarity.EPIC, coinPrice = 1500,
+        "glass", "Hielo", SkinRarity.EPIC, coinPrice = 3_300,
         baseStyle = SkinStyle(
             TileFinish.GLASS,
             tilePalette = ColorRamp.ramp(12, 0xFFE9F6FF, 0xFFBEE0F7, 0xFF8EC5EC, 0xFF5E9FD8, 0xFF4B6FC4, 0xFF3A47A0),
@@ -172,7 +172,7 @@ enum class TileSkin(
         )
     ),
     CANDY(
-        "candy", "Dulces", SkinRarity.EPIC, coinPrice = 1800,
+        "candy", "Dulces", SkinRarity.EPIC, coinPrice = 3_600,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFFFE3F1, 0xFFFFB8DA, 0xFFFF8CC0, 0xFFE86FD0, 0xFF9B7BEA, 0xFF5BB8E8, 0xFF4FD1B8),
@@ -182,7 +182,7 @@ enum class TileSkin(
         )
     ),
     SUNSET(
-        "sunset", "Atardecer", SkinRarity.EPIC, coinPrice = 1700,
+        "sunset", "Atardecer", SkinRarity.EPIC, coinPrice = 3_400,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFFFF0D6, 0xFFFFD08A, 0xFFFFA36B, 0xFFF5707A, 0xFFD64F8F, 0xFF8E3FA8, 0xFF5B3A9E),
@@ -192,7 +192,7 @@ enum class TileSkin(
         )
     ),
     ARCADE(
-        "arcade", "Arcade", SkinRarity.RARE, coinPrice = 1500,
+        "arcade", "Arcade", SkinRarity.RARE, coinPrice = 3_000,
         baseStyle = SkinStyle(
             TileFinish.FLAT,
             tilePalette = listOf(
@@ -205,7 +205,7 @@ enum class TileSkin(
         )
     ),
     NEON(
-        "neon", "Neón", SkinRarity.EPIC, gemPrice = 80,
+        "neon", "Neón", SkinRarity.EPIC, gemPrice = 120,
         baseStyle = SkinStyle(
             TileFinish.NEON,
             tilePalette = listOf(
@@ -217,7 +217,7 @@ enum class TileSkin(
         )
     ),
     OCEAN(
-        "ocean", "Océano", SkinRarity.EPIC, gemPrice = 70,
+        "ocean", "Océano", SkinRarity.EPIC, gemPrice = 106,
         baseStyle = SkinStyle(
             TileFinish.GLASS,
             tilePalette = ColorRamp.ramp(12, 0xFFD9F5F2, 0xFF9AE0DC, 0xFF52C3CF, 0xFF2E9BC8, 0xFF2F6FB8, 0xFF3F4FA0),
@@ -227,7 +227,7 @@ enum class TileSkin(
         )
     ),
     STORM(
-        "storm", "Tormenta", SkinRarity.EPIC, gemPrice = 75,
+        "storm", "Tormenta", SkinRarity.EPIC, gemPrice = 110,
         baseStyle = SkinStyle(
             TileFinish.GLASS,
             tilePalette = ColorRamp.ramp(12, 0xFFEEF3FA, 0xFFD3DEEE, 0xFFB5C7E3, 0xFF97AEDB, 0xFF8E9FDD, 0xFFA99CE6),
@@ -237,7 +237,7 @@ enum class TileSkin(
         )
     ),
     FIREFLY(
-        "firefly", "Luciérnagas", SkinRarity.EPIC, gemPrice = 70,
+        "firefly", "Luciérnagas", SkinRarity.EPIC, gemPrice = 106,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFE4F8E6, 0xFFB7E8C2, 0xFF7ED3A0, 0xFF48B884, 0xFF2F9A74, 0xFF2D7A63),
@@ -247,7 +247,7 @@ enum class TileSkin(
         )
     ),
     LAVA(
-        "lava", "Volcán", SkinRarity.EPIC, gemPrice = 90,
+        "lava", "Volcán", SkinRarity.EPIC, gemPrice = 135,
         baseStyle = SkinStyle(
             TileFinish.JELLY,
             tilePalette = ColorRamp.ramp(12, 0xFFFFEBCF, 0xFFFFC970, 0xFFFF9A3C, 0xFFFF5E3A, 0xFFD62F3B, 0xFF8E1B2E),
@@ -257,7 +257,7 @@ enum class TileSkin(
         )
     ),
     SPACE(
-        "space", "Galaxia", SkinRarity.LEGENDARY, gemPrice = 150,
+        "space", "Galaxia", SkinRarity.LEGENDARY, gemPrice = 225,
         baseStyle = SkinStyle(
             TileFinish.NEON,
             tilePalette = ColorRamp.ramp(12, 0xFF8FD3FF, 0xFFA9A0FF, 0xFFD18BFF, 0xFFFF8BD0, 0xFFFFB48B, 0xFFFFE08B),
@@ -266,7 +266,7 @@ enum class TileSkin(
         )
     ),
     AURORA(
-        "aurora", "Aurora", SkinRarity.LEGENDARY, gemPrice = 160,
+        "aurora", "Aurora", SkinRarity.LEGENDARY, gemPrice = 240,
         baseStyle = SkinStyle(
             TileFinish.GLASS,
             tilePalette = ColorRamp.ramp(12, 0xFFD9FCF2, 0xFFA6F2D8, 0xFF78E6C6, 0xFF7ED8E8, 0xFF8EC5FF, 0xFFB69CFF, 0xFFE59CFF),
@@ -276,7 +276,7 @@ enum class TileSkin(
         )
     ),
     ROSEGOLD(
-        "rosegold", "Oro Rosa", SkinRarity.LEGENDARY, gemPrice = 180,
+        "rosegold", "Oro Rosa", SkinRarity.LEGENDARY, gemPrice = 270,
         baseStyle = SkinStyle(
             TileFinish.METAL,
             tilePalette = ColorRamp.ramp(12, 0xFFFFEDE8, 0xFFF8CFC2, 0xFFEBAA98, 0xFFD58472, 0xFFB45F5C, 0xFF7C3A44),

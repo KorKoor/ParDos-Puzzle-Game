@@ -13,6 +13,6 @@ object ChapterRewards {
     /** Premio del cofre: crece con el capítulo y siempre da gemas. */
     fun forChapter(chapter: Int): Reward {
         val c = chapter.coerceAtLeast(0)
-        return Reward(coins = 100 + 50 * c, gems = 2 + c / 3, isChest = true)
+        return Reward(coins = 80 + 40 * c, gems = 2 + c / 4, isChest = true)
     }
 }

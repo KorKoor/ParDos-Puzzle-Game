@@ -28,6 +28,7 @@ import com.korkoor.pardos.ui.design.*
 fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val settings = remember { SettingsManager(context) }
+    val lowResourceMode by PowerProfile.lowResourceMode
     val sound by settings.soundEnabled.collectAsState()
     val music by settings.musicEnabled.collectAsState()
     val haptics by settings.hapticsEnabled.collectAsState()
@@ -35,6 +36,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val autoNext by settings.autoNextEnabled.collectAsState()
     val sfxVol by settings.sfxVolume.collectAsState()
     val musicVol by settings.musicVolume.collectAsState()
+    val gameUiScale by settings.gameUiScale.collectAsState()
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
@@ -61,6 +63,51 @@ fun SettingsScreen(onBack: () -> Unit) {
                     SettingRow(Icons.Rounded.MusicNote, Violet, "Música", "Calma en el menú y más energía cuando entras en racha", music) { settings.setMusic(it) }
                     if (music) VolumeRow(Violet, musicVol, { settings.setMusicVolume(it) }) { }
                     SettingRow(Icons.Rounded.Vibration, Terracotta, "Vibración", "Un toque suave al mover y fusionar", haptics) { settings.setHaptics(it) }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            SectionLabel("Tamaño durante la partida")
+            PardosCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconTile(Icons.Rounded.ZoomIn, Violet, size = 44.dp)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Textos y botones", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Navy)
+                            Text(
+                                "En compacto queda más espacio para el tablero.",
+                                fontSize = 12.sp, color = InkSecondary, lineHeight = 16.sp
+                            )
+                        }
+                    }
+                    androidx.compose.material3.Slider(
+                        value = gameUiScale,
+                        onValueChange = settings::setGameUiScale,
+                        valueRange = 0.8f..1.1f,
+                        steps = 2,
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = Violet, activeTrackColor = Violet,
+                            inactiveTrackColor = Violet.copy(alpha = 0.18f)
+                        )
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Compacta", fontSize = 11.sp, color = InkSecondary)
+                        Text("${(gameUiScale * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Navy)
+                        Text("Grande", fontSize = 11.sp, color = InkSecondary)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            SectionLabel("Rendimiento")
+            PardosCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(vertical = 6.dp)) {
+                    SettingRow(
+                        Icons.Rounded.Speed, Violet, "Modo para dispositivos modestos",
+                        "Reduce partículas y animaciones decorativas para ahorrar recursos y batería.",
+                        lowResourceMode
+                    ) { PowerProfile.setLowResourceMode(context, it) }
                 }
             }
 

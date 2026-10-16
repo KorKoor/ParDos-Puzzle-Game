@@ -68,6 +68,7 @@ sealed class Screen {
     data object Shop : Screen()
     data object Collection : Screen()
     data object Multiplayer : Screen()
+    data object WeeklyTournament : Screen()
     data object Season : Screen()
     data object Wheel : Screen()
     data object Studio : Screen()
@@ -79,7 +80,7 @@ private fun Screen.navDepth(): Int = when (this) {
     Screen.Splash -> 0
     Screen.Menu -> 1
     Screen.ModeSelection, Screen.CustomLevel, Screen.Records, Screen.Achievements, Screen.Prestige, Screen.Gallery,
-    Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.AccessibilityGame,
+    Screen.Profile, Screen.Friends, Screen.Shop, Screen.Collection, Screen.Multiplayer, Screen.WeeklyTournament, Screen.AccessibilityGame,
     Screen.Season, Screen.Wheel -> 2
     Screen.Studio, Screen.Settings -> 3
     Screen.LevelSelector -> 3
@@ -111,6 +112,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate - app launch start")
+        com.korkoor.pardos.data.local.Analytics.init(this)
+        com.korkoor.pardos.data.local.PlayGamesHelper.init(this)
 
         // Solo en builds de depuración: `--ei debug_day_offset N` salta N días para probar fiestas
         if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
@@ -138,7 +141,7 @@ class MainActivity : ComponentActivity() {
         // El permiso de avisos ya no se pide al abrir: lo pide `NotificationPrimerDialog` tras la primera victoria
 
         com.korkoor.pardos.ui.game.logic.AdManager.initialize(this)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowCompat.enableEdgeToEdge(window)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
@@ -489,7 +492,14 @@ class MainActivity : ComponentActivity() {
                                 onPrestige = { currentScreen = Screen.Prestige }
                             )
                             Screen.Settings -> com.korkoor.pardos.ui.settings.SettingsScreen(onBack = { currentScreen = Screen.Profile })
-                            Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(onBack = { currentScreen = Screen.Menu })
+                            Screen.Friends -> com.korkoor.pardos.ui.profile.FriendsScreen(
+                                onBack = { currentScreen = Screen.Menu },
+                                onAcceptChallenge = { challenge ->
+                                    gameViewModel.updateAccessibilitySpawnAssist(false)
+                                    gameViewModel.startRemoteAccept(challenge)
+                                    currentScreen = Screen.Game
+                                }
+                            )
                             Screen.Collection -> com.korkoor.pardos.ui.collection.CollectionScreen(onBack = { currentScreen = Screen.Menu })
 
                             Screen.Multiplayer -> com.korkoor.pardos.ui.social.MultiplayerHub(
@@ -500,6 +510,7 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = Screen.Game
                                 },
                                 onFriends = { currentScreen = Screen.Friends },
+                                onWeeklyTournament = { currentScreen = Screen.WeeklyTournament },
                                 onDailyChallenge = {
                                     gameViewModel.updateAccessibilitySpawnAssist(false)
                                     gameViewModel.setupDailyChallenge()
@@ -515,6 +526,9 @@ class MainActivity : ComponentActivity() {
                                     gameViewModel.startRemoteAccept(challenge)
                                     currentScreen = Screen.Game
                                 }
+                            )
+                            Screen.WeeklyTournament -> com.korkoor.pardos.ui.social.WeeklyTournamentScreen(
+                                onBack = { currentScreen = Screen.Multiplayer }
                             )
                             Screen.Shop -> com.korkoor.pardos.ui.shop.ShopScreen(
                                 activity = this@MainActivity,

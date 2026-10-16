@@ -168,7 +168,7 @@ object SeasonPass {
         }
         return SeasonReward(
             coins = 25 + 4 * tier,
-            gems = if (tier == TIERS) 12 else if (tier % 5 == 0) 4 else 0,
+            gems = if (tier == TIERS) 10 else if (tier % 5 == 0) 3 else 0,
             chest = chest,
             freezes = if (tier == 10 || tier == 20) 1 else 0,
             undos = if (tier == 7 || tier == 17 || tier == 27) 2 else 0,

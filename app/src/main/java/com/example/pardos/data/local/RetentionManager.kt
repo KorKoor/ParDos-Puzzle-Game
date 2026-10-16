@@ -119,6 +119,8 @@ class RetentionManager(context: Context) {
         addWeekly(WeeklyType.LOGIN_DAYS, 1)
         prefs.edit().putInt(K_DAYS_PLAYED, prefs.getInt(K_DAYS_PLAYED, 0) + 1).apply()
 
+        if (away >= 2) Analytics.returnAfterDays(away)
+        if (away >= WB_MIN_AWAY) startWelcomeBack(today)
         val gift = Comeback.giftFor(away)
         if (gift != null) {
             economy.addCoins(gift.coins)
@@ -127,6 +129,41 @@ class RetentionManager(context: Context) {
         }
         bump()
         return CheckIn(gift, away)
+    }
+
+    // ============================ Camino de regreso ============================
+
+    /** Tres objetivos sencillos al volver tras varios días: jugar un nivel, completar el reto diario y abrir un cofre. */
+    data class WelcomeBackGoals(val play: Boolean, val daily: Boolean, val chest: Boolean, val daysLeft: Int) {
+        val doneCount: Int get() = listOf(play, daily, chest).count { it }
+    }
+
+    private fun startWelcomeBack(today: Int) {
+        prefs.edit().putInt(K_WB_START, today).putBoolean(K_WB_PLAY, false).putBoolean(K_WB_DAILY, false)
+            .putBoolean(K_WB_CHEST, false).putBoolean(K_WB_PAID, false).apply()
+    }
+
+    /** Los objetivos activos (3 días desde que volviste) o null si no hay camino de regreso en marcha. */
+    fun welcomeBackGoals(): WelcomeBackGoals? {
+        val start = prefs.getInt(K_WB_START, -1)
+        if (start < 0 || prefs.getBoolean(K_WB_PAID, false)) return null
+        val left = WB_DAYS - (today() - start)
+        if (left <= 0) return null
+        return WelcomeBackGoals(prefs.getBoolean(K_WB_PLAY, false), prefs.getBoolean(K_WB_DAILY, false), prefs.getBoolean(K_WB_CHEST, false), left)
+    }
+
+    private fun welcomeBackStep(key: String) {
+        val g = welcomeBackGoals() ?: return
+        if (prefs.getBoolean(key, false)) return
+        prefs.edit().putBoolean(key, true).apply()
+        Analytics.welcomeBackStep(key)
+        if (g.doneCount + 1 >= 3) {
+            prefs.edit().putBoolean(K_WB_PAID, true).apply()
+            economy.addCoins(WB_BONUS_COINS)
+            collection.addChests(ChestType.RARE, 1)
+            Analytics.welcomeBackDone()
+            bump()
+        }
     }
 
     // ============================ Cofre gratis ============================
@@ -348,6 +385,7 @@ class RetentionManager(context: Context) {
 
     /** Al terminar cualquier partida. Devuelve los extras ganados para enseñarlos. */
     fun onGameFinished(won: Boolean, dailyChallenge: Boolean): GameBonus {
+        welcomeBackStep(K_WB_PLAY)
         addWeekly(WeeklyType.PLAY_GAMES, 1)
 
         // Puntos de pase por jugar/ganar, con tope diario
@@ -388,6 +426,7 @@ class RetentionManager(context: Context) {
     }
 
     fun onDailyChallengeCompleted() {
+        welcomeBackStep(K_WB_DAILY)
         addWeekly(WeeklyType.DAILY_CHALLENGES, 1)
         // Solo una vez por día suma puntos
         if (prefs.getInt(K_DAILY_CH_DAY, -1) != today()) {
@@ -405,7 +444,7 @@ class RetentionManager(context: Context) {
         addWeekly(WeeklyType.REACH_TILE, value, asMax = true)
         if (value > prefs.getInt(K_BEST_TILE, 0)) prefs.edit().putInt(K_BEST_TILE, value).apply()
     }
-    fun onChestOpened() = addWeekly(WeeklyType.OPEN_CHESTS, 1)
+    fun onChestOpened() { welcomeBackStep(K_WB_CHEST); addWeekly(WeeklyType.OPEN_CHESTS, 1) }
 
     /** Se llama al cobrar una misión diaria. [allClaimed] = ya cobró las tres. Devuelve true si hubo bonus del día. */
     fun onDailyMissionClaimed(allClaimed: Boolean): Boolean {
@@ -658,7 +697,7 @@ class RetentionManager(context: Context) {
         return n
     }
 
-    private companion object {
+    companion object {
         const val K_CHEST_LAST = "free_chest_last"
         const val K_CHEST_COUNT = "free_chest_count"
         const val K_CHEST_SKIP_DAY = "free_chest_skip_day"
@@ -674,6 +713,14 @@ class RetentionManager(context: Context) {
         const val K_GAME_PTS = "game_pts"
         const val K_FIRST_WIN_DAY = "first_win_day"
         const val K_DAILY_CH_DAY = "daily_ch_day"
+        const val K_WB_START = "wb_start"
+        const val K_WB_PLAY = "wb_play"
+        const val K_WB_DAILY = "wb_daily"
+        const val K_WB_CHEST = "wb_chest"
+        const val K_WB_PAID = "wb_paid"
+        const val WB_MIN_AWAY = 3
+        const val WB_DAYS = 3
+        const val WB_BONUS_COINS = 250
         const val K_ALL_MISSIONS_DAY = "all_missions_day"
         const val K_PERFECT_DAY = "perfect_day"
         const val K_PERFECT_STREAK = "perfect_streak"

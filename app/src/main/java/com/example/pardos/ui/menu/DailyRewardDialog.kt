@@ -192,7 +192,7 @@ fun DailyRewardDialog(
                             onClick = {
                                 val grant = { onDouble(); doubled = true }
                                 if (vip) grant()
-                                else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                                else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act, placement = "daily_gift") { grant() } }
                             }
                         )
                     } else {

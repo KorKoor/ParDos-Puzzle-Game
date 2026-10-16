@@ -41,9 +41,9 @@ data class AvatarDef(
         get() = when {
             source == AvatarSource.PRESTIGE -> com.korkoor.pardos.domain.collection.Rarity.LEGENDARY
             source == AvatarSource.SEASON -> com.korkoor.pardos.domain.collection.Rarity.EPIC
-            coinPrice >= 3_000 -> com.korkoor.pardos.domain.collection.Rarity.LEGENDARY
-            coinPrice >= 2_000 -> com.korkoor.pardos.domain.collection.Rarity.EPIC
-            coinPrice >= 1_000 -> com.korkoor.pardos.domain.collection.Rarity.RARE
+            coinPrice >= Economy.AVATAR_PRICE_LEGENDARY -> com.korkoor.pardos.domain.collection.Rarity.LEGENDARY
+            coinPrice >= Economy.AVATAR_PRICE_EPIC -> com.korkoor.pardos.domain.collection.Rarity.EPIC
+            coinPrice >= Economy.AVATAR_PRICE_NICE -> com.korkoor.pardos.domain.collection.Rarity.RARE
             else -> com.korkoor.pardos.domain.collection.Rarity.COMMON
         }
 
@@ -57,8 +57,8 @@ data class AvatarDef(
             source == AvatarSource.PRESTIGE -> AvatarFrame.MYTHIC
             source == AvatarSource.SEASON -> AvatarFrame.PRISM
             animal == null -> AvatarFrame.NONE
-            coinPrice >= 2_500 -> AvatarFrame.GOLD
-            coinPrice >= 1_500 -> AvatarFrame.SILVER
+            coinPrice >= Economy.AVATAR_PRICE_EPIC -> AvatarFrame.GOLD
+            coinPrice >= Economy.AVATAR_PRICE_RARE -> AvatarFrame.SILVER
             else -> AvatarFrame.SOFT
         }
 }

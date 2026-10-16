@@ -38,6 +38,15 @@ Sin esto, "Continuar con Google" falla en la versión instalada desde Play.
 (app `ca-app-pub-3851960142449906~8749596168`, recompensado `ca-app-pub-3851960142449906/7125882091`).
 Antes de publicar: en AdMob vincula la app con su ficha de Play y revisa `app-ads.txt` si lo pide.
 
+### Archivo `app-ads.txt`
+Contenido proporcionado por AdMob:
+
+```text
+google.com, pub-3851960142449906, DIRECT, f08c47fec0942fa0
+```
+
+Publicado en `KorKoor/korwork-portfolio`, rama `main`, en `public/app-ads.txt`; Vite/Vercel lo sirve en la raíz como `https://www.korwork.org/app-ads.txt`. También se conserva una copia en la raíz de este repositorio Android. AdMob puede tardar en rastrear el archivo y actualizar su estado.
+
 ---
 ## Estado verificado el 8-oct-2026 (navegador integrado)
 - **ID de publicidad ✅** ya estaba declarado desde el 21-ene: *Sí*, usos "Estadísticas" y "Publicidad o marketing". Coincide con el permiso `AD_ID` del manifiesto. Sin cambios.

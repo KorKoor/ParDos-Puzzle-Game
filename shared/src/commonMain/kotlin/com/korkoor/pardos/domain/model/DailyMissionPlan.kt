@@ -46,7 +46,7 @@ object DailyMissionPlan {
 object PerfectDays {
     data class Milestone(val days: Int, val gems: Int)
 
-    val milestones = listOf(Milestone(3, 3), Milestone(7, 8), Milestone(14, 15), Milestone(30, 40))
+    val milestones = listOf(Milestone(3, 2), Milestone(7, 5), Milestone(14, 10), Milestone(30, 25))
 
     /** Racha de días perfectos tras cobrar las tres de hoy: sigue si el último día perfecto fue ayer, se reinicia si no. */
     fun next(lastPerfectDay: Int?, streak: Int, today: Int): Int = when {

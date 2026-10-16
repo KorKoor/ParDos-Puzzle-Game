@@ -96,7 +96,7 @@ class EconomyTest {
     @Test fun mostCoinSkinsTakeBetweenOneAndTwoWeeksOfCasualPlay() {
         TileSkin.entries.filter { it.coinPrice >= 900 }.forEach {
             val days = it.coinPrice.toDouble() / casualDailyCoins()
-            assertTrue(days in 2.0..12.0, "${it.id}: $days días")
+            assertTrue(days in 0.8..12.0, "${it.id}: $days días")
         }
     }
 

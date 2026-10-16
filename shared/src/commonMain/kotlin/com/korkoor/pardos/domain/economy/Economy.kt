@@ -8,27 +8,31 @@ import com.korkoor.pardos.domain.collection.Rarity
  *  - Monedas: se ganan jugando; para skins comunes/raras, cofres comunes y consumibles.
  *  - Gemas: premium; se ganan poco jugando (cofres de capítulo, hitos, logros) y se compran.
  *  - Esencia: se obtiene de piezas repetidas; sirve para CREAR piezas que te faltan.
- * Todos los números viven aquí para poder balancearlos con pruebas.
+ * Todos los números viven aquí para poder balancearlos con pruebas (ver `EconomyBalanceTest` y docs/ECONOMIA.md).
+ *
+ * Regla de oro (v3.1): las monedas valen la mitad que antes y las gemas dos tercios. Los precios dentro del juego (skins, avatares,
+ * banners, cofres, efectos) se duplicaron en monedas y subieron un 50 % en gemas; los premios gratis más generosos se recortaron un poco.
+ * Las compras reales (packs de gemas, VIP, pack inicial) NO se tocaron: así los productos de Play Console y App Store siguen igual.
  */
 object Economy {
 
     // ---------------- Precios de cofres ----------------
-    const val COMMON_CHEST_COINS = 400
-    const val RARE_CHEST_COINS = 1_200
-    const val RARE_CHEST_GEMS = 30
-    const val EPIC_CHEST_GEMS = 80
+    const val COMMON_CHEST_COINS = 850
+    const val RARE_CHEST_COINS = 2_600
+    const val RARE_CHEST_GEMS = 45
+    const val EPIC_CHEST_GEMS = 120
 
     // ---------------- Consumibles ----------------
-    const val UNDO_PRICE_COINS = 60
-    const val EXTRA_TIME_PRICE_COINS = 90
-    const val STREAK_FREEZE_PRICE_COINS = 350
+    const val UNDO_PRICE_COINS = 100
+    const val EXTRA_TIME_PRICE_COINS = 150
+    const val STREAK_FREEZE_PRICE_COINS = 700
     const val MAX_STREAK_FREEZES = 3
     /** Poderes manuales (Escoba y Unir): en Android piden un anuncio; en iPhone se pagan con monedas. */
-    const val MANUAL_POWER_PRICE_COINS = 80
+    const val MANUAL_POWER_PRICE_COINS = 150
     /** Espera entre usos de Limpiar y Fusión. */
     const val POWER_COOLDOWN_MS: Long = 15L * 60 * 1000
     /** Segunda oportunidad al perder: en Android se logra viendo un anuncio; en iPhone cuesta gemas. */
-    const val REVIVE_PRICE_GEMS = 12
+    const val REVIVE_PRICE_GEMS = 15
     /** Segundos que regala "Tiempo extra" en modos con reloj. */
     const val EXTRA_TIME_SECONDS = 20
 
@@ -96,20 +100,20 @@ object Economy {
     /** Impulso de monedas: victorias que dura, % extra y precio en gemas. */
     const val COIN_BOOST_WINS = 5
     const val COIN_BOOST_PERCENT = 50
-    const val COIN_BOOST_PRICE_GEMS = 20
+    const val COIN_BOOST_PRICE_GEMS = 30
 
     // ---------------- Efectos de fusión (cosméticos) ----------------
-    const val MERGE_FX_PRICE_COMMON = 700
-    const val MERGE_FX_PRICE_RARE = 1_500
-    const val MERGE_FX_GEMS_EPIC = 70
-    const val MERGE_FX_GEMS_LEGENDARY = 140
+    const val MERGE_FX_PRICE_COMMON = 1_400
+    const val MERGE_FX_PRICE_RARE = 3_000
+    const val MERGE_FX_GEMS_EPIC = 110
+    const val MERGE_FX_GEMS_LEGENDARY = 210
 
     // ---------------- Retención ----------------
     /** Espera entre cofres gratis. */
     const val FREE_CHEST_COOLDOWN_MS: Long = 4L * 60 * 60 * 1000
     /** Cada cuántos cofres gratis uno es raro. */
     const val FREE_CHEST_RARE_EVERY = 5
-    const val FREE_CHEST_SKIP_MAX_GEMS = 8
+    const val FREE_CHEST_SKIP_MAX_GEMS = 12
     /** Esperas que se pueden saltar viendo anuncios por día. */
     const val FREE_CHEST_AD_SKIPS_PER_DAY = 3
 
@@ -117,18 +121,18 @@ object Economy {
     const val WHEEL_AD_SPINS = 2
 
     /** Bonus por la primera victoria de cada día. */
-    const val FIRST_WIN_BONUS_COINS = 75
+    const val FIRST_WIN_BONUS_COINS = 40
     /** Días sin entrar a partir de los cuales hay regalo de regreso. */
     const val COMEBACK_MIN_DAYS = 3
 
     /** Misiones diarias: premio extra por cobrar las tres. */
-    const val DAILY_MISSIONS_BONUS_GEMS = 2
+    const val DAILY_MISSIONS_BONUS_GEMS = 1
 
     // Pase de temporada
     const val SEASON_TIERS = 30
     const val SEASON_POINTS_PER_TIER = 100
     /** Gemas por saltar un nivel del pase. */
-    const val SEASON_TIER_SKIP_GEMS = 40
+    const val SEASON_TIER_SKIP_GEMS = 60
 
     // Duelo a distancia (por código)
     const val REMOTE_DUEL_PLAY_COINS = 25
@@ -139,22 +143,23 @@ object Economy {
     const val REMOTE_DUEL_CREATE_PER_DAY = 3
 
     // Avatares (se compran con monedas; los de temporada solo salen en el pase)
-    const val AVATAR_PRICE_BASIC = 600
-    const val AVATAR_PRICE_COZY = 900
-    const val AVATAR_PRICE_NICE = 1_100
-    const val AVATAR_PRICE_RARE = 1_500
-    const val AVATAR_PRICE_EPIC = 2_500
-    const val AVATAR_PRICE_LEGENDARY = 3_500
+    const val AVATAR_PRICE_BASIC = 1_200
+    const val AVATAR_PRICE_COZY = 1_800
+    const val AVATAR_PRICE_NICE = 2_200
+    const val AVATAR_PRICE_RARE = 3_000
+    const val AVATAR_PRICE_EPIC = 5_000
+    const val AVATAR_PRICE_LEGENDARY = 7_000
 
     // Banners de perfil
-    const val BANNER_PRICE_BASIC = 500
-    const val BANNER_PRICE_COZY = 700
-    const val BANNER_PRICE_NICE = 900
-    const val BANNER_PRICE_RARE = 1_100
-    const val BANNER_PRICE_PRIME = 1_300
-    const val BANNER_GEMS_NICE = 60
-    const val BANNER_GEMS_RARE = 75
-    const val BANNER_GEMS_EPIC = 90
+    const val BANNER_PRICE_BASIC = 1_000
+    const val BANNER_PRICE_COZY = 1_400
+    const val BANNER_PRICE_NICE = 1_800
+    const val BANNER_PRICE_RARE = 2_200
+    const val BANNER_PRICE_PRIME = 2_600
+    const val BANNER_GEMS_NICE = 106
+    const val BANNER_GEMS_RARE = 110
+    const val BANNER_GEMS_EPIC = 135
+    const val BANNER_GEMS_LEGENDARY = 165
 
     // Hucha
     const val PIGGY_CAP = 300

@@ -681,7 +681,7 @@ private fun TradeTab(
                             onToast("+1 ficha de intercambio")
                         }
                         if (vipNow) grant()
-                        else (ctx as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                        else (ctx as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act, placement = "collection") { grant() } }
                     }
                 )
                 Spacer(Modifier.height(8.dp))
@@ -993,7 +993,7 @@ private fun OpeningDialog(opening: Opening, manager: CollectionManager, onDone: 
                             adFreq.consume(com.korkoor.pardos.data.local.AdFrequency.SLOT_EXTRA_CARD)
                             adTick++
                         }
-                        if (vip) grant() else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                        if (vip) grant() else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act, placement = "collection") { grant() } }
                     }
                 )
             }

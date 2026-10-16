@@ -35,32 +35,34 @@ fun GameTopBar(
     selectedShapeType: String,
     onShapeSelected: (String) -> Unit,
     onBackToMenu: () -> Unit,
+    uiScale: Float = 1f,
     modifier: Modifier = Modifier
 ) {
+    val controlScale = uiScale.coerceIn(0.8f, 1.1f)
     Row(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp * controlScale, vertical = 6.dp * controlScale),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.weight(1f)) {
             // Pasamos la forma seleccionada actual
-            ShapeSelector(selectedShapeType, onShapeSelected)
+            ShapeSelector(selectedShapeType, onShapeSelected, controlScale)
         }
 
-        Spacer(modifier = Modifier.width(6.dp))
+        Spacer(modifier = Modifier.width(6.dp * controlScale))
 
-        MuteButton()
-        Spacer(modifier = Modifier.width(8.dp))
+        MuteButton(controlScale)
+        Spacer(modifier = Modifier.width(8.dp * controlScale))
 
         // Botón de Salir
         JellySurface(
             color = Color(0xFFE07A5F).copy(alpha = 0.15f),
             shape = CircleShape,
             modifier = Modifier
-                .size(48.dp)
+                .size(48.dp * controlScale)
                 .zIndex(10f),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE07A5F).copy(alpha = 0.2f))
         ) {
@@ -78,7 +80,7 @@ fun GameTopBar(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(R.string.close_game),
                     tint = Color(0xFFE07A5F),
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp * controlScale)
                 )
             }
         }
@@ -87,7 +89,7 @@ fun GameTopBar(
 
 /** Silencio rápido: apaga (o enciende) efectos y música a la vez, sin salir de la partida. */
 @Composable
-private fun MuteButton() {
+private fun MuteButton(uiScale: Float) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val settings = remember { com.korkoor.pardos.data.local.SettingsManager(context) }
     val sound by settings.soundEnabled.collectAsState()
@@ -96,7 +98,7 @@ private fun MuteButton() {
     JellySurface(
         color = Color.White.copy(alpha = 0.85f),
         shape = CircleShape,
-        modifier = Modifier.size(48.dp).zIndex(10f),
+        modifier = Modifier.size(48.dp * uiScale).zIndex(10f),
         border = androidx.compose.foundation.BorderStroke(1.dp, com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.06f))
     ) {
         Box(
@@ -118,14 +120,14 @@ private fun MuteButton() {
                 imageVector = if (on) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
                 contentDescription = if (on) "Silenciar" else "Activar sonido",
                 tint = if (on) com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.7f) else Color(0xFFE07A5F),
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp * uiScale)
             )
         }
     }
 }
 
 @Composable
-private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
+private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit, uiScale: Float) {
     var expanded by remember { mutableStateOf(false) }
 
     // ✅ CORRECCIÓN: Usamos 'ShapeType.entries' para obtener la lista real de formas.
@@ -136,21 +138,21 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
         JellySurface(
             onClick = { expanded = true },
             color = Color.White.copy(alpha = 0.85f),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(20.dp * uiScale),
             shadowElevation = 4.dp,
             border = androidx.compose.foundation.BorderStroke(1.dp, com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.05f))
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier = Modifier.padding(horizontal = 12.dp * uiScale, vertical = 8.dp * uiScale),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     imageVector = Icons.Default.Category,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(16.dp * uiScale),
                     tint = Color(0xFF81B29A)
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp * uiScale))
 
                 // Mostramos el nombre actual
                 Text(
@@ -161,11 +163,11 @@ private fun ShapeSelector(current: String, onShapeSelected: (String) -> Unit) {
                     letterSpacing = 1.sp
                 )
 
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(4.dp * uiScale))
                 Icon(
                     imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(16.dp * uiScale),
                     tint = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.4f)
                 )
             }

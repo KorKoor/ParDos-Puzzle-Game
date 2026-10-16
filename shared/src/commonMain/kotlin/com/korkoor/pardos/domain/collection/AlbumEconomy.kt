@@ -205,7 +205,7 @@ object TokenRules {
     const val PLATINUM = 10
     const val MAX_STOCK = 40
 
-    const val GEMS_PER_TOKEN = 15
+    const val GEMS_PER_TOKEN = 20
     const val MAX_BOUGHT_PER_DAY = 3
 
     fun canBuy(gems: Int, boughtToday: Int, stock: Int): Boolean = gems >= GEMS_PER_TOKEN && boughtToday < MAX_BOUGHT_PER_DAY && stock < MAX_STOCK
@@ -219,8 +219,8 @@ object TokenRules {
  */
 object SeriesPackRules {
     const val CARDS = 3
-    const val COINS = 900
-    const val GEMS = 45
+    const val COINS = 1_800
+    const val GEMS = 70
     private val weights = listOf(450, 400, 130, 20)
 
     fun canOpen(series: Series, owned: Set<String>): Boolean = !CollectibleCatalog.isSeriesComplete(series, owned)
@@ -262,12 +262,12 @@ object Showcase {
 
     /** Gemas para abrir el hueco número [slot] (4.º..9.º). */
     fun unlockCost(slot: Int): Int = when (slot) {
-        4 -> 30
-        5 -> 50
-        6 -> 80
-        7 -> 120
-        8 -> 160
-        9 -> 220
+        4 -> 45
+        5 -> 75
+        6 -> 120
+        7 -> 180
+        8 -> 240
+        9 -> 330
         else -> 0
     }
 

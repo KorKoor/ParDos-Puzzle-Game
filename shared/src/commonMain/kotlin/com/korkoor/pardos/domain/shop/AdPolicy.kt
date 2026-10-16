@@ -3,23 +3,13 @@ package com.korkoor.pardos.domain.shop
 /**
  * Cuándo se enseña un anuncio de pantalla completa (intersticial).
  *
- * Pocos y en pausas naturales: solo tras ganar un nivel, nunca tras perder, nunca en la primera sesión, nunca seguidos ni encima
- * de un anuncio con premio que el jugador acaba de elegir ver, y nunca para quien tiene VIP. El objetivo es ganar dinero sin
+ * En pausas naturales: solo tras ganar un nivel de campaña (desde el nivel 3), nunca tras perder, nunca sobre una celebración y nunca
+ * para quien tiene VIP. Sin límite de cantidad. El objetivo es ganar dinero sin
  * espantar a quien juega: los anuncios con premio (que el jugador pide) son la fuente principal.
  */
 object AdPolicy {
     /** Los primeros niveles son para enamorarse del juego: sin intersticiales. */
-    const val MIN_CAMPAIGN_LEVEL = 8
-    /** Mínimo de tiempo desde que se instaló la app. */
-    const val MIN_INSTALL_AGE_MS = 20 * 60_000L
-    /** Victorias entre un intersticial y el siguiente. */
-    const val WINS_BETWEEN = 3
-    /** Separación mínima entre dos anuncios de cualquier tipo. */
-    const val MIN_GAP_MS = 180_000L
-    /** Tope diario de intersticiales. */
-    const val MAX_PER_DAY = 6
-    /** Si el jugador acaba de ver un anuncio con premio, el siguiente intersticial espera este tiempo. */
-    const val AFTER_REWARDED_MS = 240_000L
+    const val MIN_CAMPAIGN_LEVEL = 3
 
     data class State(
         val vip: Boolean,
@@ -36,14 +26,9 @@ object AdPolicy {
         val bigMoment: Boolean = false
     )
 
+    /** Sin tope de cantidad ni de tiempo: sale tras cada victoria de campaña. Nunca con VIP, tras perder ni sobre una celebración. */
     fun shouldShowInterstitial(s: State): Boolean =
-        !s.vip && s.afterWin && !s.bigMoment &&
-            s.campaignLevel >= MIN_CAMPAIGN_LEVEL &&
-            s.installAgeMs >= MIN_INSTALL_AGE_MS &&
-            s.winsSinceLastAd >= WINS_BETWEEN &&
-            s.msSinceLastAd >= MIN_GAP_MS &&
-            s.msSinceLastRewarded >= AFTER_REWARDED_MS &&
-            s.shownToday < MAX_PER_DAY
+        !s.vip && s.afterWin && !s.bigMoment && s.campaignLevel >= MIN_CAMPAIGN_LEVEL
 }
 
 /** Premios por ver anuncios (el jugador los pide) y su tope diario: así el anuncio es un trato justo, no una trampa. */

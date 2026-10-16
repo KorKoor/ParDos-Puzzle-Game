@@ -80,8 +80,8 @@ class MetaSessionTest {
         assertEquals(1, m.st().int("streak"))
         val coinsBefore = m.st().int("coins")
         val gift = ok(m.claimDailyReward())
-        assertEquals(50, gift.int("coins"))
-        assertEquals(coinsBefore + 50, m.st().int("coins"))
+        assertEquals(40, gift.int("coins"))
+        assertEquals(coinsBefore + 40, m.st().int("coins"))
         fails(m.claimDailyReward())
         // abrir otra vez el mismo día no cambia nada
         assertEquals("NONE", ok(m.openApp())["change"])
@@ -128,7 +128,7 @@ class MetaSessionTest {
         val win = ok(m.onWin(level = 1, daily = false, stars = 3, moves = 12, timeMs = 40_000, maxTile = 16, merges = 9, usedHelp = false, kind = "ZEN", boss = false, flow = 0))
         assertTrue(win.int("coins") >= 10 + 30 + 20, "monedas de la primera victoria: ${win["coins"]}")
         assertEquals(true, win["firstClear"])
-        assertEquals(75, win.int("firstWinCoins"))
+        assertEquals(40, win.int("firstWinCoins"))
         assertEquals(2, m.st().int("unlocked"))
         assertEquals(3, m.starsOf(1))
         assertEquals(12, m.bestMovesOf(1))
@@ -158,7 +158,7 @@ class MetaSessionTest {
         fails(m.equipSkin("flat"))
         m.grantCoins(1000)
         ok(m.buySkin("flat", 0))
-        assertEquals(550, m.st().int("coins"))
+        assertEquals(100, m.st().int("coins"))
         ok(m.equipSkin("flat"))
         assertEquals("flat", m.st()["equippedSkin"])
         fails(m.buySkin("flat", 0))
@@ -170,11 +170,11 @@ class MetaSessionTest {
         m.grantCoins(500)
         ok(m.buyUndos(3))
         assertEquals(3, m.st().int("undos"))
-        assertEquals(320, m.st().int("coins"))
+        assertEquals(200, m.st().int("coins"))
         assertTrue(m.useUndo())
         m.grantGems(10)
         ok(m.exchangeGems(5))
-        assertEquals(520, m.st().int("coins"))
+        assertEquals(400, m.st().int("coins"))
         fails(m.exchangeGems(50))
     }
 
@@ -214,7 +214,7 @@ class MetaSessionTest {
         // abre varios cofres hasta tener alguna repetida
         var copiesSeen = false
         for (n in 1..30) {
-            m.grantCoins(400)
+            m.grantCoins(900)
             ok(m.buyChest("COMMON", false))
             ok(m.openChest("COMMON", n.toLong()))
             val copies = jsonObject(m.albumState()).map("copies")

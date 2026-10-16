@@ -16,22 +16,28 @@ struct GameView: View {
             }
             ParticlesView(kind: style.particles, tint: style.particleTint)
             if let snap = model.snap {
-                VStack(spacing: 12) {
-                    topBar(snap, style)
-                    if model.mode == .tower { TowerHearts() }
-                    GoalCard(snap: snap)
-                    RuleChips(snap: snap)
-                    BoardView(snap: snap, hint: currentGuide(snap))
-                        .padding(.horizontal, 14)
-                    StatsRow(snap: snap)
-                    if dpadOn || UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning {
-                        DirectionPad()
+                GeometryReader { geo in
+                    let boardSide = min(geo.size.width - 28, max(220, geo.size.height * 0.42))
+                    ScrollView(.vertical) {
+                        VStack(spacing: 12) {
+                            topBar(snap, style)
+                            if model.mode == .tower { TowerHearts() }
+                            GoalCard(snap: snap)
+                            RuleChips(snap: snap)
+                            BoardView(snap: snap, hint: currentGuide(snap))
+                                .frame(height: boardSide)
+                                .padding(.horizontal, 14)
+                            StatsRow(snap: snap)
+                            if dpadOn || UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning {
+                                DirectionPad()
+                            }
+                            if model.selectMode != nil { SelectBanner() }
+                            bottom(snap)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 6)
                     }
-                    if model.selectMode != nil { SelectBanner() }
-                    bottom(snap)
-                    Spacer(minLength: 0)
                 }
-                .padding(.top, 6)
                 if snap.status != "playing" {
                     if model.mode == .campaign || model.mode == .daily {
                         ResultOverlay(snap: snap)

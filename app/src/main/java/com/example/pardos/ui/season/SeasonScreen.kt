@@ -188,7 +188,7 @@ fun SeasonScreen(
                                     com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.SEASON_TIER)
                                     message = "+${AdRewards.SEASON_BOOST_POINTS} puntos del pase"
                                 }
-                                if (vip) grant() else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act) { grant() } }
+                                if (vip) grant() else (context as? android.app.Activity)?.let { act -> com.korkoor.pardos.ui.game.logic.AdManager.showRewardedAd(act, placement = "season") { grant() } }
                             }
                         )
                     }

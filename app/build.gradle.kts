@@ -12,11 +12,23 @@ android {
     defaultConfig {
         applicationId = "com.korkoor.pardos"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 16
+        targetSdk = 36
+        versionCode = 22
         versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        create("release") {
+            val storeFilePath = project.findProperty("pardos.storeFile") as String?
+            if (storeFilePath != null && file(storeFilePath).exists()) {
+                storeFile = file(storeFilePath)
+                storePassword = project.findProperty("pardos.storePassword") as String?
+                keyAlias = project.findProperty("pardos.keyAlias") as String?
+                keyPassword = project.findProperty("pardos.keyPassword") as String?
+            }
+        }
     }
 
     buildTypes {
@@ -35,9 +47,15 @@ android {
             buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"ca-app-pub-3940256099942544/1033173712\"")
         }
         release {
+            // Signing config de lanzamiento si está configurado en gradle.properties
+            val releaseSigningConfig = signingConfigs.getByName("release")
+            if (releaseSigningConfig.storeFile != null) {
+                signingConfig = releaseSigningConfig
+            }
             // Release: IDs reales de AdMob
             manifestPlaceholders["admobAppId"] = "ca-app-pub-3851960142449906~8749596168"
             buildConfigField("String", "REWARDED_AD_UNIT_ID", "\"ca-app-pub-3851960142449906/7125882091\"")
+
             // Intersticial (pantalla completa tras ganar): vacío = desactivado hasta que crees el bloque en AdMob y pongas su ID
             // en gradle.properties como pardos.interstitialAdUnitId=ca-app-pub-3851960142449906/XXXXXXXXXX
             buildConfigField("String", "INTERSTITIAL_AD_UNIT_ID", "\"${(project.findProperty("pardos.interstitialAdUnitId") as String?) ?: ""}\"")
@@ -105,6 +123,10 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     implementation("com.google.firebase:firebase-firestore")
+    // Analítica de retención (eventos sin datos personales; ver data/local/Analytics.kt)
+    implementation("com.google.firebase:firebase-analytics")
+    // Servicios de Play Games (logros y clasificaciones en el perfil de Play Games); ver data/local/PlayGames.kt
+    implementation("com.google.android.gms:play-services-games-v2:22.1.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

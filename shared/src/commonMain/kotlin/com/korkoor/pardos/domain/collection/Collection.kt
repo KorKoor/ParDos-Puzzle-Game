@@ -146,7 +146,7 @@ object FoilRules {
 /** Esencia a cambio de gemas: un atajo para quien no quiere esperar a las repetidas (sumidero de gemas). */
 object ShardShop {
     const val SHARDS_PER_PACK = 100
-    const val GEMS_PER_PACK = 25
+    const val GEMS_PER_PACK = 40
     /** Packs que se pueden comprar al día (evita vaciar el álbum de golpe). */
     const val MAX_PACKS_PER_DAY = 4
 

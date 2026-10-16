@@ -258,7 +258,7 @@ fun FreeChestDialog(retention: RetentionManager, onOpenAlbum: () -> Unit, onDism
                 if (isVip) "Saltar la espera (VIP)" else "Saltar con anuncio ($adLeft)", Violet, enabled = adLeft > 0
             ) {
                 if (isVip) retention.skipFreeChestWithAd()
-                else activity?.let { act -> AdManager.showRewardedAd(act) { retention.skipFreeChestWithAd() } }
+                else activity?.let { act -> AdManager.showRewardedAd(act, placement = "free_chest") { retention.skipFreeChestWithAd() } }
             }
             Spacer(Modifier.height(8.dp))
             val cost = FreeChest.skipCostGems(remaining)
@@ -344,6 +344,11 @@ fun ComebackDialog(gift: ComebackGift, daysAway: Int, onDismiss: () -> Unit) {
             RewardChip(Icons.Rounded.MonetizationOn, "+${gift.coins}", Gold)
             RewardChip(Icons.Rounded.Inventory2, chestName(gift.chest), chestColor(gift.chest))
             if (gift.freezes > 0) RewardChip(Icons.Rounded.Shield, "Escudo", Sage)
+        }
+        if (daysAway >= com.korkoor.pardos.data.local.RetentionManager.WB_MIN_AWAY) {
+            Spacer(Modifier.height(14.dp))
+            Text("Camino de regreso: en 3 días juega un nivel, completa el reto diario y abre un cofre para ganar ${com.korkoor.pardos.data.local.RetentionManager.WB_BONUS_COINS} monedas y un cofre raro.",
+                fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = InkSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         }
         Spacer(Modifier.height(18.dp))
         DialogButton("Gracias", Sage, onClick = onDismiss)

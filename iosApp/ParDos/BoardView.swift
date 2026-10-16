@@ -20,7 +20,8 @@ struct BoardView: View {
                 .accessibilityAction(named: "Deslizar abajo") { model.swipe(1) }
                 .accessibilityAction(named: "Deslizar a la izquierda") { model.swipe(2) }
                 .accessibilityAction(named: "Deslizar a la derecha") { model.swipe(3) }
-                .gesture(
+                // El gesto del juego debe ganar al desplazamiento vertical de la pantalla.
+                .highPriorityGesture(
                     DragGesture(minimumDistance: 18)
                         .onEnded { value in handleSwipe(value.translation) }
                 )

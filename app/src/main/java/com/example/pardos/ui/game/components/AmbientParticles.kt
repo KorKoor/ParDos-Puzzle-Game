@@ -36,7 +36,7 @@ fun AmbientParticles(
     modifier: Modifier = Modifier,
     density: Float = 1f
 ) {
-    if (kind == ParticleKind.NONE) return
+    if (kind == ParticleKind.NONE || com.korkoor.pardos.ui.design.PowerProfile.lowResourceMode.value) return
 
     // PETALS conserva la animación original del juego
     if (kind == ParticleKind.PETALS) {

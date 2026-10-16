@@ -43,9 +43,9 @@ class MergeEffectsTest {
     }
 
     @Test fun buyWithCoins() {
-        val r = MergeFxInventory().buy(MergeFx.SPARKS, coins = 1000, gems = 0)
+        val r = MergeFxInventory().buy(MergeFx.SPARKS, coins = 5000, gems = 0)
         assertIs<MergeFxInventory.Purchase.Ok>(r)
-        assertEquals(1000 - MergeFx.SPARKS.coinPrice, r.coinsLeft)
+        assertEquals(5000 - MergeFx.SPARKS.coinPrice, r.coinsLeft)
         assertTrue(MergeFx.SPARKS.id in r.inventory.owned)
         assertIs<MergeFxInventory.Purchase.AlreadyOwned>(r.inventory.buy(MergeFx.SPARKS, 9999, 9999))
     }
@@ -61,7 +61,7 @@ class MergeEffectsTest {
     @Test fun discountAppliesAndRoundsUp() {
         val r = MergeFxInventory().buy(MergeFx.PETALS, 5000, 0, discountPercent = 30)
         assertIs<MergeFxInventory.Purchase.Ok>(r)
-        assertEquals(5000 - 1050, r.coinsLeft)
+        assertEquals(5000 - (MergeFx.PETALS.coinPrice * 70 + 99) / 100, r.coinsLeft)
     }
 
     @Test fun equipOnlyWhatYouOwn() {

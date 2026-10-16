@@ -23,6 +23,7 @@ class SettingsManager(context: Context) {
             _autoNext.value = prefs.getBoolean(K_AUTONEXT, true)
             _sfxVolume.value = prefs.getFloat(K_SFX_VOL, 0.9f).coerceIn(0f, 1f)
             _musicVolume.value = prefs.getFloat(K_MUSIC_VOL, 0.7f).coerceIn(0f, 1f)
+            _gameUiScale.value = prefs.getFloat(K_GAME_UI_SCALE, 1f).coerceIn(0.8f, 1.1f)
             loaded = true
         }
     }
@@ -42,9 +43,15 @@ class SettingsManager(context: Context) {
     /** Volumen de los efectos (0..1) y de la música (0..1). */
     val sfxVolume: StateFlow<Float> = _sfxVolume.asStateFlow()
     val musicVolume: StateFlow<Float> = _musicVolume.asStateFlow()
+    /** Escala de textos y controles durante la partida (0.8 = compacta; 1.1 = grande). */
+    val gameUiScale: StateFlow<Float> = _gameUiScale.asStateFlow()
 
     fun setSfxVolume(v: Float) { _sfxVolume.value = v.coerceIn(0f, 1f); prefs.edit().putFloat(K_SFX_VOL, _sfxVolume.value).apply() }
     fun setMusicVolume(v: Float) { _musicVolume.value = v.coerceIn(0f, 1f); prefs.edit().putFloat(K_MUSIC_VOL, _musicVolume.value).apply() }
+    fun setGameUiScale(v: Float) {
+        _gameUiScale.value = (kotlin.math.round(v.coerceIn(0.8f, 1.1f) * 10f) / 10f)
+        prefs.edit().putFloat(K_GAME_UI_SCALE, _gameUiScale.value).apply()
+    }
 
     fun setAutoNext(on: Boolean) { _autoNext.value = on; prefs.edit().putBoolean(K_AUTONEXT, on).apply() }
     fun setSound(on: Boolean) { _sound.value = on; prefs.edit().putBoolean(K_SOUND, on).apply() }
@@ -60,6 +67,7 @@ class SettingsManager(context: Context) {
         const val K_AUTONEXT = "auto_next"
         const val K_SFX_VOL = "sfx_volume"
         const val K_MUSIC_VOL = "music_volume"
+        const val K_GAME_UI_SCALE = "game_ui_scale"
         val _sound = MutableStateFlow(true)
         val _music = MutableStateFlow(true)
         val _haptics = MutableStateFlow(true)
@@ -67,6 +75,7 @@ class SettingsManager(context: Context) {
         val _autoNext = MutableStateFlow(true)
         val _sfxVolume = MutableStateFlow(0.9f)
         val _musicVolume = MutableStateFlow(0.7f)
+        val _gameUiScale = MutableStateFlow(1f)
         var loaded = false
     }
 }

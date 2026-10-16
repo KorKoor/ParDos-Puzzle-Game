@@ -2,16 +2,21 @@ package com.korkoor.pardos.ui.social
 
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import com.korkoor.pardos.ui.design.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +39,7 @@ import com.korkoor.pardos.domain.logic.RemoteChallenge
 import com.korkoor.pardos.domain.logic.RemoteDuel
 import com.korkoor.pardos.domain.logic.RemoteOutcome
 import com.korkoor.pardos.domain.social.ShareText
+import com.korkoor.pardos.domain.model.UserProfile
 import com.korkoor.pardos.ui.design.*
 import com.korkoor.pardos.ui.game.RemoteRole
 import kotlinx.coroutines.delay
@@ -68,6 +74,10 @@ fun RemoteDuelOverlay(
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
+    var showFriendPicker by remember { mutableStateOf(false) }
+    var friends by remember { mutableStateOf<List<UserProfile>?>(null) }
+    val profileManager = remember { com.korkoor.pardos.data.local.ProfileManager(context) }
+    val friendChallengeManager = remember { com.korkoor.pardos.data.local.FriendChallengeManager(context) }
     LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
 
     val creator = role == RemoteRole.CREATOR
@@ -128,6 +138,45 @@ fun RemoteDuelOverlay(
                     }
                     Spacer(Modifier.height(18.dp))
                     PrimaryButton("Compartir reto", onClick = onShare, icon = Icons.Rounded.Share)
+                    challenge?.let { ch ->
+                        TextButton(onClick = { showFriendPicker = true }) { Text("Enviar a un amigo aquí", color = Terracotta, fontWeight = FontWeight.Bold) }
+                        if (showFriendPicker) {
+                            LaunchedEffect(showFriendPicker) {
+                                friends = null
+                                profileManager.getFriendsProfiles(force = true) { friends = it }
+                            }
+                            androidx.compose.ui.window.Dialog(onDismissRequest = { showFriendPicker = false }) {
+                                JellySurface(color = Cream, shape = RoundedCornerShape(24.dp), shadowElevation = 16.dp) {
+                                    Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                                        Text("ENVIAR RETO A", fontSize = 15.sp, fontWeight = FontWeight.Black, color = Navy)
+                                        Spacer(Modifier.height(8.dp))
+                                        when {
+                                            friends == null -> Box(Modifier.fillMaxWidth().height(90.dp), contentAlignment = Alignment.Center) {
+                                                CircularProgressIndicator(color = Terracotta, modifier = Modifier.size(26.dp), strokeWidth = 3.dp)
+                                            }
+                                            friends!!.isEmpty() -> Text("Inicia sesión y agrega amigos para enviarles retos dentro de ParDos.", fontSize = 13.sp, color = InkSecondary, modifier = Modifier.padding(vertical = 18.dp))
+                                            else -> Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                                                friends!!.forEach { friend ->
+                                                    TextButton(
+                                                        onClick = {
+                                                            friendChallengeManager.send(friend.uid, profileManager.getProfile().name, ch) { error ->
+                                                                if (error == null) {
+                                                                    Toast.makeText(context, "Reto enviado a ${friend.name}", Toast.LENGTH_SHORT).show()
+                                                                    showFriendPicker = false
+                                                                } else Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                                            }
+                                                        },
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) { Text("⚔  ${friend.name}", color = Navy, fontWeight = FontWeight.Bold) }
+                                                }
+                                            }
+                                        }
+                                        TextButton(onClick = { showFriendPicker = false }, modifier = Modifier.align(Alignment.End)) { Text("Cerrar") }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(6.dp))
                     Text(
                         "Intentarlo de nuevo", fontSize = 12.sp, fontWeight = FontWeight.Black, color = InkSecondary, letterSpacing = 1.sp,

@@ -109,7 +109,9 @@ fun PowerUpSection(
     haptic: HapticFeedback,
     activity: Activity?,
     modifier: Modifier = Modifier,
-    labelColor: Color = com.korkoor.pardos.ui.design.Navy
+    labelColor: Color = com.korkoor.pardos.ui.design.Navy,
+    compact: Boolean = false,
+    uiScale: Float = 1f
 ) {
     val currentTime by viewModel.currentTimeProvider.collectAsState()
     val vipContext = androidx.compose.ui.platform.LocalContext.current
@@ -119,6 +121,8 @@ fun PowerUpSection(
         viewModel = viewModel,
         modifier = modifier,
         labelColor = labelColor,
+        compact = compact,
+        uiScale = uiScale,
         activity = activity,
         onCleanClick = {
             if (viewModel.isPowerUpAvailable(viewModel.lastCleanTime, currentTime)) {
@@ -127,7 +131,7 @@ fun PowerUpSection(
                 viewModel.grantAdReward("CLEAN")
             } else {
                 activity?.let { act ->
-                    AdManager.showRewardedAd(act) {
+                    AdManager.showRewardedAd(act, placement = "game_overlay") {
                         viewModel.grantAdReward("CLEAN")
                     }
                 }
@@ -141,7 +145,7 @@ fun PowerUpSection(
                 viewModel.grantAdReward("MERGE")
             } else {
                 activity?.let { act ->
-                    AdManager.showRewardedAd(act) {
+                    AdManager.showRewardedAd(act, placement = "game_overlay") {
                         viewModel.grantAdReward("MERGE")
                     }
                 }
@@ -182,7 +186,8 @@ fun GameOverOverlay(
     /** "¡Te faltó una fusión!": lo cerca que estuviste (null = nada que decir). */
     nearMiss: String? = null,
     /** Línea extra bajo el "casi" (por ejemplo los corazones que quedan en la torre). */
-    footnote: String? = null
+    footnote: String? = null,
+    onReview: (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -273,6 +278,11 @@ fun GameOverOverlay(
                     Spacer(Modifier.height(10.dp))
                     Text(footnote, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = com.korkoor.pardos.ui.design.Navy.copy(alpha = 0.6f), textAlign = TextAlign.Center)
                 }
+                if (onReview != null) {
+                    TextButton(onClick = onReview, modifier = Modifier.fillMaxWidth()) {
+                        Text("Revisar partida", fontWeight = FontWeight.Bold, color = com.korkoor.pardos.ui.design.Navy)
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
                 com.korkoor.pardos.ui.design.PrimaryButton(
                     text = stringResource(R.string.retry),
@@ -281,6 +291,107 @@ fun GameOverOverlay(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ReplayViewerDialog(ownReplay: com.korkoor.pardos.data.local.SavedGameReplay, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var other by remember { mutableStateOf<com.korkoor.pardos.data.local.SavedGameReplay?>(null) }
+    var viewOther by remember { mutableStateOf(false) }
+    var askCode by remember { mutableStateOf(false) }
+    var codeText by remember { mutableStateOf("") }
+    var codeError by remember { mutableStateOf(false) }
+    val replay = if (viewOther && other != null) other!! else ownReplay
+    var frameIndex by remember(replay.savedAt, replay.finalScore) { mutableIntStateOf(0) }
+    val frame = replay.frames.getOrNull(frameIndex) ?: return
+    val tiles = remember(frame) { frame.tiles.associateBy { it.row to it.col } }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        JellySurface(color = com.korkoor.pardos.ui.design.Cream, shape = RoundedCornerShape(28.dp), shadowElevation = 16.dp) {
+            Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("REVISIÓN DE PARTIDA", fontSize = 16.sp, fontWeight = FontWeight.Black, color = com.korkoor.pardos.ui.design.Navy)
+                Text("Jugada ${frame.move} · ${frame.score} puntos", fontSize = 13.sp, color = com.korkoor.pardos.ui.design.InkSecondary)
+                Spacer(Modifier.height(14.dp))
+                Column(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(18.dp)).background(Color(0xFFD9DCE4)).padding(5.dp)) {
+                    repeat(replay.boardSize) { row ->
+                        Row(Modifier.weight(1f)) {
+                            repeat(replay.boardSize) { col ->
+                                val tile = tiles[row to col]
+                                val bg = when {
+                                    tile == null -> Color(0xFFF0F1F4)
+                                    tile.value >= 512 -> Color(0xFFE07A5F)
+                                    tile.value >= 64 -> Color(0xFFE7B466)
+                                    tile.value >= 8 -> Color(0xFFF0D59D)
+                                    else -> Color(0xFFF8EBD4)
+                                }
+                                Box(
+                                    Modifier.weight(1f).fillMaxHeight().padding(2.dp).clip(RoundedCornerShape(10.dp)).background(bg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    tile?.let { Text("${it.value}", fontSize = (if (replay.boardSize >= 5) 13 else 17).sp, fontWeight = FontWeight.Black, color = if (it.value >= 32) Color.White else com.korkoor.pardos.ui.design.Navy, maxLines = 1) }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(if (frame.move == 0) "Inicio" else "Movimiento: ${frame.direction}", fontSize = 12.sp, color = com.korkoor.pardos.ui.design.InkSecondary)
+                Slider(
+                    value = frameIndex.toFloat(), onValueChange = { frameIndex = it.toInt().coerceIn(replay.frames.indices) },
+                    valueRange = 0f..replay.frames.lastIndex.toFloat(), steps = (replay.frames.size - 2).coerceAtLeast(0)
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = { frameIndex = (frameIndex - 1).coerceAtLeast(0) }, enabled = frameIndex > 0) { Text("Anterior") }
+                    TextButton(onClick = { frameIndex = (frameIndex + 1).coerceAtMost(replay.frames.lastIndex) }, enabled = frameIndex < replay.frames.lastIndex) { Text("Siguiente") }
+                }
+                other?.let { o ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Tú: ${ownReplay.finalScore} pts · ${ownReplay.frames.lastOrNull()?.move ?: 0} jugadas   |   Amigo: ${o.finalScore} pts · ${o.frames.lastOrNull()?.move ?: 0} jugadas",
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold, color = com.korkoor.pardos.ui.design.Navy, textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Text(
+                        when {
+                            ownReplay.finalScore > o.finalScore -> "¡Le ganas por ${ownReplay.finalScore - o.finalScore} puntos!"
+                            ownReplay.finalScore < o.finalScore -> "Te gana por ${o.finalScore - ownReplay.finalScore} puntos"
+                            else -> "Empate"
+                        }, fontSize = 12.sp, color = com.korkoor.pardos.ui.design.InkSecondary
+                    )
+                    TextButton(onClick = { viewOther = !viewOther }) { Text(if (viewOther) "Ver la mía" else "Ver la del amigo") }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = {
+                        val code = com.korkoor.pardos.data.local.ReplayCode.encode(ownReplay)
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, "Mi partida de ParDos (${ownReplay.finalScore} puntos). Pégala en Revisión > Comparar para verla y ganarme: $code")
+                        }
+                        context.startActivity(android.content.Intent.createChooser(send, "Compartir repetición"))
+                    }) { Text("Compartir código") }
+                    TextButton(onClick = { codeText = ""; codeError = false; askCode = true }) { Text("Comparar") }
+                }
+                TextButton(onClick = onDismiss) { Text("Cerrar") }
+            }
+        }
+    }
+    if (askCode) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { askCode = false },
+            title = { Text("Código de un amigo") },
+            text = {
+                Column {
+                    androidx.compose.material3.OutlinedTextField(value = codeText, onValueChange = { codeText = it; codeError = false }, placeholder = { Text("PDR1-…") }, maxLines = 4)
+                    if (codeError) Text("Ese código no es válido. Cópialo completo.", fontSize = 12.sp, color = Color(0xFFB3261E))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val decoded = com.korkoor.pardos.data.local.ReplayCode.decode(codeText)
+                    if (decoded == null) codeError = true else { other = decoded; viewOther = true; askCode = false }
+                }) { Text("Ver") }
+            },
+            dismissButton = { TextButton(onClick = { askCode = false }) { Text("Cancelar") } }
+        )
     }
 }
 

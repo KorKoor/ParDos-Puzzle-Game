@@ -28,21 +28,9 @@ class AdPolicyTest {
         assertTrue(AdPolicy.shouldShowInterstitial(ready.copy(bigMoment = false)))
     }
 
-    @Test fun newInstallsAreLeftAlone() {
-        assertFalse(AdPolicy.shouldShowInterstitial(ready.copy(installAgeMs = AdPolicy.MIN_INSTALL_AGE_MS - 1)))
-        assertTrue(AdPolicy.shouldShowInterstitial(ready.copy(installAgeMs = AdPolicy.MIN_INSTALL_AGE_MS)))
-    }
-
-    @Test fun spacedByWinsTimeAndADailyCap() {
-        assertFalse(AdPolicy.shouldShowInterstitial(ready.copy(winsSinceLastAd = AdPolicy.WINS_BETWEEN - 1)))
-        assertFalse(AdPolicy.shouldShowInterstitial(ready.copy(msSinceLastAd = AdPolicy.MIN_GAP_MS - 1)))
-        assertFalse(AdPolicy.shouldShowInterstitial(ready.copy(shownToday = AdPolicy.MAX_PER_DAY)))
-        assertTrue(AdPolicy.shouldShowInterstitial(ready.copy(shownToday = AdPolicy.MAX_PER_DAY - 1)))
-    }
-
-    @Test fun aRewardedAdTheyAskedForBuysThemAQuietPeriod() {
-        assertFalse(AdPolicy.shouldShowInterstitial(ready.copy(msSinceLastRewarded = 30_000)))
-        assertTrue(AdPolicy.shouldShowInterstitial(ready.copy(msSinceLastRewarded = AdPolicy.AFTER_REWARDED_MS)))
+    @Test fun hasNoFrequencyLimits() {
+        val busy = ready.copy(winsSinceLastAd = 0, msSinceLastAd = 0, msSinceLastRewarded = 0, shownToday = 999, installAgeMs = 0)
+        assertTrue(AdPolicy.shouldShowInterstitial(busy))
     }
 
     @Test fun rewardsHaveDailyCapsThatCountDown() {

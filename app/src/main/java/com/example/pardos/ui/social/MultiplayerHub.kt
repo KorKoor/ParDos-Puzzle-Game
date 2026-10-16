@@ -43,6 +43,7 @@ fun MultiplayerHub(
     onBack: () -> Unit,
     onLocalDuel: () -> Unit,
     onFriends: () -> Unit,
+    onWeeklyTournament: () -> Unit = {},
     onDailyChallenge: () -> Unit,
     onCreateChallenge: () -> Unit = {},
     onAcceptChallenge: (RemoteChallenge) -> Unit = {}
@@ -184,6 +185,7 @@ fun MultiplayerHub(
                 }
 
                 SectionLabel("Más formas de jugar")
+                HubRow(Icons.Rounded.EmojiEvents, Gold, "Torneo semanal", "Compite en una ronda validada por el servidor y suma al reto comunitario.", onWeeklyTournament)
                 HubRow(Icons.Rounded.Groups, Violet, "Duelo local", "2 jugadores en 1 teléfono: misma tabla, 60 s cada uno.", onLocalDuel)
                 HubRow(Icons.Rounded.Star, Gold, "Reto diario", "El mismo tablero para todo el mundo hoy. ¿Quién llega más lejos?", onDailyChallenge)
                 HubRow(Icons.Rounded.Group, GemBlue, "Amigos y ranking", "Agrega amigos con tu código y compitan por estrellas cada semana.", onFriends)

@@ -24,6 +24,8 @@ enum class PowerLevel { NORMAL, SAVER, HOT }
  */
 object PowerProfile {
     val level = mutableStateOf(PowerLevel.NORMAL)
+    /** Modo elegido manualmente en Ajustes; además del ahorro automático del sistema. */
+    val lowResourceMode = mutableStateOf(false)
 
     /** Reloj único (milisegundos del sistema) que mueve todas las animaciones decorativas; lo actualiza [CozyClockProvider]. */
     val nowMs = mutableLongStateOf(0L)
@@ -36,7 +38,12 @@ object PowerProfile {
         if (started) return
         started = true
         val app = context.applicationContext
-        val pm = app.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
+        lowResourceMode.value = app.getSharedPreferences("pardos_settings", Context.MODE_PRIVATE)
+            .getBoolean("low_resource_mode", false)
+        val pm = app.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: run {
+            recompute()
+            return
+        }
         powerSave = pm.isPowerSaveMode
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(c: Context?, intent: Intent?) {
@@ -60,9 +67,19 @@ object PowerProfile {
         // estados térmicos: 2 = moderado, 3 = severo (o peor)
         level.value = when {
             thermal >= 3 -> PowerLevel.HOT
-            powerSave || thermal >= 2 -> PowerLevel.SAVER
+            lowResourceMode.value || powerSave || thermal >= 2 -> PowerLevel.SAVER
             else -> PowerLevel.NORMAL
         }
+    }
+
+    fun setLowResourceMode(context: Context, enabled: Boolean) {
+        lowResourceMode.value = enabled
+        context.applicationContext
+            .getSharedPreferences("pardos_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("low_resource_mode", enabled)
+            .apply()
+        recompute()
     }
 
     /** Milisegundos entre fotogramas de las animaciones decorativas. */

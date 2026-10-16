@@ -21,22 +21,22 @@ object WeeklyMissions {
     const val PER_WEEK = 4
 
     val pool: List<WeeklyMission> = listOf(
-        WeeklyMission("play20", WeeklyType.PLAY_GAMES, "Juega 20 partidas", 20, 150),
-        WeeklyMission("play35", WeeklyType.PLAY_GAMES, "Juega 35 partidas", 35, 250),
-        WeeklyMission("win10", WeeklyType.WIN_LEVELS, "Gana 10 niveles", 10, 200),
-        WeeklyMission("win20", WeeklyType.WIN_LEVELS, "Gana 20 niveles", 20, 350),
-        WeeklyMission("daily3", WeeklyType.DAILY_CHALLENGES, "Completa 3 retos diarios", 3, 200),
-        WeeklyMission("daily5", WeeklyType.DAILY_CHALLENGES, "Completa 5 retos diarios", 5, 300),
-        WeeklyMission("merge800", WeeklyType.MERGE_PAIRS, "Combina 800 pares", 800, 200),
-        WeeklyMission("stars25", WeeklyType.EARN_STARS, "Gana 25 estrellas", 25, 250),
-        WeeklyMission("chests3", WeeklyType.OPEN_CHESTS, "Abre 3 cofres", 3, 150),
-        WeeklyMission("login5", WeeklyType.LOGIN_DAYS, "Entra 5 días distintos", 5, 200),
-        WeeklyMission("tile512", WeeklyType.REACH_TILE, "Crea una ficha de 512", 512, 250)
+        WeeklyMission("play20", WeeklyType.PLAY_GAMES, "Juega 20 partidas", 20, 120),
+        WeeklyMission("play35", WeeklyType.PLAY_GAMES, "Juega 35 partidas", 35, 200),
+        WeeklyMission("win10", WeeklyType.WIN_LEVELS, "Gana 10 niveles", 10, 160),
+        WeeklyMission("win20", WeeklyType.WIN_LEVELS, "Gana 20 niveles", 20, 280),
+        WeeklyMission("daily3", WeeklyType.DAILY_CHALLENGES, "Completa 3 retos diarios", 3, 160),
+        WeeklyMission("daily5", WeeklyType.DAILY_CHALLENGES, "Completa 5 retos diarios", 5, 240),
+        WeeklyMission("merge800", WeeklyType.MERGE_PAIRS, "Combina 800 pares", 800, 160),
+        WeeklyMission("stars25", WeeklyType.EARN_STARS, "Gana 25 estrellas", 25, 200),
+        WeeklyMission("chests3", WeeklyType.OPEN_CHESTS, "Abre 3 cofres", 3, 120),
+        WeeklyMission("login5", WeeklyType.LOGIN_DAYS, "Entra 5 días distintos", 5, 160),
+        WeeklyMission("tile512", WeeklyType.REACH_TILE, "Crea una ficha de 512", 512, 200)
     )
 
     /** Premio por completar las cuatro. */
     val completionChest = ChestType.RARE
-    const val COMPLETION_GEMS = 8
+    const val COMPLETION_GEMS = 6
 
     /** Las misiones de la semana: iguales para todos y de tipos distintos. */
     fun forWeek(weekId: Int): List<WeeklyMission> {
@@ -72,7 +72,7 @@ object PlayerLevelRewards {
         require(level >= 2)
         return LevelReward(
             level = level,
-            coins = 40 + 10 * level.coerceAtMost(30),
+            coins = 30 + 7 * level.coerceAtMost(30),
             gems = if (level % 5 == 0) 2 + level / 10 else 0,
             chest = when {
                 level % 10 == 0 -> ChestType.RARE

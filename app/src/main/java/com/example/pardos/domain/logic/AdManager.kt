@@ -146,12 +146,13 @@ object AdManager {
      * Enseña el anuncio y entrega el premio solo si el jugador lo ve completo. Si no hay anuncio listo avisa con un mensaje claro
      * (antes no pasaba nada y parecía que el botón no funcionaba) y sigue intentando cargar.
      */
-    fun showRewardedAd(activity: Activity, onUnavailable: (() -> Unit)? = null, onRewardEarned: () -> Unit) {
+    fun showRewardedAd(activity: Activity, onUnavailable: (() -> Unit)? = null, placement: String = "other", onRewardEarned: () -> Unit) {
         val ad = rewardedAd
         if (ad == null) {
             GameAudio.play(Sfx.UI_ERROR)
             Toast.makeText(activity, com.korkoor.pardos.R.string.ad_not_ready, Toast.LENGTH_SHORT).show()
             loadRewardedAd(activity)
+            com.korkoor.pardos.data.local.Analytics.adUnavailable(placement)
             onUnavailable?.invoke()
             return
         }
@@ -169,6 +170,7 @@ object AdManager {
         }
         ad.show(activity) {
             AdFrequency(activity).recordRewarded()
+            com.korkoor.pardos.data.local.Analytics.adReward(placement)
             GameAudio.play(Sfx.AD_REWARD)
             onRewardEarned()
         }
