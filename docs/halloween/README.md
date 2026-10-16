@@ -13,3 +13,7 @@ telarañas en las esquinas, estrellas que titilan y una colina con lápidas. Col
 - **Web / pruebas:** `lottie-web` o https://lottiefiles.com/preview.
 
 Se regenera con `python tools/lottie/make_halloween.py` (los colores, tiempos y posiciones están arriba del script).
+
+## Imagen principal
+
+`imagen_principal_halloween.jpg` (y `.png`) — imagen fija 1920×1080 (16:9) sacada de la animación (cuadro 48, con las alas abiertas). Lo importante (título PARDOS, calabaza y luna) está dentro de la zona segura; las telarañas de las esquinas son solo decoración. Se regenera renderizando ese cuadro con lottie-web a 1920×1080.

@@ -84,6 +84,13 @@ def grad_fill(x0, y0, x1, y1, stops):
             "g": {"p": len(stops), "k": static(flat)}, "nm": "Degradado"}
 
 
+def radial_fill(cx, cy, r, color, a0, a1):
+    """Degradado radial suave: de a0 % de opacidad en el centro a a1 % en el borde (halos sin borde duro)."""
+    c = rgb(color)[:3]
+    return {"ty": "gf", "o": static(100), "r": 1, "t": 2, "s": static([cx, cy]), "e": static([cx + r, cy]), "h": static(0), "a": static(0),
+            "g": {"p": 2, "k": static([0] + c + [1] + c + [0, a0 / 100.0, 1, a1 / 100.0])}, "nm": "Halo suave"}
+
+
 def line_stroke(color, w, op=100):
     return {"ty": "st", "c": static(rgb(color)), "o": static(op), "w": static(w), "lc": 2, "lj": 2, "nm": "Trazo"}
 
@@ -196,10 +203,10 @@ def make():
             pos["k"].append(kf)
         add(name, [group(body, tr())], ks(p=pos, s=(scale, scale)))
 
-    bat("Murcielago 1", [(0, 80, 150), (22, 170, 110), (45, 250, 165), (68, 150, 205), (90, 80, 150)], 78)
-    bat("Murcielago 2", [(0, 860, 290), (22, 740, 245), (45, 620, 300), (68, 760, 340), (90, 860, 290)], 62)
-    bat("Murcielago 3", [(0, 690, 190), (22, 780, 150), (45, 870, 195), (68, 790, 235), (90, 690, 190)], 48)
-    bat("Murcielago 4", [(0, 70, 265), (22, 190, 232), (45, 300, 285), (68, 160, 310), (90, 70, 265)], 42)
+    bat("Murcielago 1", [(0, 40, 150), (22, 120, 110), (45, 200, 165), (68, 100, 205), (90, 40, 150)], 105)
+    bat("Murcielago 2", [(0, 860, 290), (22, 740, 245), (45, 620, 300), (68, 760, 340), (90, 860, 290)], 90)
+    bat("Murcielago 3", [(0, 690, 190), (22, 780, 150), (45, 870, 195), (68, 790, 235), (90, 690, 190)], 70)
+    bat("Murcielago 4", [(0, 70, 265), (22, 190, 232), (45, 300, 285), (68, 160, 310), (90, 70, 265)], 60)
 
     # ---- calabaza (flota y respira) con la cara encendida
     face_glow = anim([(0, 88), (10, 100), (20, 78), (30, 100), (45, 90), (60, 100), (75, 80), (90, 88)])
@@ -220,7 +227,7 @@ def make():
     add("Calabaza", pumpkin, ks(p=bob, r=anim([(0, -2), (23, 2), (45, -2), (68, 2), (90, -2)]), s=(100, 100)))
 
     # halo naranja detras de la calabaza
-    add("Halo calabaza", [group([ell(0, 0, 330, 270), fill(ORANGE, 11)], tr(s=anim([(0, [100, 100]), (45, [106, 106]), (90, [100, 100])])), "Halo")], ks(p=(CX, 350)))
+    add("Halo calabaza", [group([ell(0, 0, 440, 360), radial_fill(0, 0, 220, ORANGE, 42, 0)], tr(s=anim([(0, [100, 100]), (45, [106, 106]), (90, [100, 100])])), "Halo")], ks(p=(CX, 350)))
 
     # ---- lapidas y colina (a todo el ancho)
     hill = bez([[-20, 512], [-20, 436], [160, 404], [330, 428], [455, 440], [600, 410], [760, 392], [930, 430], [930, 512]], [[0, 0]] * 9, [[0, 0]] * 9)
@@ -231,7 +238,7 @@ def make():
 
     # ---- luna con halo que respira
     moon = [
-        group([ell(0, 0, 150, 150), fill(GLOW, 15)], tr(s=anim([(0, [100, 100]), (45, [112, 112]), (90, [100, 100])])), "Halo luna"),
+        group([ell(0, 0, 280, 280), radial_fill(0, 0, 140, GLOW, 50, 0)], tr(s=anim([(0, [100, 100]), (45, [112, 112]), (90, [100, 100])])), "Halo luna"),
         group([ell(0, 0, 104, 104), fill(MOON)], name="Luna"),
         group([ell(-18, -10, 22, 22), ell(14, 16, 28, 28), ell(20, -24, 14, 14), fill(MOON_D)], name="Crateres"),
     ]
@@ -251,7 +258,7 @@ def make():
 
     # fondo nocturno que cubre todo el lienzo (sin esto el visor lo pinta de blanco)
     add("Fondo", [group([rect(-60, -60, SW + 120, SH + 120), grad_fill(0, -60, 0, SH + 60, [(0.0, "#0C061C"), (0.55, "#2A1547"), (1.0, "#4A2272")])], name="Cielo"),
-                  group([ell(820, 118, 520, 520), grad_fill(820, -150, 820, 380, [(0.0, "#6A4A9A"), (1.0, "#2A1547")])], tr(o=22), "Resplandor de la luna")])
+                  group([ell(820, 118, 760, 760), radial_fill(820, 118, 380, "#7A58B0", 60, 0)], name="Resplandor de la luna")])
 
     return {"v": "5.7.4", "fr": FPS, "ip": 0, "op": END, "w": W, "h": H, "nm": "ParDos - Mega actualizacion de Halloween", "ddd": 0, "assets": [], "layers": layers,
             "meta": {"g": "ParDos", "a": "ParDos", "k": "halloween,evento,parDos", "d": "Evento de Halloween (vector, 16:9, 60 fps, 3 s en bucle)"}}
