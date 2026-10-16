@@ -199,8 +199,10 @@ class NewMechanicsTest {
         assertTrue(withPhase.map { it.phase2!!.title }.toSet().size >= 5, "las fases son variadas")
     }
 
-    @Test fun thereAreTwentyFourBossRecipes() {
-        assertEquals(24, LevelGenerator.bossNames.size)
+    @Test fun thereAreThirtyTwoBossRecipesWithLore() {
+        assertEquals(32, LevelGenerator.bossNames.size)
+        assertEquals(LevelGenerator.bossNames.toSet(), com.korkoor.pardos.domain.level.BossLore.names, "cada jefe tiene motivo y frase")
+        assertTrue(LevelGenerator.bossNames.map { com.korkoor.pardos.domain.level.BossLore.motifOf(it) }.toSet().size >= 9)
         assertTrue(LevelCatalog.all().filter { it.isBoss }.map { it.title }.toSet().size >= 14)
     }
 }

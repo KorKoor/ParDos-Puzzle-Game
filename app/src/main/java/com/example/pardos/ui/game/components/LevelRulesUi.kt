@@ -154,12 +154,16 @@ private fun MovesPill(left: Int, limit: Int) {
 internal fun NewRuleDialog(state: BoardState, onStart: () -> Unit) {
     val kind = state.levelKind ?: return
     val spec = remember(state.currentLevel) { LevelCatalog.spec(state.currentLevel) }
-    val c = kind.accent()
+    val motif = if (kind == LevelKind.BOSS) com.korkoor.pardos.domain.level.BossLore.motifOf(state.levelTitle) else null
+    val c = motif?.tone() ?: kind.accent()
     CardDialog(onStart) {
-        Box(Modifier.wobble(4f, 1700)) { KindBadge(kind, 84.dp) }
+        if (motif != null) BossEmblem(motif, size = 96.dp) else Box(Modifier.wobble(4f, 1700)) { KindBadge(kind, 84.dp) }
         Spacer(Modifier.height(10.dp))
         Text(if (kind == LevelKind.BOSS) "JEFE" else "NUEVA REGLA", fontSize = 11.sp, fontWeight = FontWeight.Black, color = c, letterSpacing = 3.sp)
         Text(if (kind == LevelKind.BOSS) (state.levelTitle ?: kind.label) else state.kindLabel(), fontSize = 26.sp, fontWeight = FontWeight.Black, color = Navy, textAlign = TextAlign.Center)
+        if (motif != null) com.korkoor.pardos.domain.level.BossLore.tauntOf(state.levelTitle)?.let {
+            Text("“$it”", fontSize = 13.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, color = c.darker(0.7f), textAlign = TextAlign.Center)
+        }
         Spacer(Modifier.height(6.dp))
         Text(if (state.twist.isDeadEnd && kind == LevelKind.TWIST) "Una de las direcciones está prohibida" else kind.rule, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = InkSecondary, textAlign = TextAlign.Center)
         state.levelTip?.let {

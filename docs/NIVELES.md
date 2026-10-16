@@ -70,3 +70,7 @@ adb shell am start -n com.korkoor.pardos.debug/com.korkoor.pardos.MainActivity -
 ## Jefes (v3.2)
 
 Hay 24 recetas de jefe. Las 8 nuevas llegan por capítulo: El Laberinto (5), Fábrica de combos (9), Cronista (11), Dragón de piedra (16), Gran cosecha (18), Doble tormenta (22), Torre de cristal (24) y Ojo de la tormenta (30). Todas se arman con las reglas que ya existen y pasan la prueba del robot (`LevelFeasibilityTest`), que comprueba que se pueden ganar. Arreglo de paso: el jefe "Callejón sin salida" ya no usa giros de dirección que aún no han llegado a ese capítulo.
+
+### Más jefes y emblemas animados (v3.3)
+
+Son 32 recetas. Nuevos: Coloso de hierro (14), Banquete de cuatros (19), Reloj roto (21), Maestro del eco (28), Fuego fatuo (32), Guardián del abismo (36), Eclipse (40) y El Último Jefe (60). Cada jefe tiene un motivo (`BossLore`: muro, tormenta, reloj, oro, piedra, cristal, ojo, engranajes, laberinto o fuego) y una frase. La tarjeta del jefe dibuja su emblema animado (`BossEmblem.kt`, todo con Canvas, sin imágenes) con su color propio. Las pruebas exigen que cada jefe tenga motivo y frase y que haya al menos 9 motivos distintos.
