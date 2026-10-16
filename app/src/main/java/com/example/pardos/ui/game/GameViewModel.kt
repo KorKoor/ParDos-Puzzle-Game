@@ -1492,6 +1492,17 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             )
             lastCoinsEarned = economy.applyWinBonuses(lastCoinsEarned)
             economy.addCoins(lastCoinsEarned)
+            // Reto bonus del nivel (opcional): si se cumplió, un pequeño extra de monedas
+            com.korkoor.pardos.ui.game.components.QuestHud.result = null
+            if (isCampaignRun() && !towerActive) {
+                val st = _boardState.value
+                com.korkoor.pardos.domain.flow.SideQuests.forLevel(st.currentLevel, st.moveLimit != null, st.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS)?.let { q ->
+                    val free = st.boardSize * st.boardSize - st.blocked.size
+                    val ok = com.korkoor.pardos.domain.flow.SideQuests.achieved(q, com.korkoor.pardos.domain.flow.QuestResult(st.starsEarned, st.moveLimit, st.moveCount, st.emptySpaces, free, peakFlowTier, finalTimeUsed))
+                    if (ok) { lastCoinsEarned += q.coins; economy.addCoins(q.coins) }
+                    com.korkoor.pardos.ui.game.components.QuestHud.result = q to ok
+                }
+            }
             coinsDoubled = false
 
             // Retención: pase de temporada, semanales, hucha y bonus de la primera victoria del día

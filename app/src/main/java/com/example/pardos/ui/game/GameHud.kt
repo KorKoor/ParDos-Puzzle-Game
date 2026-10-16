@@ -144,7 +144,11 @@ internal fun GameHeader(
                 tileValues = state.tiles.mapTo(HashSet()) { it.value },
                 liveStars = if (starLimits != null && !state.isLevelCompleted && !state.isGameOver) Triple(state.moveCount, starLimits.first, starLimits.second) else null
             )
-            LevelRuleChips(state, Modifier.padding(top = if (compact) 2.dp else 6.dp))
+            LevelRuleChips(
+                state, Modifier.padding(top = if (compact) 2.dp else 6.dp),
+                quest = if (towerHearts == null && state.gameMode == com.korkoor.pardos.domain.model.GameMode.CLASICO)
+                    com.korkoor.pardos.domain.flow.SideQuests.forLevel(state.currentLevel, state.moveLimit != null, state.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS) else null
+            )
             if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = if (compact) 2.dp else 6.dp))
             if (towerHearts != null) TowerHearts(towerHearts, Modifier.padding(top = if (compact) 2.dp else 6.dp))
         }

@@ -201,6 +201,7 @@ fun LevelSummaryOverlay(
                                 StatsRow(moves, timeElapsed)
                                 StarHintLine(starHint)
                                 CoinsEarnedChip(coinsEarned, canDouble, vip, onDouble)
+                                com.korkoor.pardos.ui.game.components.QuestResultRow(Modifier.padding(top = 6.dp))
                                 BonusChips(bonus)
                                 com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
                                     streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,
@@ -240,6 +241,7 @@ fun LevelSummaryOverlay(
                     ) {
                         StarHintLine(starHint)
                         CoinsEarnedChip(coinsEarned, canDouble, vip, onDouble)
+                                com.korkoor.pardos.ui.game.components.QuestResultRow(Modifier.padding(top = 6.dp))
                         BonusChips(bonus)
                         com.korkoor.pardos.ui.game.components.FlowSummaryExtras(
                             streak, streakBonusPct, flowBonusPct, milestone, teaser, nextKindSeen,

@@ -79,10 +79,10 @@ fun KindBadge(kind: LevelKind, size: Dp, modifier: Modifier = Modifier) {
  * y cuántas piedras hay. En los niveles Zen sin reglas no aparece nada.
  */
 @Composable
-internal fun LevelRuleChips(state: BoardState, modifier: Modifier = Modifier) {
+internal fun LevelRuleChips(state: BoardState, modifier: Modifier = Modifier, quest: com.korkoor.pardos.domain.flow.SideQuest? = null) {
     val kind = state.levelKind ?: return
     val movesLeft = state.movesLeft
-    if (kind == LevelKind.ZEN && movesLeft == null && state.blocked.isEmpty()) return
+    if (kind == LevelKind.ZEN && movesLeft == null && state.blocked.isEmpty() && quest == null) return
 
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         if (kind != LevelKind.ZEN) KindPill(kind, if (kind == LevelKind.BOSS) (state.levelTitle ?: kind.label) else state.kindLabel())
@@ -94,6 +94,7 @@ internal fun LevelRuleChips(state: BoardState, modifier: Modifier = Modifier) {
         if (kind == LevelKind.BOSS && state.phase2 != null) {
             SmallPill(Icons.Rounded.SwapHoriz, if (state.phase >= 2) "Fase 2" else "Fase 1", LevelKind.BOSS.accent())
         }
+        if (quest != null && !state.isLevelCompleted && !state.isGameOver) QuestPill(quest)
     }
 }
 

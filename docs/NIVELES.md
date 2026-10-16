@@ -80,3 +80,7 @@ Son 40 recetas (los 8 de la recta final: Segador 44, Coloso de cristal 48, Reina
 - **Guardianes:** 12 mini jefes (`Guardians` en `BossLore.kt`) vigilan los niveles 5 y 15 de cada capítulo desde el capítulo 3. No cambian las reglas del nivel: le dan nombre, emblema animado y una frase en una tarjeta propia (una vez por nivel).
 - **Bestiario:** tarjeta en la pantalla de Logros con todas las fichas de jefes y guardianes. Cada una se desbloquea al ganar un nivel donde aparece (`Bestiary` en shared, `BestiaryUi.kt` en Android).
 - **Logros secretos:** 6 logros con `hidden = true` (nombre y descripción ocultos hasta lograrlos; valen como logro raro): último movimiento, sobre la campana, cazajefes, segunda fase, casa llena y cadena de jefe.
+
+## Retos bonus por nivel (v3.7)
+
+Cada nivel de campaña desde el 4 (menos los jefes) trae un **reto bonus opcional** (`SideQuests`, en `shared/.../flow`): Ímpetu (llegar a ¡Imparable!), Mesa despejada (ganar con la mitad del tablero libre), Sobrado (con un cuarto de los movimientos sin usar; solo niveles con límite), Perfecto (3 estrellas) o Veloz (menos de 90 s). Siempre el mismo reto para el mismo nivel. Se ve como una píldora junto a las reglas, y al ganar el resumen dice si se cumplió (+20 a +25 monedas). No cambia las estrellas ni obliga a nada.
