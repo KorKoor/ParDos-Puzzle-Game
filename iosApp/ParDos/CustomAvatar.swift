@@ -1,4 +1,6 @@
 import SwiftUI
+import Vision
+import CoreImage
 import UIKit
 import PhotosUI
 
@@ -106,6 +108,34 @@ final class CustomAvatarStore: ObservableObject {
             data.mode = "image"
             data.enabled = true
             save()
+        }
+    }
+
+    /// Quita el fondo de la imagen actual y deja solo el sujeto (como los stickers de fotos de iOS). Pide iOS 17.
+    func cutOutSubject(done: @escaping (Bool) -> Void) {
+        guard let source = image, let cg = source.cgImage else { done(false); return }
+        if #available(iOS 17.0, *) {
+            let request = VNGenerateForegroundInstanceMaskRequest()
+            let handler = VNImageRequestHandler(cgImage: cg, options: [:])
+            DispatchQueue.global(qos: .userInitiated).async {
+                var result: UIImage? = nil
+                do {
+                    try handler.perform([request])
+                    if let found = request.results?.first {
+                        let buffer = try found.generateMaskedImage(ofInstances: found.allInstances, from: handler, croppedToInstancesExtent: true)
+                        let ci = CIImage(cvPixelBuffer: buffer)
+                        if let out = CIContext().createCGImage(ci, from: ci.extent) { result = UIImage(cgImage: out) }
+                    }
+                } catch {
+                    result = nil
+                }
+                DispatchQueue.main.async {
+                    if let cut = result { self.setImage(cut) }
+                    done(result != nil)
+                }
+            }
+        } else {
+            done(false)
         }
     }
 
@@ -274,6 +304,11 @@ final class EmojiTextView: UITextView {
         return super.textInputMode
     }
 
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(UIResponderStandardEditActions.paste(_:)) && UIPasteboard.general.hasImages { return true }
+        return super.canPerformAction(action, withSender: sender)
+    }
+
     override func paste(_ sender: Any?) {
         if let picture = UIPasteboard.general.image {
             onImage?(picture)
@@ -284,6 +319,14 @@ final class EmojiTextView: UITextView {
 
     func harvest() {
         var picture: UIImage? = nil
+        if #available(iOS 18.0, *) {
+            attributedText.enumerateAttribute(.adaptiveImageGlyph, in: NSRange(location: 0, length: attributedText.length), options: []) { value, _, stop in
+                if let glyph = value as? NSAdaptiveImageGlyph, let decoded = UIImage(data: glyph.imageContent) {
+                    picture = decoded
+                    stop.pointee = true
+                }
+            }
+        }
         attributedText.enumerateAttribute(.attachment, in: NSRange(location: 0, length: attributedText.length), options: []) { value, _, stop in
             guard let attachment = value as? NSTextAttachment else { return }
             if let direct = attachment.image {
@@ -327,6 +370,7 @@ struct EmojiKeyboardField: UIViewRepresentable {
         view.textColor = UIColor.clear
         view.tintColor = UIColor.clear
         view.allowsEditingTextAttributes = true
+        if #available(iOS 18.0, *) { view.supportsAdaptiveImageGlyph = true }
         view.autocorrectionType = .no
         view.delegate = context.coordinator
         view.onEmoji = onEmoji
@@ -407,23 +451,13 @@ struct CustomAvatarSheet: View {
         ScrollView {
             VStack(spacing: 18) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Mi avatar")
-                    .font(.system(size: 22, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Mi avatar", symbol: "face.smiling")
                 preview
                 sources
                 animationPicker
                 backgroundPicker
                 toggleRow
-                Button(action: onClose) {
-                    Text("LISTO")
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .kerning(2)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.accent))
-                }
+                BigButton(title: "LISTO", action: onClose)
                 Spacer(minLength: 20)
             }
             .padding(.horizontal, 20)
@@ -457,7 +491,9 @@ struct CustomAvatarSheet: View {
     private var preview: some View {
         ZStack {
             if store.hasContent {
+                LightRays(color: Color(hex: 0xE9B949)).frame(width: 240, height: 240)
                 CustomAvatarFace(size: 132)
+                    .overlay(Circle().stroke(LinearGradient(colors: [Color(hex: 0xFFF1B5), Color(hex: 0xE9B949), Color(hex: 0xB07A1E)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 4))
             } else {
                 Circle()
                     .fill(Theme.ink.opacity(0.08))
@@ -488,6 +524,26 @@ struct CustomAvatarSheet: View {
                 sourceButton(symbol: "doc.on.clipboard", title: "Pegar") {
                     pasteImage()
                 }
+            }
+            if store.image != nil {
+                Button(action: {
+                    pasteMessage = "Recortando el sujeto…"
+                    store.cutOutSubject { ok in
+                        pasteMessage = ok ? nil : "No pude separar el sujeto de esa imagen (hace falta iOS 17 y un sujeto claro)"
+                        if ok { Haptics.success() }
+                    }
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle.badge.minus")
+                        Text(loc("Quitar el fondo (recortar sujeto)"))
+                    }
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundColor(Theme.ink)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .card(radius: 16)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
             if let message = pasteMessage {
                 Text(loc(message))

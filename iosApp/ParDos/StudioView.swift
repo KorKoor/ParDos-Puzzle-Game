@@ -122,6 +122,10 @@ struct StudioSheet: View {
     private func editor(_ data: StudioStateData) -> some View {
         VStack(spacing: 14) {
             previewCard
+            HStack(spacing: 10) {
+                actionPill("dice.fill", "Sorpréndeme") { randomize(data) }
+                actionPill("arrow.counterclockwise", "Volver a lo guardado") { load() }
+            }
             section("Puntos de partida") {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -163,31 +167,69 @@ struct StudioSheet: View {
             }
             ParticlesView(kind: style.particles, tint: style.particleTint)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            HStack(spacing: 6) {
-                ForEach([2, 4, 8, 16, 32, 64], id: \.self) { v in
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous).fill(style.fill(v))
-                        Text("\(v)")
-                            .font(.system(size: 14, weight: .black, design: .rounded))
-                            .foregroundColor(style.text(v))
+            boardPreview
+        }
+        .frame(height: 262)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(LinearGradient(colors: [Color.white.opacity(0.9), Color(hex: 0xE9B949).opacity(0.5)], startPoint: .top, endPoint: .bottom), lineWidth: 1.5))
+        .shadow(color: Theme.ink.opacity(0.18), radius: 16, x: 0, y: 10)
+    }
+
+    /// Un tablero de verdad con todas las fichas, hasta la 4096, para ver cómo queda el degradado completo.
+    private var boardPreview: some View {
+        let style = BoardStyle(skin: preview)
+        let values = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 2, 4, 8, 16]
+        return VStack(spacing: 6) {
+            ForEach(0..<4, id: \.self) { r in
+                HStack(spacing: 6) {
+                    ForEach(0..<4, id: \.self) { c in
+                        TileView(tile: TileSnap(id: "p\(r)\(c)", v: values[r * 4 + c], r: r, c: c, new: false, merged: false), size: 54, style: style)
                     }
-                    .frame(width: 44, height: 44)
                 }
             }
         }
-        .frame(height: 120)
-        .clipped()
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill((style.ink ?? Theme.ink).opacity(0.12)))
+    }
+
+    private func actionPill(_ symbol: String, _ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol)
+                Text(loc(title))
+            }
+            .font(.system(size: 13, weight: .heavy, design: .rounded))
+            .foregroundColor(Theme.ink)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .card(radius: 16)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private func randomize(_ d: StudioStateData) {
+        finish = d.finishes.randomElement() ?? finish
+        let first = Double(Int.random(in: 0...359))
+        hue = first
+        hue2 = (first + Double(Int.random(in: 70...200))).truncatingRemainder(dividingBy: 360)
+        tone = ["PASTEL", "VIVID", "DEEP"].randomElement() ?? tone
+        background = ["LIGHT", "TINTED", "DARK"].randomElement() ?? background
+        particles = d.particleKinds.randomElement() ?? particles
+        Haptics.tap()
+        refreshPreview()
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(loc(title).uppercased())
                 .font(.system(size: 10, weight: .heavy))
                 .kerning(2)
-                .foregroundColor(Theme.ink.opacity(0.4))
+                .foregroundColor(Theme.ink.opacity(0.45))
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .card(radius: 20)
     }
 
     private func chip(_ title: String, _ on: Bool, action: @escaping () -> Void) -> some View {
@@ -197,8 +239,18 @@ struct StudioSheet: View {
                 .foregroundColor(on ? .white : Theme.ink.opacity(0.6))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
-                .background(Capsule().fill(on ? Theme.accent : Color.white))
+                .background(
+                    Group {
+                        if on {
+                            Capsule().fill(LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom))
+                                .shadow(color: Theme.accent.opacity(0.45), radius: 7, y: 3)
+                        } else {
+                            LuxCapsule()
+                        }
+                    }
+                )
         }
+        .buttonStyle(ToyPressStyle())
     }
 
     private func chips(_ items: [(String, String)], selected: String, pick: @escaping (String) -> Void) -> some View {
@@ -212,15 +264,22 @@ struct StudioSheet: View {
     }
 
     private func hueSlider(_ value: Binding<Double>) -> some View {
-        VStack(spacing: 4) {
-            LinearGradient(
-                colors: stride(from: 0, through: 360, by: 40).map { Color(hue: Double($0) / 360.0, saturation: 0.75, brightness: 0.95) },
-                startPoint: .leading, endPoint: .trailing
-            )
-            .frame(height: 10)
-            .clipShape(Capsule())
-            Slider(value: value, in: 0...359, step: 1) { editing in
-                if !editing { refreshPreview() }
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hue: value.wrappedValue / 360.0, saturation: 0.75, brightness: 0.95))
+                .frame(width: 34, height: 34)
+                .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+                .shadow(color: Color(hue: value.wrappedValue / 360.0, saturation: 0.75, brightness: 0.95).opacity(0.6), radius: 8, y: 3)
+            VStack(spacing: 4) {
+                LinearGradient(
+                    colors: stride(from: 0, through: 360, by: 30).map { Color(hue: Double($0) / 360.0, saturation: 0.75, brightness: 0.95) },
+                    startPoint: .leading, endPoint: .trailing
+                )
+                .frame(height: 10)
+                .clipShape(Capsule())
+                Slider(value: value, in: 0...359, step: 1) { editing in
+                    if !editing { refreshPreview() }
+                }
             }
         }
     }

@@ -457,3 +457,31 @@ extension View {
         modifier(PulsingGlow(color: color, radius: radius, strength: strength))
     }
 }
+
+/// Icono de lujo: cuadrado redondeado con degradado, brillo de cristal arriba y el símbolo en blanco (como los de Ajustes de iOS, pero con más luz).
+struct LuxIcon: View {
+    let symbol: String
+    let tint: Color
+    let size: CGFloat
+
+    init(_ symbol: String, tint: Color = Theme.accent, size: CGFloat = 32) {
+        self.symbol = symbol
+        self.tint = tint
+        self.size = size
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
+        return ZStack {
+            shape.fill(LinearGradient(colors: [tint.shade(0.22), tint, tint.shade(-0.14)], startPoint: .top, endPoint: .bottom))
+            shape.fill(LinearGradient(colors: [Color.white.opacity(0.42), Color.white.opacity(0)], startPoint: .top, endPoint: .center))
+            shape.strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8)
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.5, weight: .bold))
+                .foregroundColor(.white)
+                .shadow(color: Color.black.opacity(0.22), radius: 1, y: 1)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: tint.opacity(0.4), radius: 5, x: 0, y: 3)
+    }
+}

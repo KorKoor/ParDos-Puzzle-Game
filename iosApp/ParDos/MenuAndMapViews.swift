@@ -687,9 +687,7 @@ struct SettingsView: View {
     private func toggleRow(_ symbol: String, _ title: String, _ value: Binding<Bool>) -> some View {
         Toggle(isOn: value) {
             HStack(spacing: 12) {
-                Image(systemName: symbol)
-                    .frame(width: 24)
-                    .foregroundColor(Theme.accent)
+                LuxIcon(symbol, tint: Theme.accent, size: 30)
                 Text(loc(title))
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(Theme.ink)
