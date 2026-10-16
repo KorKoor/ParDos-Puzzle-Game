@@ -36,6 +36,9 @@ struct RootView: View {
             SeasonBackdrop()
             content
                 .frame(maxWidth: 640)
+                .id(model.screen)
+                .transition(.opacity.combined(with: .scale(scale: 1.03)))
+                .animation(.easeInOut(duration: 0.35), value: model.screen)
             if let message = model.toast {
                 ToastView(text: message)
                     .zIndex(30)
@@ -50,6 +53,7 @@ struct RootView: View {
         }
         .sheet(item: $model.sheet) { sheet in
             sheetContent(sheet)
+                .modifier(SheetEntrance())
                 .environmentObject(model)
         }
         .onChange(of: scenePhase) { phase in

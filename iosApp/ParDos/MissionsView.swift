@@ -156,18 +156,16 @@ struct MissionsSheet: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Misiones")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Misiones", symbol: "checklist")
                 if let state = model.state {
-                    daily(state)
-                    weekly(state)
+                    daily(state).rise(0.05)
+                    weekly(state).rise(0.14)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private func daily(_ state: MetaState) -> some View {

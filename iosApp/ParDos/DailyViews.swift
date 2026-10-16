@@ -287,7 +287,7 @@ struct CalendarSheet: View {
             Spacer(minLength: 8)
         }
         .padding(.horizontal, 18)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .alert(item: $askDay) { cell in
             let cost = model.state?.calendar?.recoverCost ?? 3
             return Alert(

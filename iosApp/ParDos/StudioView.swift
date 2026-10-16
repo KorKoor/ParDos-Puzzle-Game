@@ -85,21 +85,19 @@ struct StudioSheet: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Studio")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Studio", symbol: "paintpalette.fill")
                 if let data = data {
                     if data.owned {
-                        editor(data)
+                        editor(data).rise(0.05)
                     } else {
-                        locked
+                        locked.rise(0.05)
                     }
                 }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .onAppear { load() }
     }
 

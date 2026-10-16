@@ -71,21 +71,19 @@ struct FriendsSheet: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Amigos")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Amigos", symbol: "person.2.fill")
                 Text("Sin cuentas ni servidores: compartes tu tarjeta por WhatsApp y tus amigos pegan la suya. Cada vez que quieras actualizar tus marcas, vuelve a compartirla.")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.5))
                     .multilineTextAlignment(.center)
-                shareCard
-                addCard
-                if let data = data { listCard(data) }
+                shareCard.rise(0.05)
+                addCard.rise(0.12)
+                if let data = data { listCard(data).rise(0.19) }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .sheet(item: $sharing) { item in
             ShareSheet(text: item.text, image: item.image)
         }

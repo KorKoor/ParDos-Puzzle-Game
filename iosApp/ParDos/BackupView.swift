@@ -77,7 +77,7 @@ struct BackupSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .sheet(item: $sharing) { item in
             ShareSheet(text: item.text)
         }

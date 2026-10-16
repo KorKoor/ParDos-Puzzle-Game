@@ -82,7 +82,7 @@ struct WheelSheet: View {
                 .padding(.horizontal, 30)
             Spacer(minLength: 0)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private func wheel(_ slices: [WheelSliceInfo]) -> some View {
@@ -203,7 +203,7 @@ struct SeasonSheet: View {
                 }
             }
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .onAppear { model.loadTiers() }
     }
 
@@ -324,14 +324,12 @@ struct LeagueSheet: View {
         VStack(spacing: 14) {
             sheetHandle()
             if let league = model.state?.league {
-                Text("Liga \(league.name)")
-                    .font(.system(size: 26, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Liga \(league.name)", symbol: "trophy.fill")
                 if let pending = league.pending {
                     pendingCard(pending)
                 }
-                progressCard(league)
-                ladderCard(league)
+                progressCard(league).rise(0.05)
+                ladderCard(league).rise(0.12)
                 Text("Cada semana cuentan las estrellas que ganes. Al cerrar la semana subes, te quedas o bajas, y cobras monedas por cada estrella.")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.45))
@@ -341,7 +339,7 @@ struct LeagueSheet: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private func pendingCard(_ pending: LeaguePending) -> some View {
@@ -458,7 +456,7 @@ struct LowFundsSheet: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private func helpRow(_ symbol: String, _ title: String, _ detail: String, _ price: Int, _ have: String, _ action: @escaping () -> Void) -> some View {

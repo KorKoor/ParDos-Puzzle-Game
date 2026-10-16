@@ -331,7 +331,7 @@ struct PieceDetail: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     @ViewBuilder

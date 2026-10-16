@@ -428,7 +428,7 @@ struct CustomAvatarSheet: View {
             }
             .padding(.horizontal, 20)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .overlay(
             EmojiKeyboardField(
                 focus: $keyboard,

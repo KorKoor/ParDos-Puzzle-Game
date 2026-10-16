@@ -94,7 +94,7 @@ struct AchievementsSheet: View {
             }
         }
         .padding(.horizontal, 18)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .onAppear { data = model.loadAchievements() }
     }
 
@@ -212,7 +212,7 @@ struct PrestigeSheet: View {
             .padding(.horizontal, 18)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .onAppear { data = model.loadPrestige() }
     }
 

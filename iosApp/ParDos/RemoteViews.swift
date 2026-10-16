@@ -139,7 +139,7 @@ struct RemoteSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
         }
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .onAppear { history = model.loadRemoteHistory() }
     }
 

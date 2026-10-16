@@ -355,7 +355,7 @@ struct LevelPreviewSheet: View {
             Spacer(minLength: 4)
         }
         .padding(.horizontal, 24)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private var goalBox: some View {
@@ -405,9 +405,7 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 14) {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-            Text("Ajustes")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
+            SheetTitle("Ajustes", symbol: "gearshape.fill")
             ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
             VStack(spacing: 0) {
@@ -424,10 +422,10 @@ struct SettingsView: View {
                 toggleRow("gamecontroller.fill", "Botones de dirección", $dpadOn)
             }
             .padding(.horizontal, 16)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
-            volumeCard
-            powerCard
-            iconCard
+            .card(radius: 20)
+            volumeCard.rise(0.08)
+            powerCard.rise(0.12)
+            iconCard.rise(0.16)
             VStack(spacing: 6) {
                 Text("TU PROGRESO")
                     .font(.system(size: 10, weight: .heavy))
@@ -442,7 +440,7 @@ struct SettingsView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            .card(radius: 20)
             VStack(spacing: 0) {
                 Button(action: { model.switchSheet(.backup) }) {
                     HStack(spacing: 12) {
@@ -459,7 +457,7 @@ struct SettingsView: View {
                 linkRow("cup.and.saucer.fill", "Invítame un café (Ko-fi)", "https://ko-fi.com/korkor0209")
             }
             .padding(.horizontal, 16)
-            .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+            .card(radius: 20)
             Text(ArtLibrary.shared.report())
                 .font(.system(size: 9, weight: .semibold, design: .monospaced))
                 .foregroundColor(Theme.ink.opacity(0.35))
@@ -475,7 +473,7 @@ struct SettingsView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.white))
+                .card(radius: 14)
             }
             Button(action: { confirmReset = true }) {
                 Text("Borrar mi progreso")
@@ -486,7 +484,7 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 22)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
         .onChange(of: musicOn) { _ in
             SoundManager.shared.settingsChanged()
             model.syncMusic()
@@ -520,7 +518,7 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 16)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+        .card(radius: 20)
     }
 
     private var iconCard: some View {
@@ -547,7 +545,7 @@ struct SettingsView: View {
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+        .card(radius: 20)
     }
 
     private var powerCard: some View {
@@ -574,7 +572,7 @@ struct SettingsView: View {
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+        .card(radius: 20)
     }
 
     private func sliderRow(_ symbol: String, _ title: String, _ value: Binding<Double>, onChange: @escaping (Double) -> Void, onEnd: @escaping () -> Void) -> some View {

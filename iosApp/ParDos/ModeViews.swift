@@ -398,7 +398,7 @@ struct CustomGameSheet: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 22)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private func presetButton(_ title: String, _ detail: String, _ symbol: String, _ color: Color, action: @escaping () -> Void) -> some View {
@@ -467,7 +467,7 @@ struct RecordsSheet: View {
             .padding(.bottom, 30)
         }
         .padding(.horizontal, 22)
-        .background(Theme.cream.ignoresSafeArea())
+        .background(LuxSheetBackground())
     }
 
     private func runsCard(_ runs: [RunInfo]) -> some View {

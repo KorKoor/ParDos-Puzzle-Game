@@ -195,3 +195,81 @@ struct LuxFill<S: ShapeStyle>: View {
             .animation(.spring(response: 0.6, dampingFraction: 0.8), value: width)
     }
 }
+
+/// Fondo de las hojas: crema con un degradado suave y dos manchas de luz muy lentas (quieto con "Reducir movimiento").
+struct LuxSheetBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: [Theme.cream, Theme.paper], startPoint: .top, endPoint: .bottom)
+            LivingBackdrop()
+        }
+        .ignoresSafeArea()
+    }
+}
+
+/// Título de hoja: icono con degradado, nombre grande y un filete dorado que se desvanece.
+struct SheetTitle: View {
+    let text: String
+    let symbol: String
+
+    init(_ text: String, symbol: String) {
+        self.text = text
+        self.symbol = symbol
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                Image(systemName: symbol)
+                    .font(.system(size: 15, weight: .black))
+                    .foregroundColor(.white)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(LinearGradient(colors: [Theme.accent, Theme.accentDark], startPoint: .top, endPoint: .bottom)))
+                    .shadow(color: Theme.accent.opacity(0.4), radius: 6, y: 3)
+                Text(loc(text))
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.ink)
+            }
+            Rectangle()
+                .fill(LinearGradient(colors: [.clear, Theme.gold.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing))
+                .frame(height: 1)
+                .padding(.horizontal, 40)
+        }
+        .padding(.bottom, 2)
+    }
+}
+
+/// Aparece con un empujón hacia arriba y un fundido, con retraso para que las tarjetas de una hoja entren una tras otra.
+struct RiseModifier: ViewModifier {
+    let delay: Double
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 18)
+            .onAppear {
+                if UIAccessibility.isReduceMotionEnabled { shown = true; return }
+                withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(delay)) { shown = true }
+            }
+    }
+}
+
+extension View {
+    func rise(_ delay: Double = 0) -> some View { modifier(RiseModifier(delay: delay)) }
+}
+
+/// Entrada del contenido de cada hoja (la hoja misma entra deslizándose, como siempre en iOS).
+struct SheetEntrance: ViewModifier {
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .scaleEffect(shown ? 1 : 0.97, anchor: .top)
+            .onAppear {
+                if UIAccessibility.isReduceMotionEnabled { shown = true; return }
+                withAnimation(.easeOut(duration: 0.32)) { shown = true }
+            }
+    }
+}
