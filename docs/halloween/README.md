@@ -1,7 +1,7 @@
 # Animación de la mega actualización de Halloween (Lottie)
 
 `halloween_mega_update.json` — animación vectorial en formato **Lottie** (JSON), **1920×1080 (16:9), 60 fps**, 180 cuadros (3 s) en bucle sin costura y **menos de 200 KB** (hoy ~75 KB). El generador falla si se sale de esas medidas.
-Sin imágenes, sin emojis y sin texto (el texto se pone aparte en cada pantalla, así se traduce sin tocar la animación).
+Sin imágenes ni emojis. Lleva fondo nocturno propio (no queda transparente ni blanco) y el título PARDOS dibujado con trazos (no usa fuentes, así se ve igual en cualquier visor).
 
 Escena: luna con halo que respira, tres murciélagos que vuelan en bucle aleteando, calabaza que flota con la cara encendida (luz que parpadea),
 telarañas en las esquinas, estrellas que titilan y una colina con lápidas. Colores del evento: morado noche, naranja calabaza y dorado.

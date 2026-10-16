@@ -75,6 +75,35 @@ def bez(v, i, o, closed=True):
     return {"ty": "sh", "ks": static({"i": i, "o": o, "v": v, "c": closed}), "nm": "Curva"}
 
 
+def grad_fill(x0, y0, x1, y1, stops):
+    """Degradado lineal. stops: lista de (posicion 0-1, '#rrggbb')."""
+    flat = []
+    for pos, col in stops:
+        flat += [pos] + rgb(col)[:3]
+    return {"ty": "gf", "o": static(100), "r": 1, "t": 1, "s": static([x0, y0]), "e": static([x1, y1]),
+            "g": {"p": len(stops), "k": static(flat)}, "nm": "Degradado"}
+
+
+def line_stroke(color, w, op=100):
+    return {"ty": "st", "c": static(rgb(color)), "o": static(op), "w": static(w), "lc": 2, "lj": 2, "nm": "Trazo"}
+
+
+# Letras del titulo como trazos redondeados (sin fuentes: el texto no depende de nada del telefono)
+LETTERS = {
+    "P": [[(-20, 40), (-20, -40), (12, -40), (22, -28), (22, -12), (12, 0), (-20, 0)]],
+    "A": [[(-26, 40), (0, -40), (26, 40)], [(-14, 12), (14, 12)]],
+    "R": [[(-20, 40), (-20, -40), (12, -40), (22, -28), (22, -12), (12, 0), (-20, 0)], [(4, 0), (24, 40)]],
+    "D": [[(-20, 40), (-20, -40), (6, -40), (24, -24), (24, 24), (6, 40), (-20, 40)]],
+    "S": [[(22, -28), (10, -40), (-12, -40), (-24, -28), (-24, -12), (-12, 0), (12, 0), (24, 12), (24, 28), (12, 40), (-12, 40), (-24, 28)]],
+}
+
+
+def letter_shapes(ch):
+    if ch == "O":
+        return [ell(0, 0, 50, 80)]
+    return [poly(pts, closed=False) for pts in LETTERS[ch]]
+
+
 def group(items, transform=None, name="Grupo"):
     return {"ty": "gr", "it": items + [transform or tr()], "nm": name}
 
@@ -131,6 +160,18 @@ def make():
         kf[-1] = (90, kf[0][1])
         add("Estrella %d" % (n + 1), [group([sparkle_shape(s), fill(GLOW)], tr(p=(x, y)))], ks(o=anim(kf)))
 
+    # ---- titulo PARDOS: letras de trazo redondeado que suben y bajan en onda (como el titulo del juego)
+    word = "PARDOS"
+    for n, ch in enumerate(word):
+        x = CX + (n - 2.5) * 74
+        yb = [(tt, 80 + 5 * math.sin(2 * math.pi * (tt / 90.0) + n * 0.9)) for tt in range(0, 91, 5)]
+        yb[-1] = (90, yb[0][1])
+        pos = anim([(tt, [x, yy, 0]) for tt, yy in yb])
+        add("Letra %s" % ch, [
+            group(letter_shapes(ch) + [line_stroke("#FF8A1F", 17, 100)], tr(p=(0, 5)), "Sombra naranja"),
+            group(letter_shapes(ch) + [line_stroke("#FFF3D6", 13, 100)], name="Letra"),
+        ], ks(p=pos))
+
     # ---- murcielagos: vuelan en un recorrido cerrado y aletean
     def bat(name, path, scale):
         wing_l = bez([[-6, 4], [-22, -22], [-48, -26], [-62, -4], [-50, -2], [-44, 8], [-34, 2], [-26, 12], [-14, 6]],
@@ -155,9 +196,9 @@ def make():
             pos["k"].append(kf)
         add(name, [group(body, tr())], ks(p=pos, s=(scale, scale)))
 
-    bat("Murcielago 1", [(0, 110, 120), (22, 290, 80), (45, 520, 135), (68, 330, 175), (90, 110, 120)], 78)
-    bat("Murcielago 2", [(0, 840, 240), (22, 700, 195), (45, 560, 255), (68, 740, 300), (90, 840, 240)], 62)
-    bat("Murcielago 3", [(0, 560, 50), (22, 700, 95), (45, 850, 62), (68, 720, 28), (90, 560, 50)], 48)
+    bat("Murcielago 1", [(0, 80, 150), (22, 170, 110), (45, 250, 165), (68, 150, 205), (90, 80, 150)], 78)
+    bat("Murcielago 2", [(0, 860, 290), (22, 740, 245), (45, 620, 300), (68, 760, 340), (90, 860, 290)], 62)
+    bat("Murcielago 3", [(0, 690, 190), (22, 780, 150), (45, 870, 195), (68, 790, 235), (90, 690, 190)], 48)
     bat("Murcielago 4", [(0, 70, 265), (22, 190, 232), (45, 300, 285), (68, 160, 310), (90, 70, 265)], 42)
 
     # ---- calabaza (flota y respira) con la cara encendida
@@ -183,9 +224,9 @@ def make():
 
     # ---- lapidas y colina (a todo el ancho)
     hill = bez([[-20, 512], [-20, 436], [160, 404], [330, 428], [455, 440], [600, 410], [760, 392], [930, 430], [930, 512]], [[0, 0]] * 9, [[0, 0]] * 9)
-    tomb = lambda x, y, w, h: group([rect(x, y, w, h, 14), fill("#5A3A80")], name="Lapida")
+    tomb = lambda x, y, w, h: group([rect(x, y, w, h, 14), fill("#4B2F70")], name="Lapida")
     cross = lambda x, y: group([rect(x, y, 8, 30, 2), rect(x - 10, y + 8, 28, 7, 2), fill(VIOLET, 45)], name="Cruz")
-    add("Colina", [group([hill, fill("#3E2160")], name="Colina"), tomb(36, 396, 40, 60), tomb(128, 410, 32, 48), tomb(740, 384, 44, 66), tomb(838, 400, 40, 58),
+    add("Colina", [group([hill, fill("#1B0D30")], name="Colina"), tomb(36, 396, 40, 60), tomb(128, 410, 32, 48), tomb(740, 384, 44, 66), tomb(838, 400, 40, 58),
                    cross(60, 410), cross(790, 402)])
 
     # ---- luna con halo que respira
@@ -194,7 +235,7 @@ def make():
         group([ell(0, 0, 104, 104), fill(MOON)], name="Luna"),
         group([ell(-18, -10, 22, 22), ell(14, 16, 28, 28), ell(20, -24, 14, 14), fill(MOON_D)], name="Crateres"),
     ]
-    add("Luna", moon, ks(p=anim([(0, [740, 112, 0]), (45, [740, 106, 0]), (90, [740, 112, 0])])))
+    add("Luna", moon, ks(p=anim([(0, [820, 118, 0]), (45, [820, 112, 0]), (90, [740, 112, 0])])))
 
     # ---- telaranas de las esquinas
     def web(x, y, sx):
@@ -207,6 +248,10 @@ def make():
             lines.append(poly(pts, closed=False))
         return group(lines + [stroke(WEB, 2.2, 70)], tr(p=(x, y), s=(sx, 100)), "Telarana")
     add("Telaranas", [web(0, 0, 100), web(SW, 0, -100)])
+
+    # fondo nocturno que cubre todo el lienzo (sin esto el visor lo pinta de blanco)
+    add("Fondo", [group([rect(-60, -60, SW + 120, SH + 120), grad_fill(0, -60, 0, SH + 60, [(0.0, "#0C061C"), (0.55, "#2A1547"), (1.0, "#4A2272")])], name="Cielo"),
+                  group([ell(820, 118, 520, 520), grad_fill(820, -150, 820, 380, [(0.0, "#6A4A9A"), (1.0, "#2A1547")])], tr(o=22), "Resplandor de la luna")])
 
     return {"v": "5.7.4", "fr": FPS, "ip": 0, "op": END, "w": W, "h": H, "nm": "ParDos - Mega actualizacion de Halloween", "ddd": 0, "assets": [], "layers": layers,
             "meta": {"g": "ParDos", "a": "ParDos", "k": "halloween,evento,parDos", "d": "Evento de Halloween (vector, 16:9, 60 fps, 3 s en bucle)"}}
