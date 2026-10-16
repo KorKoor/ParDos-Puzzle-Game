@@ -187,7 +187,17 @@ struct AmountPill: View {
                 .overlay(Capsule().strokeBorder(Color.white, lineWidth: 1))
         )
         .overlay(Capsule().stroke(Theme.ink.opacity(0.06), lineWidth: 1))
-        .shadow(color: Theme.ink.opacity(0.10), radius: 0, x: 0, y: 2)
+        .shadow(color: Theme.ink.opacity(0.08), radius: 5, x: 0, y: 3)
+        .shadow(color: glowColor.opacity(0.28), radius: 9, x: 0, y: 0)
+    }
+
+    private var glowColor: Color {
+        switch kind {
+        case .coin: return Color(hex: 0xE9B949)
+        case .gem: return Color(hex: 0x4FA3E0)
+        case .shard: return Color(hex: 0xB57CF0)
+        case .token: return Color(hex: 0x2E9E8F)
+        }
     }
 
     @ViewBuilder

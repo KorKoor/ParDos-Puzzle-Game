@@ -185,6 +185,7 @@ struct TileView: View {
         }
         .frame(width: size, height: size)
         .shadow(color: Color.black.opacity(style.finish == "FLAT" ? 0 : 0.12), radius: 0, x: 0, y: 3)
+        .shadow(color: fillColor.opacity(tile.v >= 512 ? 0.65 : (tile.v >= 128 ? 0.4 : 0)), radius: tile.v >= 512 ? 14 : 9, x: 0, y: 0)
         .scaleEffect(pop)
         .onAppear {
             if tile.new {

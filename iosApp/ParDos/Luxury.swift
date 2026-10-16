@@ -433,3 +433,27 @@ struct MapAmbience: View {
         }
     }
 }
+
+/// Resplandor que respira alrededor de un elemento importante (botón de jugar, cosas listas para cobrar).
+struct PulsingGlow: ViewModifier {
+    let color: Color
+    let radius: CGFloat
+    let strength: Double
+
+    func body(content: Content) -> some View {
+        if UIAccessibility.isReduceMotionEnabled || ProcessInfo.processInfo.isLowPowerModeEnabled {
+            content.shadow(color: color.opacity(0.35 * strength), radius: radius, x: 0, y: 5)
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
+                let p = 0.5 + 0.5 * sin(timeline.date.timeIntervalSinceReferenceDate * 2.2)
+                content.shadow(color: color.opacity((0.26 + 0.32 * p) * strength), radius: radius * CGFloat(0.85 + 0.3 * p), x: 0, y: 5)
+            }
+        }
+    }
+}
+
+extension View {
+    func pulsingGlow(_ color: Color, radius: CGFloat = 16, strength: Double = 1) -> some View {
+        modifier(PulsingGlow(color: color, radius: radius, strength: strength))
+    }
+}

@@ -81,7 +81,8 @@ struct HomeView: View {
                 HStack(spacing: 12) {
                     Button(action: { model.tab = .profile }) {
                         AvatarView(id: state?.avatar ?? 1, size: 62, mine: true)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 3))
+                            .overlay(Circle().stroke(LinearGradient(colors: [Color(hex: 0xFFF1B5), Color(hex: 0xE9B949), Color(hex: 0xB07A1E)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 3))
+                            .shadow(color: Color(hex: 0xE9B949).opacity(0.55), radius: 10, y: 3)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(name)
@@ -108,7 +109,7 @@ struct HomeView: View {
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(Theme.ink)
                             .frame(width: 38, height: 38)
-                            .background(Circle().fill(Color.white.opacity(0.92)))
+                            .background(LuxCircle())
                     }
                 }
                 .padding(.horizontal, 14)
@@ -152,11 +153,19 @@ struct HomeView: View {
             .padding(.horizontal, 24)
             .frame(height: 96)
             .background(
-                RoundedRectangle(cornerRadius: 30, style: .continuous)
-                    .fill(LinearGradient(colors: [Theme.accent, Theme.accentDark], startPoint: .top, endPoint: .bottom))
+                ZStack {
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(LinearGradient(colors: [Theme.accent.shade(0.2), Theme.accent, Theme.accentDark], startPoint: .top, endPoint: .bottom))
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)))
+                    RoundedRectangle(cornerRadius: 30, style: .continuous)
+                        .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.85), Color(hex: 0xE9B949).opacity(0.55), Color.white.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
+                }
             )
-            .shadow(color: Theme.accentDark.opacity(0.5), radius: 0, x: 0, y: 6)
+            .shimmer(radius: 30, period: 3.4)
+            .pulsingGlow(Theme.accent, radius: 20)
         }
+        .buttonStyle(ToyPressStyle())
     }
 
     private var dailyCard: some View {
@@ -166,6 +175,7 @@ struct HomeView: View {
                     Circle()
                         .fill(kindColor(model.dailyCard?.kind ?? "ZEN"))
                         .frame(width: 46, height: 46)
+                        .shadow(color: kindColor(model.dailyCard?.kind ?? "ZEN").opacity(0.7), radius: 10)
                     Image(systemName: kindSymbol(model.dailyCard?.kind ?? "ZEN"))
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
@@ -199,9 +209,18 @@ struct HomeView: View {
             }
             .padding(.horizontal, 16)
             .frame(height: 74)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Theme.ink))
-            .shadow(color: Theme.ink.opacity(0.25), radius: 0, x: 0, y: 4)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(LinearGradient(colors: [Theme.ink.shade(0.14), Theme.ink, Theme.ink.shade(-0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .strokeBorder(LinearGradient(colors: [Color(hex: 0xE9B949).opacity(0.7), Color.white.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.2)
+                }
+            )
+            .shimmer(radius: 24, period: 6)
+            .shadow(color: Theme.ink.opacity(0.35), radius: 14, x: 0, y: 8)
         }
+        .buttonStyle(ToyPressStyle())
     }
 
     // MARK: Lo de hoy
@@ -241,7 +260,7 @@ struct HomeView: View {
                         icon: AnyView(SpriteImage(name: "ico_fire", size: 38))
                     ) { model.sheet = .missions }
                     TodayTile(
-                        title: "Pase", detail: "Nivel \(season?.tier ?? 0)/30", hot: (season?.claimable ?? 0) > 0,
+                        title: "Pase", detail: "Nivel \(season?.tier ?? 0)/80", hot: (season?.claimable ?? 0) > 0,
                         icon: AnyView(SpriteImage(name: "ico_crown", size: 38))
                     ) { model.sheet = .season }
                     TodayTile(
@@ -400,6 +419,7 @@ struct TodayTile: View {
             .card(radius: 20)
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(hot ? Theme.accent.opacity(0.7) : Color.clear, lineWidth: 2))
             .scaleEffect(hot && pulse ? 1.04 : 1.0)
+            .shadow(color: hot ? Theme.accent.opacity(0.4) : Color.clear, radius: 12, x: 0, y: 4)
         }
         .buttonStyle(PlainButtonStyle())
         .onAppear {

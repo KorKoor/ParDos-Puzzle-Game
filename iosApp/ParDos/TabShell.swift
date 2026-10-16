@@ -82,8 +82,9 @@ struct TabBarView: View {
             VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
                     Capsule()
-                        .fill(selected ? Theme.accent.opacity(0.16) : Color.clear)
+                        .fill(selected ? Theme.accent.opacity(0.18) : Color.clear)
                         .frame(width: 52, height: 30)
+                        .shadow(color: selected ? Theme.accent.opacity(0.45) : Color.clear, radius: 9, x: 0, y: 2)
                         .offset(x: -4, y: -1)
                     Image(systemName: symbol)
                         .font(.system(size: 21, weight: .bold))
