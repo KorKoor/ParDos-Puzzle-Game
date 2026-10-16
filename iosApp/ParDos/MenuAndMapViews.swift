@@ -45,7 +45,7 @@ struct MapView: View {
         VStack(spacing: 10) {
             HStack {
                 Text("Campaña")
-                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .font(.system(size: 30, weight: .black, design: .serif))
                     .foregroundColor(Theme.ink)
                 Spacer()
                 HStack(spacing: 4) {
@@ -70,7 +70,8 @@ struct MapView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(Theme.accent))
+                    .background(Capsule().fill(LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom)))
+                    .shadow(color: Theme.accent.opacity(0.4), radius: 6, y: 3)
                 }
                 Menu {
                     ForEach(0..<chapterCount, id: \.self) { chapter in
@@ -104,81 +105,107 @@ struct ChapterBanner: View {
     /// El cofre que se abre al superar el último nivel del capítulo.
     private var chestBadge: some View {
         let claimed = model.chapterChestClaimed(chapter)
-        return VStack(spacing: 2) {
+        return VStack(spacing: 3) {
             ZStack(alignment: .bottomTrailing) {
-                ChestIcon(type: chapter >= 3 ? "RARE" : "COMMON", size: 40).opacity(claimed ? 0.6 : 1)
+                ChestIcon(type: chapter >= 3 ? "RARE" : "COMMON", size: 42).opacity(claimed ? 0.6 : 1)
                 if claimed {
                     Image(systemName: "checkmark.circle.fill").font(.system(size: 16)).foregroundColor(.white)
                 }
             }
             Text(claimed ? "COBRADO" : "AL FINAL")
                 .font(.system(size: 8, weight: .heavy))
-                .kerning(1)
+                .kerning(1.2)
                 .foregroundColor(Color.white.opacity(0.85))
         }
+    }
+
+    private func background(_ theme: ChapterTheme) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        let gold = Color(hex: 0xE9B949)
+        return ZStack(alignment: .bottomTrailing) {
+            shape.fill(LinearGradient(colors: [theme.color.shade(0.14), theme.color, theme.color.shade(-0.28)], startPoint: .topLeading, endPoint: .bottomTrailing))
+            ArtView(id: "prop.\(theme.scenery)_b")
+                .frame(width: 120, height: 120)
+                .opacity(0.55)
+                .offset(x: -58, y: 12)
+                .allowsHitTesting(false)
+            shape.fill(LinearGradient(colors: [Color.white.opacity(0.28), Color.white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)))
+            shape.strokeBorder(
+                LinearGradient(colors: [Color.white.opacity(0.75), gold.opacity(0.55), Color.white.opacity(0.12)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: 1.5
+            )
+        }
+        .clipShape(shape)
     }
 
     var body: some View {
         let theme = Chapters.theme(chapter)
         let stars = model.chapterStars(chapter)
-        return HStack(spacing: 12) {
-            ArtView(id: theme.emblem)
-                .frame(width: 60, height: 60)
-                .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 3)
-            VStack(alignment: .leading, spacing: 4) {
+        let total = Chapters.size * 3
+        let fraction = Double(stars) / Double(max(1, total))
+        return HStack(spacing: 14) {
+            ZStack {
+                Circle().fill(Color.white.opacity(0.16)).frame(width: 80, height: 80)
+                Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 1.5).frame(width: 80, height: 80)
+                ArtView(id: theme.emblem).frame(width: 62, height: 62)
+            }
+            .shadow(color: Color.black.opacity(0.28), radius: 6, x: 0, y: 4)
+            VStack(alignment: .leading, spacing: 6) {
                 Text("CAPÍTULO \(chapter + 1)")
                     .font(.system(size: 10, weight: .heavy))
-                    .kerning(3)
-                    .foregroundColor(Color.white.opacity(0.75))
+                    .kerning(4)
+                    .foregroundColor(Color.white.opacity(0.78))
                 Text(loc(theme.name))
-                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .font(.system(size: 22, weight: .black, design: .serif))
                     .foregroundColor(.white)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill").font(.system(size: 11))
-                    Text("\(stars)/\(Chapters.size * 3)")
-                        .font(.system(size: 12, weight: .heavy))
+                    .minimumScaleFactor(0.75)
+                HStack(spacing: 8) {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.white.opacity(0.24))
+                            LuxFill(Color.white.opacity(0.95), width: max(6, geo.size.width * CGFloat(fraction)))
+                        }
+                    }
+                    .frame(height: 6)
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill").font(.system(size: 10))
+                        Text("\(stars)/\(total)").font(.system(size: 11, weight: .heavy))
+                    }
+                    .foregroundColor(Color.white.opacity(0.92))
+                    .fixedSize()
                 }
-                .foregroundColor(Color.white.opacity(0.85))
             }
             Spacer(minLength: 0)
             chestBadge
         }
-        .padding(16)
-        .background(
-            ZStack(alignment: .bottomTrailing) {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(LinearGradient(colors: [theme.color, theme.color.opacity(0.75)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                ArtView(id: "prop.\(theme.scenery)_b")
-                    .frame(width: 104, height: 104)
-                    .opacity(0.92)
-                    .offset(x: -56, y: 8)
-                    .allowsHitTesting(false)
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        )
+        .padding(18)
+        .background(background(theme))
+        .shimmer(radius: 28, period: 8)
+        .shadow(color: theme.color.opacity(0.45), radius: 16, x: 0, y: 10)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 14)
     }
 }
 
-/// Camino que une cada nivel con el siguiente: una cinta suave con una línea punteada encima.
+/// Camino que une cada nivel con el siguiente: un resplandor suave, una cinta de luz y puntos; dorado en lo ya recorrido.
 struct MapRoad: View {
     let level: Int
     let tint: Color
     let locked: Bool
+    let done: Bool
 
     private func sway(_ n: Int) -> CGFloat {
         return n <= 0 ? 0 : CGFloat(sin(Double(n) * 0.85)) * 86
     }
 
     var body: some View {
-        let rowHeight: CGFloat = 92
-        let nodeY: CGFloat = 40
+        let rowHeight: CGFloat = 96
+        let nodeY: CGFloat = 42
         let prev = sway(level - 1)
         let here = sway(level)
         let next = sway(level + 1)
+        let gold = Color(hex: 0xE9B949)
         return Canvas { context, size in
             let cx = size.width / 2
             let p0 = CGPoint(x: cx + prev, y: nodeY - rowHeight)
@@ -189,9 +216,13 @@ struct MapRoad: View {
             let end = CGPoint(x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2)
             path.move(to: start)
             path.addQuadCurve(to: end, control: p1)
-            let ribbon = tint.opacity(locked ? 0.10 : 0.22)
-            context.stroke(path, with: .color(ribbon), style: StrokeStyle(lineWidth: 16, lineCap: .butt, lineJoin: .round))
-            context.stroke(path, with: .color(Color.white.opacity(locked ? 0.35 : 0.75)), style: StrokeStyle(lineWidth: 2.6, lineCap: .butt, lineJoin: .round, dash: [2, 7]))
+            let base: Color = done ? gold : tint
+            let glowAlpha: Double = done ? 0.20 : (locked ? 0.05 : 0.12)
+            context.stroke(path, with: .color(base.opacity(glowAlpha)), style: StrokeStyle(lineWidth: 26, lineCap: .round, lineJoin: .round))
+            let ribbonAlpha: Double = done ? 0.55 : (locked ? 0.14 : 0.30)
+            context.stroke(path, with: .color(base.opacity(ribbonAlpha)), style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
+            let dotAlpha: Double = done ? 0.95 : (locked ? 0.35 : 0.8)
+            context.stroke(path, with: .color(Color.white.opacity(dotAlpha)), style: StrokeStyle(lineWidth: 2.4, lineCap: .round, lineJoin: .round, dash: [0.5, 8]))
         }
         .allowsHitTesting(false)
     }
@@ -201,6 +232,7 @@ struct LevelRow: View {
     @EnvironmentObject var model: AppModel
     let level: Int
     @State private var pulse = false
+    @State private var bob = false
 
     var body: some View {
         let locked = level > model.unlocked
@@ -218,50 +250,38 @@ struct LevelRow: View {
         return Button(action: { if !locked { model.openPreview(level) } }) {
             VStack(spacing: 4) {
                 ZStack {
-                    if current {
-                        Circle()
-                            .stroke(tint.opacity(0.5), lineWidth: 3)
-                            .frame(width: 76, height: 76)
-                            .scaleEffect(pulse ? 1.18 : 0.92)
-                            .opacity(pulse ? 0.1 : 0.9)
-                    }
-                    node(locked: locked, tint: tint, boss: boss)
-                    if locked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(Theme.ink.opacity(0.3))
-                    } else {
-                        Text("\(level)")
-                            .font(.system(size: 20, weight: .black, design: .rounded))
-                            .foregroundColor(.white)
-                    }
-                    if !locked && kind != "ZEN" {
+                    if current { ripple(tint) }
+                    jewel(level: level, locked: locked, current: current, stars: stars, tint: tint, boss: boss, motif: card?.motif)
+                    if !locked && !boss && kind != "ZEN" {
                         Image(systemName: kindSymbol(kind))
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
                             .padding(5)
                             .background(Circle().fill(kindColor(kind)).overlay(Circle().stroke(Color.white, lineWidth: 2)))
-                            .offset(x: 24, y: -22)
+                            .shadow(color: Color.black.opacity(0.2), radius: 2, y: 1)
+                            .offset(x: 26, y: -24)
                     }
+                    if current { marker }
                 }
                 starRow(stars: stars, show: !locked && stars > 0)
             }
             .offset(x: sway)
-            .frame(height: 92)
+            .frame(height: 96)
             .frame(maxWidth: .infinity)
             .background(
                 ZStack {
-                    theme.color.opacity(0.07)
-                    MapRoad(level: level, tint: tint, locked: locked)
+                    LinearGradient(colors: [theme.color.opacity(0.10), theme.color.opacity(0.16)], startPoint: .top, endPoint: .bottom)
+                    MapRoad(level: level, tint: tint, locked: locked, done: level < model.unlocked)
                 }
             )
             .overlay(
                 Group {
                     if let propId = propId {
                         ArtView(id: propId)
-                            .frame(width: 58, height: 58)
+                            .frame(width: 60, height: 60)
                             .offset(x: propX, y: 12)
-                            .opacity(locked ? 0.55 : 1)
+                            .opacity(locked ? 0.5 : 1)
+                            .shadow(color: Color.black.opacity(0.12), radius: 3, y: 3)
                     }
                 }
                 .allowsHitTesting(false)
@@ -270,24 +290,77 @@ struct LevelRow: View {
         .buttonStyle(PlainButtonStyle())
         .onAppear {
             if current {
-                withAnimation(Animation.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) {
-                    pulse = true
-                }
+                withAnimation(Animation.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+                withAnimation(Animation.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { bob = true }
             }
         }
     }
 
+    /// Dos ondas de luz que salen del nivel actual.
+    private func ripple(_ tint: Color) -> some View {
+        ZStack {
+            Circle()
+                .stroke(tint.opacity(0.55), lineWidth: 3)
+                .frame(width: 70, height: 70)
+                .scaleEffect(pulse ? 1.55 : 0.9)
+                .opacity(pulse ? 0 : 0.9)
+            Circle()
+                .stroke(Color(hex: 0xE9B949).opacity(0.5), lineWidth: 2)
+                .frame(width: 70, height: 70)
+                .scaleEffect(pulse ? 1.9 : 1.0)
+                .opacity(pulse ? 0 : 0.7)
+        }
+    }
+
+    /// Flecha dorada que rebota encima del nivel actual.
+    private var marker: some View {
+        Image(systemName: "arrowtriangle.down.fill")
+            .font(.system(size: 14))
+            .foregroundColor(Color(hex: 0xE9B949))
+            .shadow(color: Color(hex: 0xE9B949).opacity(0.8), radius: 6)
+            .offset(y: bob ? -48 : -42)
+    }
+
+    /// El nivel como una joya: aro metálico (dorado con 3 estrellas), cuerpo con degradado y brillo de cristal.
     @ViewBuilder
-    private func node(locked: Bool, tint: Color, boss: Bool) -> some View {
-        let size: CGFloat = boss ? 64 : 56
-        let shape = RoundedRectangle(cornerRadius: boss ? 20 : size / 2, style: .continuous)
+    private func jewel(level: Int, locked: Bool, current: Bool, stars: Int, tint: Color, boss: Bool, motif: String?) -> some View {
+        let size: CGFloat = boss ? 72 : 60
+        let gold = Color(hex: 0xE9B949)
         if locked {
-            shape.fill(Color(hex: 0xD8D3E0)).frame(width: size, height: size)
+            ZStack {
+                Circle().fill(LinearGradient(colors: [Color(hex: 0xE3DFEA), Color(hex: 0xC9C3D4)], startPoint: .top, endPoint: .bottom))
+                Circle().strokeBorder(Color.white.opacity(0.7), lineWidth: 2)
+                Image(systemName: "lock.fill").font(.system(size: 18, weight: .bold)).foregroundColor(Theme.ink.opacity(0.35))
+            }
+            .frame(width: size - 6, height: size - 6)
+        } else if boss, let motif = motif {
+            ZStack(alignment: .bottomTrailing) {
+                BossEmblemView(motif: motif, size: size)
+                Text("\(level)")
+                    .font(.system(size: 11, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(LinearGradient(colors: [gold, Color(hex: 0xB07A1E)], startPoint: .top, endPoint: .bottom)))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                    .offset(x: 6, y: 4)
+            }
+            .frame(width: size, height: size)
         } else {
-            shape
-                .fill(LinearGradient(colors: [tint.opacity(0.85), tint], startPoint: .top, endPoint: .bottom))
-                .frame(width: size, height: size)
-                .shadow(color: tint.opacity(0.5), radius: 0, x: 0, y: 4)
+            let ring: LinearGradient = stars >= 3
+                ? LinearGradient(colors: [Color(hex: 0xFFF1B5), gold, Color(hex: 0xB07A1E)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                : LinearGradient(colors: [Color.white.opacity(0.95), Color.white.opacity(0.45)], startPoint: .top, endPoint: .bottom)
+            ZStack {
+                Circle().fill(tint.opacity(0.35)).frame(width: size + 16, height: size + 16).blur(radius: 9)
+                Circle().fill(LinearGradient(colors: [tint.shade(0.24), tint, tint.shade(-0.14)], startPoint: .top, endPoint: .bottom))
+                Circle().fill(LinearGradient(colors: [Color.white.opacity(0.5), Color.white.opacity(0)], startPoint: .top, endPoint: .center)).padding(3)
+                Circle().strokeBorder(ring, lineWidth: 3.5)
+                Text("\(level)")
+                    .font(.system(size: 21, weight: .black, design: .serif))
+                    .foregroundColor(.white)
+                    .shadow(color: Color.black.opacity(0.25), radius: 1, y: 1)
+            }
+            .frame(width: size, height: size)
         }
     }
 
@@ -298,6 +371,7 @@ struct LevelRow: View {
                 Image(systemName: "star.fill")
                     .font(.system(size: 11))
                     .foregroundColor(i < stars ? Theme.gold : Theme.ink.opacity(0.12))
+                    .shadow(color: i < stars ? Theme.gold.opacity(0.6) : Color.clear, radius: 3)
             }
         }
         .opacity(show ? 1 : 0)
