@@ -98,16 +98,16 @@ enum EmblemPainter {
                     for i in 0..<12 {
                         let a = Double(i) / 12 * .pi * 2
                         var tick = Path()
-                        tick.move(to: CGPoint(x: c.x + cos(a) * r * 0.82, y: c.y + sin(a) * r * 0.82))
-                        tick.addLine(to: CGPoint(x: c.x + cos(a) * r * 0.94, y: c.y + sin(a) * r * 0.94))
+                        tick.move(to: CGPoint(x: c.x + CGFloat(cos(a)) * r * 0.82, y: c.y + CGFloat(sin(a)) * r * 0.82))
+                        tick.addLine(to: CGPoint(x: c.x + CGFloat(cos(a)) * r * 0.94, y: c.y + CGFloat(sin(a)) * r * 0.94))
                         ctx.stroke(tick, with: .color(main.opacity(0.7)), style: StrokeStyle(lineWidth: lw * 0.5, lineCap: .round))
                     }
                     let a1 = t * 0.9, a2 = t * 0.075
                     var hand = Path()
-                    hand.move(to: c); hand.addLine(to: CGPoint(x: c.x + cos(a1) * r * 0.78, y: c.y + sin(a1) * r * 0.78))
+                    hand.move(to: c); hand.addLine(to: CGPoint(x: c.x + CGFloat(cos(a1)) * r * 0.78, y: c.y + CGFloat(sin(a1)) * r * 0.78))
                     ctx.stroke(hand, with: .color(glow), style: style)
                     var hand2 = Path()
-                    hand2.move(to: c); hand2.addLine(to: CGPoint(x: c.x + cos(a2) * r * 0.5, y: c.y + sin(a2) * r * 0.5))
+                    hand2.move(to: c); hand2.addLine(to: CGPoint(x: c.x + CGFloat(cos(a2)) * r * 0.5, y: c.y + CGFloat(sin(a2)) * r * 0.5))
                     ctx.stroke(hand2, with: .color(main), style: style)
                 case "GOLD":
                     for i in 0..<3 {
@@ -127,7 +127,7 @@ enum EmblemPainter {
                         for k in 0..<7 {
                             let a = Double(k) / 7 * .pi * 2
                             let rr = r * (0.82 + 0.18 * CGFloat(((k * 5 + n * 3) % 4)) / 3)
-                            let pt = CGPoint(x: cx + cos(a) * rr, y: cy + sin(a) * rr)
+                            let pt = CGPoint(x: cx + CGFloat(cos(a)) * rr, y: cy + CGFloat(sin(a)) * rr)
                             if k == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
                         }
                         p.closeSubpath()
@@ -167,7 +167,7 @@ enum EmblemPainter {
                         for k in 0..<steps {
                             let a = ang + Double(k) / Double(steps) * .pi * 2
                             let rr = k % 2 == 0 ? r : r * 0.78
-                            let pt = CGPoint(x: gc.x + cos(a) * rr, y: gc.y + sin(a) * rr)
+                            let pt = CGPoint(x: gc.x + CGFloat(cos(a)) * rr, y: gc.y + CGFloat(sin(a)) * rr)
                             if k == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
                         }
                         p.closeSubpath()
