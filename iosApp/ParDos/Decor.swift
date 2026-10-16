@@ -258,11 +258,15 @@ struct RuleIntroView: View {
         ZStack {
             Color.black.opacity(0.5).ignoresSafeArea()
             VStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(kindColor(card.kind)).frame(width: 78, height: 78)
-                    Image(systemName: kindSymbol(card.kind))
-                        .font(.system(size: 34, weight: .bold))
-                        .foregroundColor(.white)
+                if let motif = card.motif {
+                    BossEmblemView(motif: motif, size: 112)
+                } else {
+                    ZStack {
+                        Circle().fill(kindColor(card.kind)).frame(width: 78, height: 78)
+                        Image(systemName: kindSymbol(card.kind))
+                            .font(.system(size: 34, weight: .bold))
+                            .foregroundColor(.white)
+                    }
                 }
                 Text(card.boss ? "JEFE" : "NUEVA REGLA")
                     .font(.system(size: 11, weight: .heavy))
@@ -272,6 +276,13 @@ struct RuleIntroView: View {
                     .font(.system(size: 26, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
                     .multilineTextAlignment(.center)
+                if let taunt = card.taunt, !taunt.isEmpty {
+                    Text("\u{201C}\(taunt)\u{201D}")
+                        .font(.system(size: 14, weight: .semibold, design: .serif))
+                        .italic()
+                        .foregroundColor(kindColor(card.kind))
+                        .multilineTextAlignment(.center)
+                }
                 Text(loc(card.rule))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.65))

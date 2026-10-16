@@ -111,6 +111,8 @@ struct RootView: View {
             FriendsSheet()
         case .calendar:
             CalendarSheet()
+        case .bestiary:
+            BestiarySheet()
         }
     }
 }

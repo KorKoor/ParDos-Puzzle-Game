@@ -81,6 +81,9 @@ struct LevelCard: Decodable, Identifiable {
     let chips: [String]
     let tip: String?
     let threeStars: String
+    let motif: String?
+    let taunt: String?
+    let guardian: String?
 }
 
 /// Errores de lectura de los datos compartidos (se enseñan en Ajustes → Diagnóstico para poder corregirlos rápido).

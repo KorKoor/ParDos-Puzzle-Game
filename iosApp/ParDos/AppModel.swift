@@ -49,6 +49,7 @@ enum Sheet: Identifiable {
     case backup
     case friends
     case calendar
+    case bestiary
 
     var id: String {
         switch self {
@@ -68,6 +69,7 @@ enum Sheet: Identifiable {
         case .backup: return "backup"
         case .friends: return "friends"
         case .calendar: return "calendar"
+        case .bestiary: return "bestiary"
         }
     }
 }

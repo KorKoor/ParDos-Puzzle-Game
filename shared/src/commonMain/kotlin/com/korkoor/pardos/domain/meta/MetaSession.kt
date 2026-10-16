@@ -811,6 +811,21 @@ class MetaSession {
         return obj("packs" to packs, "specials" to specials)
     }
 
+    /** Bestiario: jefes y guardianes con su frase y si ya se vencieron (ganar cualquiera de sus niveles). */
+    fun bestiary(): String {
+        fun entry(e: com.korkoor.pardos.domain.level.Bestiary.Entry): Raw = robj(
+            "name" to e.name, "motif" to e.motif.name, "taunt" to e.taunt, "levels" to e.levels, "first" to e.firstLevel,
+            "defeated" to e.defeated { starsOf(it) }, "guardian" to e.guardian
+        )
+        val bosses = com.korkoor.pardos.domain.level.Bestiary.bosses.map { entry(it) }
+        val guardians = com.korkoor.pardos.domain.level.Bestiary.guardians.map { entry(it) }
+        val all = com.korkoor.pardos.domain.level.Bestiary.bosses + com.korkoor.pardos.domain.level.Bestiary.guardians
+        return obj(
+            "bosses" to bosses, "guardians" to guardians,
+            "defeated" to all.count { e -> e.defeated { starsOf(it) } }, "total" to all.size
+        )
+    }
+
     /** Simula la compra de un producto (la versión de prueba no cobra; con StoreKit esto lo confirma la App Store). */
     fun testBuyProduct(id: String): String {
         val pack = IosStore.gemPack(id)

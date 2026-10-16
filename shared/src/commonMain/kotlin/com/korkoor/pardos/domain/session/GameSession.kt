@@ -94,7 +94,10 @@ class GameSession(seed: Long) {
             "id" to s.id, "title" to s.title, "kind" to s.kind.name, "kindLabel" to s.kind.label, "rule" to s.kind.rule,
             "goal" to s.goalText(), "size" to s.boardSize, "boss" to s.isBoss,
             "moveLimit" to s.moveLimit, "timeMs" to s.timeLimitMs, "chips" to s.ruleChips(), "tip" to s.tip,
-            "threeStars" to LevelRules.threeStarHint(s)
+            "threeStars" to LevelRules.threeStarHint(s),
+            "motif" to com.korkoor.pardos.domain.level.BossLore.motifOf(s.title).name.takeIf { s.isBoss },
+            "taunt" to com.korkoor.pardos.domain.level.BossLore.tauntOf(s.title).takeIf { s.isBoss },
+            "guardian" to com.korkoor.pardos.domain.level.Guardians.forLevel(s.id).takeIf { !s.isBoss }
         )
     }
 

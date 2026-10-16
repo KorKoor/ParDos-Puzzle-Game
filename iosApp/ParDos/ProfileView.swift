@@ -119,6 +119,10 @@ struct ProfileView: View {
                 bigTile("person.2.fill", Theme.energy, "Amigos", "Ranking con tarjetas") { model.sheet = .friends }
                 bigTile("chart.bar.fill", Color(hex: 0x4E8FA6), "Récords", "Tus mejores marcas") { model.sheet = .records }
             }
+            HStack(spacing: 10) {
+                bigTile("eye.fill", Color(hex: 0xB4413C), "Bestiario", "Jefes y guardianes") { model.sheet = .bestiary }
+                Color.clear.frame(maxWidth: .infinity)
+            }
         }
     }
 
