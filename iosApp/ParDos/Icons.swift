@@ -244,12 +244,13 @@ struct CardBackground: ViewModifier {
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
                         .fill(LinearGradient(colors: [Color.white.opacity(0.55), Color.white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.45)))
                     RoundedRectangle(cornerRadius: radius, style: .continuous)
-                        .strokeBorder(Color.white.opacity(0.85), lineWidth: 1.2)
+                        .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.95), Color.white.opacity(0.35)], startPoint: .top, endPoint: .bottom), lineWidth: 1.2)
                 }
             )
             .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Theme.ink.opacity(0.06), lineWidth: 1))
             .shadow(color: Theme.ink.opacity(0.10), radius: 0, x: 0, y: 3)
             .shadow(color: Theme.ink.opacity(soft ? 0.07 : 0), radius: 10, x: 0, y: 7)
+            .shadow(color: Theme.accent.opacity(soft ? 0.05 : 0), radius: 22, x: 0, y: 14)
     }
 }
 

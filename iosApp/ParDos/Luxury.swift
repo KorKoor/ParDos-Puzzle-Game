@@ -69,3 +69,61 @@ struct LivingBackdrop: View {
         }
     }
 }
+
+/// Todos los botones "planos" de la app se hunden un poco al tocarlos (esta definición tapa a la de SwiftUI en todo el proyecto).
+struct PlainButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.93 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+/// Onda de luz al formar una ficha grande (256 o más): un anillo que se abre y un destello breve.
+struct BigMergeFlash: View {
+    let value: Int
+    let size: CGFloat
+    @State private var t: CGFloat = 0
+
+    private var tint: Color { value >= 1024 ? Color(hex: 0xFFE27A) : (value >= 512 ? Theme.gold : Theme.accent) }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(tint.opacity(Double(1 - t) * 0.9), lineWidth: 5 * (1 - t) + 1)
+                .frame(width: size * (0.35 + 0.9 * t), height: size * (0.35 + 0.9 * t))
+            Circle()
+                .fill(RadialGradient(colors: [tint.opacity(Double(1 - t) * 0.45), .clear], center: .center, startRadius: 0, endRadius: size * 0.5))
+                .frame(width: size, height: size)
+        }
+        .onAppear {
+            if UIAccessibility.isReduceMotionEnabled { t = 1; return }
+            withAnimation(.easeOut(duration: 0.7)) { t = 1 }
+        }
+    }
+}
+
+/// Al vencer a un jefe: su emblema entra con rebote y aparece "JEFE VENCIDO" en letras doradas.
+struct BossDefeatedBanner: View {
+    let motif: String
+    @State private var shown = false
+
+    var body: some View {
+        VStack(spacing: 8) {
+            BossEmblemView(motif: motif, size: 88)
+                .scaleEffect(shown ? 1 : 0.3)
+                .rotationEffect(.degrees(shown ? 0 : -25))
+            Text(loc("JEFE VENCIDO"))
+                .font(.system(size: 13, weight: .black, design: .serif))
+                .kerning(5)
+                .foregroundColor(Color(hex: 0xB07A1E))
+                .opacity(shown ? 1 : 0)
+                .offset(y: shown ? 0 : 10)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.55).delay(0.15)) { shown = true }
+            Haptics.success()
+        }
+    }
+}

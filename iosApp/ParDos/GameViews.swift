@@ -47,6 +47,7 @@ struct GameView: View {
                     }
                 }
                 if let left = snap.frenzy, left > 0 {
+                    FrenzyGlow()
                     VStack {
                         FrenzyBadge(left: left)
                             .padding(.top, 8)
@@ -451,6 +452,9 @@ struct ResultOverlay: View {
 
     private var card: some View {
         VStack(spacing: 14) {
+            if won, snap.kind == "BOSS", let motif = model.card(snap.level)?.motif {
+                BossDefeatedBanner(motif: motif)
+            }
             Text(headline)
                 .font(.system(size: 26, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)

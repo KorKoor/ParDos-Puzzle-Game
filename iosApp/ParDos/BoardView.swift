@@ -67,6 +67,7 @@ struct BoardCanvas: View {
             emptyCells
             stoneCells
             tileViews
+            bigFlash
             guide
         }
         .frame(width: side, height: side)
@@ -112,6 +113,16 @@ struct BoardCanvas: View {
                     .position(x: x(tile.c), y: y(tile.r))
                     .transition(.scale)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var bigFlash: some View {
+        if let t = snap.tiles.first(where: { $0.merged && $0.v >= 256 }) {
+            BigMergeFlash(value: t.v, size: cell * 3)
+                .id(t.id + "-f" + String(t.v))
+                .position(x: x(t.c), y: y(t.r))
+                .allowsHitTesting(false)
         }
     }
 

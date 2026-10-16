@@ -34,3 +34,22 @@ struct FrenzyBadge: View {
         }
     }
 }
+
+/// Borde de luz dorada alrededor de toda la pantalla mientras dura el Frenesí.
+struct FrenzyGlow: View {
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
+            let pulse = 0.5 + 0.5 * sin(timeline.date.timeIntervalSinceReferenceDate * 5)
+            Rectangle()
+                .strokeBorder(
+                    LinearGradient(colors: [Color(hex: 0xFF8A1F), Color(hex: 0xFFE27A), Color(hex: 0xFF8A1F)], startPoint: .top, endPoint: .bottom),
+                    lineWidth: 5 + 3 * pulse
+                )
+                .opacity(0.35 + 0.3 * pulse)
+                .blur(radius: 6)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+        }
+        .onAppear { Haptics.success() }
+    }
+}

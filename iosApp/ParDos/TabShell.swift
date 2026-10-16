@@ -56,7 +56,9 @@ struct TabBarView: View {
                 Rectangle()
                     .fill(Color.white)
                     .shadow(color: Theme.ink.opacity(0.12), radius: 6, x: 0, y: -2)
-                Rectangle().fill(Theme.ink.opacity(0.06)).frame(height: 1)
+                Rectangle()
+                    .fill(LinearGradient(colors: [Color.clear, Theme.gold.opacity(0.55), Color.clear], startPoint: .leading, endPoint: .trailing))
+                    .frame(height: 1)
             }
             .ignoresSafeArea(edges: .bottom)
         )
