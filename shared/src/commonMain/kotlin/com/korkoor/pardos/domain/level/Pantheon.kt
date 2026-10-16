@@ -138,7 +138,7 @@ object Pantheon {
         }
         val pillars = StonePatterns.all.filter { it.size == 4 && it.cells.size == 1 && it.severity == 2 }
         val pillar = pillars[(b.index * 7) % pillars.size]
-        val pillarTile = 1 shl StonePatterns.exponentFor(Integer.numberOfTrailingZeros(tile), pillar)
+        val pillarTile = 1 shl StonePatterns.exponentFor(tile.countTrailingZeroBits(), pillar)
         val twist = twists[(room + b.position) % twists.size]
         val base = when ((b.position + room) % 8) {
             0 -> B.sprint(id, pillarTile, 4, slack = 1.75, stones = pillar)
