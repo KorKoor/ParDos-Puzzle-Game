@@ -67,6 +67,21 @@ class LevelFeasibilityTest {
         assertTrue(bad.isEmpty(), "Niveles demasiado difíciles para el bot:\n" + bad.joinToString("\n") + report)
     }
 
+    @Test fun theSixtyPantheonBossesAreValidAndWinnable() {
+        val bosses = com.korkoor.pardos.domain.level.Pantheon.bosses
+        assertTrue(bosses.size == 60 && bosses.map { it.name }.toSet().size == 60, "60 jefes con nombres distintos")
+        val bad = mutableListOf<String>()
+        for (b in bosses) {
+            val spec = b.spec
+            val problems = com.korkoor.pardos.domain.level.LevelValidator.problems(spec)
+            if (problems.isNotEmpty()) bad.add("PANTEON #${b.id} ${b.name}: $problems")
+            val (wins, n) = winRate(spec, 6)
+            println("FEAS panteon #${b.id} ${b.name} ${spec.goalText()} moves=${spec.moveLimit} time=${spec.timeLimitMs?.div(1000)} wins=$wins/$n")
+            if (wins < 3) bad.add("PANTEON #${b.id} ${b.name} ${spec.kind} ${spec.goalText()} wins=$wins/$n")
+        }
+        assertTrue(bad.isEmpty(), "Jefes del Panteón con problemas:\n" + bad.joinToString("\n"))
+    }
+
     @Test fun botWinsTheDailyChallenges() {
         val days = (20000..20062).map { com.korkoor.pardos.domain.logic.DailyChallenge.forDay(it) }
         val unique = days.map { it.spec }.distinctBy { sig(it) }

@@ -50,6 +50,7 @@ enum Sheet: Identifiable {
     case friends
     case calendar
     case bestiary
+    case pantheon
 
     var id: String {
         switch self {
@@ -70,6 +71,7 @@ enum Sheet: Identifiable {
         case .friends: return "friends"
         case .calendar: return "calendar"
         case .bestiary: return "bestiary"
+        case .pantheon: return "pantheon"
         }
     }
 }
@@ -756,7 +758,12 @@ final class AppModel: ObservableObject {
             tower = decodeJSON(TowerInfo.self, meta.towerInfo())
             startTowerFloor()
         case .campaign:
-            start(min(current.level + 1, levelCount))
+            if current.level > 100_000 {
+                backToMenu()
+                sheet = .pantheon
+            } else {
+                start(min(current.level + 1, levelCount))
+            }
         default:
             backToMenu()
         }
@@ -911,6 +918,7 @@ final class AppModel: ObservableObject {
     }
 
     func finishCampaign(_ s: BoardSnap) {
+        if s.level > 100_000 { finishPantheon(s); return }
         if s.status == "won" {
             let json = act { m in
                 m.onWin(

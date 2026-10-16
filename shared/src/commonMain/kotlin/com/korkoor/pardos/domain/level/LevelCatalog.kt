@@ -34,6 +34,7 @@ object LevelCatalog {
 
     fun spec(level: Int): LevelSpec {
         val id = level.coerceAtLeast(1)
+        Pantheon.bossOf(id)?.let { return it.spec }
         return HandmadeLevels.get(id) ?: LevelGenerator.build(id)
     }
 

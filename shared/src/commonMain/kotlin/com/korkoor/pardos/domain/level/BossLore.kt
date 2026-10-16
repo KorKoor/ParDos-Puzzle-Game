@@ -55,9 +55,9 @@ object BossLore {
 
     val names: Set<String> get() = entries.keys
 
-    fun motifOf(name: String?): BossMotif = entries[name]?.motif ?: Guardians.motifOf(name)
+    fun motifOf(name: String?): BossMotif = entries[name]?.motif ?: Pantheon.byName(name)?.motif ?: Guardians.motifOf(name)
 
-    fun tauntOf(name: String?): String? = entries[name]?.taunt ?: Guardians.tauntOf(name)
+    fun tauntOf(name: String?): String? = entries[name]?.taunt ?: Pantheon.byName(name)?.taunt ?: Guardians.tauntOf(name)
 }
 
 /**

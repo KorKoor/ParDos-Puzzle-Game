@@ -92,3 +92,5 @@ Cuando pidas la build, si aparece un error de compilación se arregla en la sigu
 - **Reto bonus por nivel** (`QuestPill`): opcional, da monedas al cumplirlo.
 - **Jefe de la semana** en Inicio (`WeeklyBossCard`): monedas + banner la primera vez que se vence cada semana.
 - **Packs nuevos** (`halloween_pack`, `boss_pack`, `treasure_pack`) y **pase de 80 niveles**: salen solos del módulo compartido. Hay que crear los 3 productos en App Store Connect (ver `APPSTORE_PRODUCTOS.md`).
+
+- **Panteón de jefes** (`Pantheon.kt` en `:shared`, `PantheonView.swift`): 12 salas con 5 jefes (60), niveles 100001 en adelante (no tocan la campaña). Se abre con el nivel 30; cada jefe abre al siguiente; premios por jefe y cofre al vencer al jefe de sala. Los 60 los gana el bot de pruebas (`LevelFeasibilityTest`). Fondo vivo con estrellas, destello dorado y emblemas animados.

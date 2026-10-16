@@ -811,6 +811,56 @@ class MetaSession {
         return obj("packs" to packs, "specials" to specials)
     }
 
+    // ------------------------------------------------------------------ Panteón de jefes
+
+    private fun panStars(level: Int): Int = store.int("pan_stars_$level")
+
+    private fun campaignBest(): Int {
+        var best = 0
+        for (lv in 1..com.korkoor.pardos.domain.level.LevelCatalog.TOTAL_LEVELS) if (starsOf(lv) > 0) best = lv else if (lv > best + 40) break
+        return best
+    }
+
+    /** Salas y jefes del Panteón con su estado. Un jefe se abre al vencer al anterior; el Panteón, con el nivel 30 de campaña. */
+    fun pantheon(): String {
+        val P = com.korkoor.pardos.domain.level.Pantheon
+        val open = campaignBest() >= P.MIN_CAMPAIGN_LEVEL
+        var previousBeaten = true
+        var beaten = 0
+        val rooms = P.rooms.map { room ->
+            val list = room.bosses.map { b ->
+                val stars = panStars(b.id)
+                val unlocked = open && previousBeaten
+                previousBeaten = stars > 0
+                if (stars > 0) beaten++
+                robj(
+                    "id" to b.id, "name" to b.name, "motif" to b.motif.name, "taunt" to b.taunt, "stars" to stars,
+                    "unlocked" to unlocked, "roomBoss" to b.isRoomBoss, "coins" to P.coinsFor(b), "gems" to P.gemsFor(b)
+                )
+            }
+            robj("index" to room.index, "name" to room.name, "bosses" to list)
+        }
+        return obj("open" to open, "minLevel" to P.MIN_CAMPAIGN_LEVEL, "rooms" to rooms, "beaten" to beaten, "total" to P.TOTAL)
+    }
+
+    /** Victoria en un jefe del Panteón: guarda las estrellas y paga la primera vez (los jefes de sala traen además un cofre). */
+    fun pantheonWin(level: Int, stars: Int): String {
+        val b = com.korkoor.pardos.domain.level.Pantheon.bossOf(level) ?: return no("")
+        val before = panStars(level)
+        if (stars > before) store.setInt("pan_stars_$level", stars.coerceIn(1, 3))
+        if (before > 0) return ok("first" to false, "coins" to 0, "gems" to 0, "chest" to "")
+        val P = com.korkoor.pardos.domain.level.Pantheon
+        wallet.addCoins(P.coinsFor(b))
+        wallet.addGems(P.gemsFor(b))
+        var chest = ""
+        if (b.isRoomBoss) {
+            val type = if (b.room >= 8) com.korkoor.pardos.domain.collection.ChestType.EPIC else com.korkoor.pardos.domain.collection.ChestType.RARE
+            col.addChests(type, 1)
+            chest = type.name
+        }
+        return ok("first" to true, "coins" to P.coinsFor(b), "gems" to P.gemsFor(b), "chest" to chest, "room" to b.name)
+    }
+
     private fun weeklyBossLevel(): Int? {
         val beaten = com.korkoor.pardos.domain.level.Bestiary.bosses.flatMap { it.levels }.filter { starsOf(it) > 0 }
         return com.korkoor.pardos.domain.level.WeeklyBoss.levelFor(com.korkoor.pardos.domain.level.WeeklyBoss.weekOf(clock.today.toLong()), beaten)

@@ -113,6 +113,8 @@ struct RootView: View {
             CalendarSheet()
         case .bestiary:
             BestiarySheet()
+        case .pantheon:
+            PantheonSheet()
         }
     }
 }
