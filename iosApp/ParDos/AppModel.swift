@@ -916,6 +916,7 @@ final class AppModel: ObservableObject {
                 )
             }
             reward = decodeJSON(WinReward.self, json)
+            if s.questDone == true, let coins = s.questCoins, coins > 0, !s.daily { _ = act { $0.grantCoins(n: Int32(coins)) } }
             if s.tutorialDone { defaults.set(true, forKey: "tutorial_done") }
             if s.daily {
                 defaults.set(true, forKey: "daily_done_\(localDay())")

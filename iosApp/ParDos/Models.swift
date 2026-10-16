@@ -61,6 +61,10 @@ struct BoardSnap: Decodable {
     let flowStreak: Int
     let frenzy: Int?
     let calm: Int?
+    let questTitle: String?
+    let questHint: String?
+    let questCoins: Int?
+    let questDone: Bool?
     let nearMiss: String?
 }
 

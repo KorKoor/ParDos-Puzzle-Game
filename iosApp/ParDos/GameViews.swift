@@ -23,6 +23,7 @@ struct GameView: View {
                             topBar(snap, style)
                             if model.mode == .tower { TowerHearts() }
                             GoalCard(snap: snap)
+                            if model.mode == .campaign, let title = snap.questTitle { QuestPill(title: title, hint: snap.questHint ?? "", coins: snap.questCoins ?? 0, done: snap.questDone == true) }
                             RuleChips(snap: snap)
                             BoardView(snap: snap, hint: currentGuide(snap))
                                 .frame(height: boardSide)
@@ -453,6 +454,9 @@ struct ResultOverlay: View {
                 .font(.system(size: 26, weight: .black, design: .rounded))
                 .foregroundColor(Theme.ink)
                 .multilineTextAlignment(.center)
+            if won, model.mode == .campaign, let title = snap.questTitle {
+                QuestPill(title: title, hint: snap.questHint ?? "", coins: snap.questCoins ?? 0, done: snap.questDone == true)
+            }
             if won {
                 HStack(spacing: 8) {
                     ForEach(0..<3, id: \.self) { i in

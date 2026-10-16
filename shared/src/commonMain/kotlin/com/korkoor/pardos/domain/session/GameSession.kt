@@ -15,6 +15,8 @@ import com.korkoor.pardos.domain.level.Twist
 import com.korkoor.pardos.domain.level.goalText
 import com.korkoor.pardos.domain.flow.FlowMeter
 import com.korkoor.pardos.domain.flow.Frenzy
+import com.korkoor.pardos.domain.flow.QuestResult
+import com.korkoor.pardos.domain.flow.SideQuests
 import com.korkoor.pardos.domain.flow.FlowTier
 import com.korkoor.pardos.domain.flow.NearMiss
 import com.korkoor.pardos.domain.logic.CoachStep
@@ -294,6 +296,16 @@ class GameSession(seed: Long) {
         ph.spawn?.let { spawn = it }
     }
 
+    /** Reto bonus del nivel (opcional, solo campaña): mini objetivo que da unas monedas si se cumple al ganar. */
+    private fun quest() = if (daily) null else SideQuests.forLevel(spec.id, spec.moveLimit != null, spec.isBoss)
+
+    private fun questDone(): Boolean {
+        val q = quest() ?: return false
+        if (status != WON) return false
+        val used = spec.timeLimitMs?.let { limit -> (limit + extraTimeMs - (timeLeftMs ?: limit)).coerceAtLeast(0L) } ?: elapsedMs
+        return SideQuests.achieved(q, QuestResult(stars, spec.moveLimit, moves, (spec.freeCells - tiles.size).coerceAtLeast(0), spec.freeCells, FlowMeter.tierOf(peakFlowStreak), used))
+    }
+
     private fun win() {
         status = WON
         val used = spec.timeLimitMs?.let { limit -> (limit + extraTimeMs - (timeLeftMs ?: limit)).coerceAtLeast(0L) } ?: elapsedMs
@@ -486,7 +498,7 @@ class GameSession(seed: Long) {
             "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
             "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs,
             "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent,
-            "canRevive" to canRevive(), "flowStreak" to flowStreak, "frenzy" to frenzyLeft, "calm" to calmMoves,
+            "canRevive" to canRevive(), "flowStreak" to flowStreak, "frenzy" to frenzyLeft, "calm" to calmMoves, "questTitle" to quest()?.title, "questHint" to quest()?.hint, "questCoins" to quest()?.coins, "questDone" to questDone(),
             "nearMiss" to (if (status == LOST) NearMiss.message(spec.goal, spec.goalValue, spec.goalCount, tiles, score, stats, lostReason == OUT_OF_MOVES) else null), "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
             "empty" to (spec.freeCells - tiles.size).coerceAtLeast(0), "stuck" to engine.isGameOver(tiles)
         )
