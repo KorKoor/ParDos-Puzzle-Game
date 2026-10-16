@@ -23,7 +23,7 @@ class SettingsManager(context: Context) {
             _autoNext.value = prefs.getBoolean(K_AUTONEXT, true)
             _sfxVolume.value = prefs.getFloat(K_SFX_VOL, 0.9f).coerceIn(0f, 1f)
             _musicVolume.value = prefs.getFloat(K_MUSIC_VOL, 0.7f).coerceIn(0f, 1f)
-            _gameUiScale.value = prefs.getFloat(K_GAME_UI_SCALE, 1f).coerceIn(0.8f, 1.1f)
+            _gameUiScale.value = prefs.getFloat(K_GAME_UI_SCALE, 0.8f).coerceIn(0.8f, 1.1f)
             loaded = true
         }
     }
@@ -75,7 +75,7 @@ class SettingsManager(context: Context) {
         val _autoNext = MutableStateFlow(true)
         val _sfxVolume = MutableStateFlow(0.9f)
         val _musicVolume = MutableStateFlow(0.7f)
-        val _gameUiScale = MutableStateFlow(1f)
+        val _gameUiScale = MutableStateFlow(0.8f)
         var loaded = false
     }
 }

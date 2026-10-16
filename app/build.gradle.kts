@@ -13,8 +13,8 @@ android {
         applicationId = "com.korkoor.pardos"
         minSdk = 24
         targetSdk = 36
-        versionCode = 22
-        versionName = "2.0"
+        versionCode = 23
+        versionName = "3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -116,6 +116,7 @@ dependencies {
     implementation("com.android.billingclient:billing-ktx:8.0.0")
     // Ventana nativa de Google Play para pedir una reseña en un buen momento (la propia Play decide si la enseña)
     implementation("com.google.android.play:review:2.0.2")
+    implementation("com.google.android.play:app-update-ktx:2.1.0")
 
     implementation(platform("com.google.firebase:firebase-bom:34.2.0"))
     implementation("com.google.firebase:firebase-auth")

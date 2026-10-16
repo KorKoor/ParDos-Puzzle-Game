@@ -15,6 +15,25 @@ object RatePrompt {
     private const val PREFS = "pardos_rate"
     private const val K_LAST_DAY = "last_ask_day"
     private const val K_COUNT = "ask_count"
+    private const val K_MS = "play_ms"
+    private var resumedAt = 0L
+
+    /** Cuenta el tiempo real con el juego en pantalla, para pedir la reseña solo a quien ya lleva un buen rato jugando. */
+    fun sessionStart() { resumedAt = android.os.SystemClock.elapsedRealtime() }
+
+    fun sessionEnd(context: Context) {
+        if (resumedAt == 0L) return
+        val ms = android.os.SystemClock.elapsedRealtime() - resumedAt
+        resumedAt = 0L
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit().putLong(K_MS, prefs.getLong(K_MS, 0L) + ms.coerceAtLeast(0L)).apply()
+    }
+
+    private fun playedMinutes(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val live = if (resumedAt != 0L) android.os.SystemClock.elapsedRealtime() - resumedAt else 0L
+        return ((prefs.getLong(K_MS, 0L) + live) / 60_000L).toInt()
+    }
 
     fun maybeAsk(activity: Activity, campaignLevel: Int, winStreak: Int, threeStarWin: Boolean, bossWin: Boolean, adNow: Boolean, vip: Boolean) {
         try {
@@ -24,6 +43,7 @@ object RatePrompt {
             val state = RatePolicy.State(
                 campaignLevel = campaignLevel,
                 installDays = AdFrequency(activity).installAgeDays(),
+                playMinutes = playedMinutes(activity),
                 daysSinceLastAsk = last?.let { today - it },
                 asks = prefs.getInt(K_COUNT, 0),
                 winStreak = winStreak,

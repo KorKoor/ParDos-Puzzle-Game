@@ -23,6 +23,10 @@ class RatePolicyTest {
         assertFalse(RatePolicy.shouldAsk(happy.copy(winStreak = RatePolicy.MIN_WIN_STREAK - 1)))
     }
 
+    @Test fun onlyAfterPlayingAWhile() {
+        assertFalse(RatePolicy.shouldAsk(happy.copy(playMinutes = RatePolicy.MIN_PLAY_MINUTES - 1)))
+    }
+
     @Test fun neverInTheFirstSessionNorTheFirstLevels() {
         assertFalse(RatePolicy.shouldAsk(happy.copy(installDays = RatePolicy.MIN_INSTALL_DAYS - 1)))
         assertFalse(RatePolicy.shouldAsk(happy.copy(campaignLevel = RatePolicy.MIN_CAMPAIGN_LEVEL - 1)))

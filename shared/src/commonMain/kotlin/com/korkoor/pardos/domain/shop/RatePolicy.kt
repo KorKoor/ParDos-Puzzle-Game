@@ -10,6 +10,8 @@ object RatePolicy {
     const val MIN_CAMPAIGN_LEVEL = 12
     /** Ha vuelto al menos otro día: no se pide en la primera sesión. */
     const val MIN_INSTALL_DAYS = 2
+    /** Lleva un buen rato jugando (minutos con la app abierta, sumando sesiones). */
+    const val MIN_PLAY_MINUTES = 25
     const val MIN_DAYS_BETWEEN_ASKS = 60
     const val MAX_ASKS = 3
     /** Racha mínima de victorias seguidas para que cuente como momento feliz (salvo un jefe vencido). */
@@ -18,6 +20,7 @@ object RatePolicy {
     data class State(
         val campaignLevel: Int,
         val installDays: Int,
+        val playMinutes: Int = MIN_PLAY_MINUTES,
         /** Días desde la última vez que se pidió (null = nunca). */
         val daysSinceLastAsk: Int?,
         val asks: Int,
@@ -33,6 +36,7 @@ object RatePolicy {
         s.asks < MAX_ASKS &&
             s.campaignLevel >= MIN_CAMPAIGN_LEVEL &&
             s.installDays >= MIN_INSTALL_DAYS &&
+            s.playMinutes >= MIN_PLAY_MINUTES &&
             (s.daysSinceLastAsk == null || s.daysSinceLastAsk >= MIN_DAYS_BETWEEN_ASKS) &&
             !s.adNow &&
             (s.bossWin || (s.threeStarWin && s.winStreak >= MIN_WIN_STREAK))

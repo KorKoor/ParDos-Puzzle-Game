@@ -109,10 +109,13 @@ class MainActivity : ComponentActivity() {
         profileManager.updateCampaignLevel(reached)
     }
 
+    private var inAppUpdate: com.korkoor.pardos.data.local.InAppUpdate? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.d(TAG, "onCreate - app launch start")
         com.korkoor.pardos.data.local.Analytics.init(this)
+        inAppUpdate = com.korkoor.pardos.data.local.InAppUpdate(this)
         com.korkoor.pardos.data.local.PlayGamesHelper.init(this)
 
         // Solo en builds de depuración: `--ei debug_day_offset N` salta N días para probar fiestas
@@ -601,6 +604,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        com.korkoor.pardos.data.local.RatePrompt.sessionStart()
+        inAppUpdate?.check()
         // Hitos, rango y Platino al día cada vez que vuelves a la app
         try { com.korkoor.pardos.data.local.PrestigeManager(this).refresh() } catch (e: Exception) { Log.w(TAG, "prestigio: ${e.message}") }
         if (::notificationManager.isInitialized) {
@@ -611,6 +616,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        com.korkoor.pardos.data.local.RatePrompt.sessionEnd(this)
         // Sube los cambios pendientes del perfil (una sola escritura por sesión como máximo)
         com.korkoor.pardos.data.local.ProfileManager(this).flushPendingSync()
         if (::notificationManager.isInitialized) {
