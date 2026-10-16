@@ -307,6 +307,7 @@ struct ChestOpenView: View {
     @State private var opened = false
     @State private var revealed = 0
     @State private var shake = false
+    @State private var flash = false
     private let timer = Timer.publish(every: 0.55, on: .main, in: .common).autoconnect()
 
     private var columns: [GridItem] {
@@ -317,7 +318,12 @@ struct ChestOpenView: View {
         VStack(spacing: 16) {
             if !opened {
                 Spacer()
-                ChestIcon(type: type == "SERIES" ? "RARE" : type, size: 150)
+                ZStack {
+                    LightRays(color: rarityColor(type == "SERIES" ? "RARE" : type))
+                        .frame(width: 320, height: 320)
+                    ChestIcon(type: type == "SERIES" ? "RARE" : type, size: 150)
+                        .shadow(color: rarityColor(type == "SERIES" ? "RARE" : type).opacity(0.7), radius: 24)
+                }
                     .rotationEffect(.degrees(shake ? 5 : -5))
                     .onAppear {
                         withAnimation(Animation.easeInOut(duration: 0.12).repeatForever(autoreverses: true)) { shake = true }
@@ -360,14 +366,19 @@ struct ChestOpenView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+        .overlay(Color.white.opacity(flash ? 0.85 : 0).ignoresSafeArea().allowsHitTesting(false))
         .onTapGesture {
             if !opened {
+                Haptics.success()
+                flash = true
+                withAnimation(.easeOut(duration: 0.5)) { flash = false }
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) { opened = true }
             }
         }
         .onReceive(timer) { _ in
             if opened && revealed < drops.count {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.65)) { revealed += 1 }
+                Haptics.tap()
             }
         }
     }
@@ -390,7 +401,8 @@ struct ChestOpenView: View {
                         .foregroundColor(Theme.gold)
                 }
             }
-            .transition(.scale)
+            .transition(.scale.combined(with: .opacity))
+            .rotation3DEffect(.degrees(index < revealed ? 0 : 90), axis: (x: 0, y: 1, z: 0))
         } else {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.white.opacity(0.12))

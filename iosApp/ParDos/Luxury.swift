@@ -127,3 +127,51 @@ struct BossDefeatedBanner: View {
         }
     }
 }
+
+/// Número que sube hasta su valor (monedas del premio): cuenta en menos de un segundo y vibra al llegar.
+struct CountUpText: View {
+    let value: Int
+    var prefix: String = ""
+    @State private var shown = 0
+
+    var body: some View {
+        Text("\(prefix)\(shown)")
+            .monospacedDigit()
+            .onAppear {
+                shown = 0
+                if UIAccessibility.isReduceMotionEnabled || value <= 0 { shown = value; return }
+                let steps = 24
+                for i in 1...steps {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + 0.9 * Double(i) / Double(steps)) {
+                        let p = Double(i) / Double(steps)
+                        shown = Int(Double(value) * (1 - pow(1 - p, 3)))
+                        if i == steps { shown = value; Haptics.tap() }
+                    }
+                }
+            }
+    }
+}
+
+/// Rayos de luz que giran despacio detrás de un objeto importante (cofres, jefes).
+struct LightRays: View {
+    let color: Color
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            Canvas { ctx, size in
+                let c = CGPoint(x: size.width / 2, y: size.height / 2)
+                let r = size.width / 2
+                for i in 0..<12 {
+                    let a = t * 0.25 + Double(i) / 12.0 * .pi * 2
+                    var p = Path()
+                    p.move(to: c)
+                    p.addArc(center: c, radius: r, startAngle: .radians(a - 0.09), endAngle: .radians(a + 0.09), clockwise: false)
+                    p.closeSubpath()
+                    ctx.fill(p, with: .radialGradient(Gradient(colors: [color.opacity(0.45), .clear]), center: c, startRadius: 0, endRadius: r))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}

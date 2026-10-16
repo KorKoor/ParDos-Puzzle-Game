@@ -519,7 +519,12 @@ struct ResultOverlay: View {
         }
         .padding(24)
         .frame(maxWidth: 340)
-        .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream))
+        .background(
+            RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream)
+                .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(LinearGradient(colors: [Theme.gold.opacity(won ? 0.8 : 0.25), Color.white.opacity(0.1)], startPoint: .top, endPoint: .bottom), lineWidth: 1.5))
+        )
+        .shimmer(radius: 30, period: won ? 4.5 : 12)
+        .shadow(color: Color.black.opacity(0.25), radius: 24, y: 12)
         .padding(.horizontal, 24)
     }
 
@@ -534,7 +539,7 @@ struct ResultOverlay: View {
         VStack(spacing: 10) {
             HStack(spacing: 8) {
                 CoinIcon(size: 30)
-                Text("+\(reward.coins)")
+                CountUpText(value: reward.coins, prefix: "+")
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
             }
