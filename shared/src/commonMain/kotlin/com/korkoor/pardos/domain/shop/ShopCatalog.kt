@@ -1,6 +1,6 @@
 package com.korkoor.pardos.domain.shop
 
-enum class ProductKind { GEMS, VIP, STARTER, STUDIO, SEASON_PASS, PIGGY }
+enum class ProductKind { GEMS, VIP, STARTER, STUDIO, SEASON_PASS, PIGGY, BUNDLE }
 
 /** Producto de la tienda (compra real). Los IDs deben crearse igual en Play Console / App Store Connect. */
 data class StoreProduct(
@@ -8,7 +8,9 @@ data class StoreProduct(
     val kind: ProductKind,
     val gems: Int = 0,
     /** Precio de referencia en centavos de dólar (solo para calcular el "% extra" que se enseña; el cobro real lo fija Play). */
-    val usdCents: Int = 0
+    val usdCents: Int = 0,
+    /** Solo para BUNDLE: cofres raros que trae el pack. */
+    val rareChests: Int = 0
 )
 
 object ShopCatalog {
@@ -25,6 +27,10 @@ object ShopCatalog {
     const val SEASON_PASS = "season_pass"
     /** Rompe la hucha y entrega las gemas guardadas (consumible). */
     const val PIGGY_BREAK = "piggy_break"
+    /** Packs de gemas + cofres (consumibles: se pueden volver a comprar). */
+    const val HALLOWEEN_PACK = "halloween_pack"
+    const val BOSS_PACK = "boss_pack"
+    const val TREASURE_PACK = "treasure_pack"
 
     val products: List<StoreProduct> = listOf(
         StoreProduct(GEMS_TINY, ProductKind.GEMS, gems = 45, usdCents = 99),
@@ -36,7 +42,10 @@ object ShopCatalog {
         StoreProduct(STARTER_PACK, ProductKind.STARTER),
         StoreProduct(SKIN_STUDIO, ProductKind.STUDIO),
         StoreProduct(SEASON_PASS, ProductKind.SEASON_PASS),
-        StoreProduct(PIGGY_BREAK, ProductKind.PIGGY)
+        StoreProduct(PIGGY_BREAK, ProductKind.PIGGY),
+        StoreProduct(HALLOWEEN_PACK, ProductKind.BUNDLE, gems = 800, usdCents = 499, rareChests = 4),
+        StoreProduct(BOSS_PACK, ProductKind.BUNDLE, gems = 200, usdCents = 199, rareChests = 1),
+        StoreProduct(TREASURE_PACK, ProductKind.BUNDLE, gems = 1000, usdCents = 999, rareChests = 6)
     )
 
     fun byId(id: String): StoreProduct? = products.firstOrNull { it.id == id }

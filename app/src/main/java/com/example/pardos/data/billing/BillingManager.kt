@@ -188,6 +188,13 @@ class BillingManager(context: Context) : PurchasesUpdatedListener {
                     retention.unlockPremium()
                     _message.value = "¡Pase premium activado!"
                 }
+                ProductKind.BUNDLE -> consumeThen(purchase) {
+                    economy.addGems(product.gems)
+                    com.korkoor.pardos.data.local.CollectionManager(appContext).addChests(
+                        com.korkoor.pardos.domain.collection.ChestType.RARE, product.rareChests
+                    )
+                    _message.value = "+${product.gems} gemas y ${product.rareChests} cofres raros"
+                }
                 ProductKind.PIGGY -> consumeThen(purchase) {
                     val gems = retention.breakPiggy()
                     _message.value = if (gems > 0) "¡Hucha rota! +$gems gemas" else "La hucha estaba vacía"

@@ -64,7 +64,10 @@ object IosStore {
         Special(ShopCatalog.SEASON_PASS, "Pase premium", "La vía premium de la temporada: más premios y la skin exclusiva del mes.", 499, true),
         Special(ShopCatalog.SKIN_STUDIO, "Studio", "Diseña tus propias fichas: acabado, colores, fondo y partículas. Una sola vez.", 399, false),
         Special(ShopCatalog.VIP_FOREVER, "VIP para siempre", "+20% de monedas, 5 gemas cada día y poderes sin esperas de pago. Una sola vez.", 699, false),
-        Special(ShopCatalog.PIGGY_BREAK, "Romper la hucha", "Recibe de golpe todas las gemas que guardó tu hucha.", 299, true)
+        Special(ShopCatalog.PIGGY_BREAK, "Romper la hucha", "Recibe de golpe todas las gemas que guardó tu hucha.", 299, true),
+        Special(ShopCatalog.HALLOWEEN_PACK, "Pack Halloween", "800 gemas y 4 cofres raros para la fiesta de los jefes.", 499, true),
+        Special(ShopCatalog.BOSS_PACK, "Pack del jefe", "200 gemas y 1 cofre raro para el reto semanal.", 199, true),
+        Special(ShopCatalog.TREASURE_PACK, "Cofre del tesoro", "1000 gemas y 6 cofres raros.", 999, true)
     )
 
     fun special(id: String): Special? = specials.firstOrNull { it.id == id }

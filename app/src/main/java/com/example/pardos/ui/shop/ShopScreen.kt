@@ -191,6 +191,18 @@ fun ShopScreen(
                             Spacer(Modifier.height(16.dp))
                         }
 
+                        // --- Packs especiales (gemas + cofres) ---
+                        listOf(
+                            Triple(ShopCatalog.HALLOWEEN_PACK, "PACK HALLOWEEN", "Para la fiesta de los jefes"),
+                            Triple(ShopCatalog.BOSS_PACK, "PACK DEL JEFE", "Para el reto semanal"),
+                            Triple(ShopCatalog.TREASURE_PACK, "COFRE DEL TESORO", "El pack grande")
+                        ).forEach { (id, title, tagline) ->
+                            val product = ShopCatalog.byId(id) ?: return@forEach
+                            BundleCard(title, tagline, product.gems, product.rareChests, prices[id]) { billing.purchase(activity, id) }
+                            Spacer(Modifier.height(12.dp))
+                        }
+                        Spacer(Modifier.height(4.dp))
+
                         PromoCard(
                             icon = Icons.Rounded.WorkspacePremium, color = Gold,
                             title = "PASE DE TEMPORADA", tag = "NUEVO CADA MES",
@@ -546,6 +558,30 @@ private fun FreeGemsCard(left: Int, onWatch: () -> Unit) {
         if (left > 0) {
             Spacer(Modifier.height(12.dp))
             WatchAdButton(label = "+${AdRewards.FREE_GEMS} ◆", sublabel = "Ver anuncio", onClick = onWatch, modifier = Modifier.fillMaxWidth(), color = GemBlue)
+        }
+    }
+}
+
+@Composable
+private fun BundleCard(title: String, tagline: String, gems: Int, chests: Int, price: String?, onBuy: () -> Unit) {
+    JellyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onBuy, enabled = price != null,
+        shape = RoundedCornerShape(Radius.XLarge), fill = Gold.lighten(0.9f), lip = Gold.deepen(0.12f).copy(alpha = 0.55f), lipHeight = 5.dp,
+        borderColor = Gold.copy(alpha = 0.7f), borderWidth = 1.5.dp,
+        padding = PaddingValues(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile(Icons.Rounded.CardGiftcard, Gold, size = 44.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Black, color = Navy, letterSpacing = 1.2.sp)
+                Text("$gems gemas · $chests ${if (chests == 1) "cofre raro" else "cofres raros"}", fontSize = 11.sp, color = InkSecondary)
+                Text(tagline, fontSize = 10.sp, color = InkSecondary)
+            }
+            Box(Modifier.clip(RoundedCornerShape(14.dp)).background(Gold).padding(horizontal = 14.dp, vertical = 9.dp)) {
+                Text(price ?: "Pronto", fontSize = 13.sp, fontWeight = FontWeight.Black, color = Color.White)
+            }
         }
     }
 }

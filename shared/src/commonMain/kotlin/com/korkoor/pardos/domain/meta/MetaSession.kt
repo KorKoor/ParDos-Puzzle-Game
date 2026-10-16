@@ -834,7 +834,13 @@ class MetaSession {
                 val gems = ret.breakPiggy()
                 if (gems > 0) ok("gems" to gems) else no("La hucha todavía está vacía")
             }
-            else -> no("Producto desconocido")
+            else -> {
+                val bundle = com.korkoor.pardos.domain.shop.ShopCatalog.byId(id)?.takeIf { it.kind == com.korkoor.pardos.domain.shop.ProductKind.BUNDLE }
+                    ?: return no("Producto desconocido")
+                wallet.addGems(bundle.gems)
+                col.addChests(com.korkoor.pardos.domain.collection.ChestType.RARE, bundle.rareChests)
+                ok("gems" to bundle.gems)
+            }
         }
     }
 
