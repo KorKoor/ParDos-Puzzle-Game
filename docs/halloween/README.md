@@ -1,6 +1,6 @@
 # Animación de la mega actualización de Halloween (Lottie)
 
-`halloween_mega_update.json` — animación vectorial en formato **Lottie** (JSON), 512×512, 30 fps, 90 cuadros (3 s) en bucle sin costura.
+`halloween_mega_update.json` — animación vectorial en formato **Lottie** (JSON), **1920×1080 (16:9), 60 fps**, 180 cuadros (3 s) en bucle sin costura y **menos de 200 KB** (hoy ~75 KB). El generador falla si se sale de esas medidas.
 Sin imágenes, sin emojis y sin texto (el texto se pone aparte en cada pantalla, así se traduce sin tocar la animación).
 
 Escena: luna con halo que respira, tres murciélagos que vuelan en bucle aleteando, calabaza que flota con la cara encendida (luz que parpadea),
