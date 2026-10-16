@@ -421,4 +421,5 @@
     <string name="ach_secret_boss_chain_desc">Defeat a boss with a combo of 6 or more.</string>
     <string name="ach_secret_hidden_title">Secret achievement</string>
     <string name="ach_secret_hidden_desc">Discover it by playing.</string>
+    <string name="calm_powerup">CALM</string>
 </resources>

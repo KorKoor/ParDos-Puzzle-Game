@@ -189,6 +189,9 @@ fun LevelSelectorScreen(
         // Mundo vivo detrás del mapa: cielo del capítulo, sol/luna, nubes, relieve y partículas
         MapBackdrop(chapter = visibleChapter, scrollPx = { listState.firstVisibleItemIndex * rowPx + listState.firstVisibleItemScrollOffset })
 
+        // Jefe de la semana: un jefe ya vencido para volver a vencerlo (monedas y un banner)
+        WeeklyBossChip(levels, onLevelSelected, Modifier.align(Alignment.TopCenter).padding(top = 138.dp))
+
         LazyColumn(
             state = listState,
             reverseLayout = true,
@@ -600,3 +603,27 @@ private fun ChapterSheet(
 }
 
 private fun lerpColor(c: Color): Color = androidx.compose.ui.graphics.lerp(c, Color.White, 0.3f)
+
+/** Chip flotante del mapa con el jefe de la semana. Si todavía no has vencido ningún jefe, no aparece. */
+@androidx.compose.runtime.Composable
+private fun WeeklyBossChip(levels: List<LevelInfo>, onLevelSelected: (LevelInfo) -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val store = remember(context) { com.korkoor.pardos.data.local.WeeklyBossStore(context) }
+    val level = remember(levels) { store.currentLevel() } ?: return
+    val info = levels.firstOrNull { it.id == level } ?: return
+    val claimed = remember(levels) { store.isClaimed() }
+    val name = remember(level) { com.korkoor.pardos.domain.level.LevelCatalog.spec(level).title }
+    androidx.compose.foundation.layout.Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.94f))
+            .clickable(enabled = !claimed) { onLevelSelected(info) }
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (claimed) "Jefe de la semana ($name): ¡vencido!" else "Jefe de la semana: $name · nivel $level · +${com.korkoor.pardos.domain.level.WeeklyBoss.REWARD_COINS} y un banner",
+            fontSize = 12.sp, fontWeight = FontWeight.Black, color = Navy
+        )
+    }
+}

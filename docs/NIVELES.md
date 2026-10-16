@@ -84,3 +84,9 @@ Son 40 recetas (los 8 de la recta final: Segador 44, Coloso de cristal 48, Reina
 ## Retos bonus por nivel (v3.7)
 
 Cada nivel de campaña desde el 4 (menos los jefes) trae un **reto bonus opcional** (`SideQuests`, en `shared/.../flow`): Ímpetu (llegar a ¡Imparable!), Mesa despejada (ganar con la mitad del tablero libre), Sobrado (con un cuarto de los movimientos sin usar; solo niveles con límite), Perfecto (3 estrellas) o Veloz (menos de 90 s). Siempre el mismo reto para el mismo nivel. Se ve como una píldora junto a las reglas, y al ganar el resumen dice si se cumplió (+20 a +25 monedas). No cambia las estrellas ni obliga a nada.
+
+## Calma, Frenesí y Jefe de la semana (v3.8)
+
+- **Calma** (poder nuevo en la barra, reloj de arena): durante las próximas 2 jugadas no cae ninguna ficha nueva. Enfriamiento de 15 min como Limpiar y Fusión (`useCalmPowerUp`).
+- **Frenesí** (`Frenzy` en `shared/.../flow`): al llegar al escalón FLOW del ímpetu, las siguientes 3 jugadas dan el doble de puntos; sale una pastilla "¡FRENESÍ! ×2" en la partida. Se gana jugando bien, no se compra.
+- **Jefe de la semana** (`WeeklyBoss`): cada semana se elige uno de los jefes que ya venciste (nunca salta niveles ni toca el progreso) y aparece como chip flotante en el mapa. Al volver a vencerlo esa semana: 300 monedas y un banner cosmético (rotación de 17; si ya lo tienes, solo las monedas). Con pruebas.

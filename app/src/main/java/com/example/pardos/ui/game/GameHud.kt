@@ -98,6 +98,7 @@ internal fun GameHeader(
     titleOverride: String? = null,
     /** Niveles de campaña ganados seguidos (0 = no se enseña). */
     winStreak: Int = 0,
+    frenzyLeft: Int = 0,
     /** Corazones que quedan en la torre (null = no se está en la torre). */
     towerHearts: Int? = null,
     /** Movimientos máximos para 3 y para 2 estrellas (null = no se enseñan las estrellas en vivo). */
@@ -149,6 +150,7 @@ internal fun GameHeader(
                 quest = if (towerHearts == null && state.gameMode == com.korkoor.pardos.domain.model.GameMode.CLASICO)
                     com.korkoor.pardos.domain.flow.SideQuests.forLevel(state.currentLevel, state.moveLimit != null, state.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS) else null
             )
+            com.korkoor.pardos.ui.game.components.FrenzyPill(frenzyLeft, Modifier.padding(top = if (compact) 2.dp else 6.dp))
             if (winStreak >= 2) FlamePill(winStreak, Modifier.padding(top = if (compact) 2.dp else 6.dp))
             if (towerHearts != null) TowerHearts(towerHearts, Modifier.padding(top = if (compact) 2.dp else 6.dp))
         }

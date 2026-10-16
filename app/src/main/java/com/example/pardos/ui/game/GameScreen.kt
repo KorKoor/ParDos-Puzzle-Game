@@ -287,6 +287,7 @@ fun GameScreen(
                                             onExtraTime = { viewModel.useExtraTime() },
                                             titleOverride = remoteTitle,
                                             winStreak = if (inCampaign) viewModel.winStreak else 0,
+                                            frenzyLeft = viewModel.frenzyLeft,
                                             towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null,
                                             starLimits = if (tutorialOn) null else starLimits,
                                             compact = compactGameLayout
@@ -426,6 +427,7 @@ fun GameScreen(
                                             onExtraTime = { viewModel.useExtraTime() },
                                             titleOverride = remoteTitle,
                                             winStreak = if (inCampaign) viewModel.winStreak else 0,
+                                            frenzyLeft = viewModel.frenzyLeft,
                                             towerHearts = if (viewModel.towerActive) viewModel.towerHearts else null,
                                             starLimits = if (tutorialOn) null else starLimits,
                                             compact = compactGameLayout

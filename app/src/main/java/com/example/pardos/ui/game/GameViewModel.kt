@@ -30,6 +30,7 @@ import kotlin.math.abs
 import androidx.core.content.edit
 
 private const val COOLDOWN_MS = 15 * 60 * 1000L // 15 minutos
+private const val CALM_MOVES = 2
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -214,6 +215,14 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Jugadas seguidas que fusionan en este nivel. */
     var flowStreak by mutableIntStateOf(0)
+        private set
+    /** Frenesí: jugadas que quedan con puntos dobles (se enciende al llegar a FLOW). */
+    var frenzyLeft by mutableIntStateOf(0)
+        private set
+    /** Calma: jugadas que quedan sin fichas nuevas. */
+    var calmMoves by mutableIntStateOf(0)
+        private set
+    var lastCalmTime by mutableLongStateOf(0L)
         private set
     var flowCallout by mutableStateOf<FlowCallout?>(null)
         private set
@@ -993,6 +1002,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         flowStreak = 0
         flowCallout = null
         peakFlowTier = com.korkoor.pardos.domain.flow.FlowTier.CALM
+        frenzyLeft = 0
+        calmMoves = 0
+        frenzyJustStarted = false
         lastStreakMilestone = null
         lastStreakBonusPct = 0
         lastFlowBonusPct = 0
@@ -1107,6 +1119,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 val newFlow = com.korkoor.pardos.domain.flow.FlowMeter.next(flowStreak, mergesCount > 0)
                 com.korkoor.pardos.domain.flow.FlowMeter.tierUp(flowStreak, newFlow)?.let { tier ->
                     flowCallout = FlowCallout(tier, ++calloutSeq)
+                    if (tier == com.korkoor.pardos.domain.flow.FlowTier.FLOW) frenzyJustStarted = true
                     onHapticFeedback(HapticFeedbackType.LongPress)
                     com.korkoor.pardos.audio.GameAudio.flowTier(tier.ordinal)
                     val id = calloutSeq
@@ -1123,7 +1136,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
                 // 🎲 GENERACIÓN INTELIGENTE (Aparición normal)
                 val finalTiles = movedTiles.toMutableList()
-                repeat(activeSpec?.dropsPerMove ?: 1) {
+                val calmNow = calmMoves > 0
+                if (calmNow) calmMoves--
+                repeat(if (calmNow) 0 else (activeSpec?.dropsPerMove ?: 1)) {
                     val newValue = pickNewTileValue(currentState.levelLimit)
                     gameEngine.spawnTileWithSpecificValue(finalTiles, newValue, 1)?.let { finalTiles.add(it) }
                 }
@@ -1164,7 +1179,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                     retention.onTileReached(maxTileValue)
                 }
 
-                val newScore = currentState.score + scoreGained
+                // Frenesí: puntos dobles las 3 jugadas siguientes a llegar a FLOW (la jugada que lo enciende no cuenta doble)
+                val boostedGain = com.korkoor.pardos.domain.flow.Frenzy.score(scoreGained, frenzyLeft)
+                frenzyLeft = com.korkoor.pardos.domain.flow.Frenzy.afterMove(frenzyLeft)
+                if (frenzyJustStarted) { frenzyLeft = com.korkoor.pardos.domain.flow.Frenzy.MOVES; frenzyJustStarted = false }
+                val newScore = currentState.score + boostedGain
                 val harvested = if (currentState.goal == LevelGoal.HARVEST) movedTiles.count { it.isMerged && it.value == currentState.levelLimit } else 0
                 val newStats = currentState.goalStats.after(mergesCount, if (currentState.goal == LevelGoal.COMBO) currentState.levelLimit else 0, harvested)
                 val reachedTarget = LevelRules.isGoalReached(
@@ -1494,7 +1513,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             economy.addCoins(lastCoinsEarned)
             // Reto bonus del nivel (opcional): si se cumplió, un pequeño extra de monedas
             com.korkoor.pardos.ui.game.components.QuestHud.result = null
+            com.korkoor.pardos.ui.game.components.QuestHud.weekly = null
             if (isCampaignRun() && !towerActive) {
+                com.korkoor.pardos.ui.game.components.QuestHud.weekly = com.korkoor.pardos.data.local.WeeklyBossStore(getApplication()).onLevelWon(_boardState.value.currentLevel)
                 val st = _boardState.value
                 com.korkoor.pardos.domain.flow.SideQuests.forLevel(st.currentLevel, st.moveLimit != null, st.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS)?.let { q ->
                     val free = st.boardSize * st.boardSize - st.blocked.size
@@ -1875,6 +1896,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun resetPowerUpCooldown(type: String) {
         if (type == "CLEAN") lastCleanTime = 0L
         if (type == "MERGE") lastMergeTime = 0L
+        if (type == "CALM") lastCalmTime = 0L
     }
 
     fun useCleanPowerUp() {
@@ -1886,6 +1908,15 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         lastCleanTime = System.currentTimeMillis()
         com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.BOARD_CLEAR)
         fireImpact(0.55f)
+    }
+
+    /** Calma: durante las próximas 2 jugadas no cae ninguna ficha nueva (respiro para ordenar el tablero). */
+    fun useCalmPowerUp() {
+        if (_boardState.value.tiles.isEmpty() || calmMoves > 0) return
+        calmMoves = CALM_MOVES
+        lastCalmTime = System.currentTimeMillis()
+        com.korkoor.pardos.audio.GameAudio.play(com.korkoor.pardos.audio.Sfx.MAGIC, 0.6f, 0.9f)
+        fireImpact(0.2f)
     }
 
     fun useMergePowerUp() {
@@ -1919,6 +1950,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         checkGameState(_boardState.value.tiles)
     }
 
+    private var frenzyJustStarted = false
     private var comboJob: Job? = null
     fun registerMerge() {
         comboJob?.cancel()

@@ -28,7 +28,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /** Los poderes del juego, cada uno con su icono dibujado a mano. */
-enum class PowerGlyph { UNDO, WAND, MERGE, BROOM, LINK }
+enum class PowerGlyph { UNDO, WAND, MERGE, BROOM, LINK, CALM }
 
 private val Gold2 = Color(0xFFFFE08A)
 
@@ -64,6 +64,7 @@ fun PowerGlyphIcon(
                     PowerGlyph.MERGE -> drawMerge(base, light, dark, t, enabled)
                     PowerGlyph.BROOM -> drawBroom(base, light, dark, t, enabled)
                     PowerGlyph.LINK -> drawLink(base, light, dark, t, enabled)
+                    PowerGlyph.CALM -> drawCalm(base, light, dark, t, enabled)
                 }
             }
         }
@@ -237,6 +238,29 @@ private fun DrawScope.drawBroom(base: Color, light: Color, dark: Color, t: Float
 }
 
 // ---------------------------------------------------------------- FUSIÓN MANUAL (dos fichas que se enlazan)
+
+/** Calma: un reloj de arena (el tiempo se detiene: no caen fichas nuevas un par de jugadas). */
+private fun DrawScope.drawCalm(base: Color, light: Color, dark: Color, t: Float, enabled: Boolean) {
+    val glass = Brush.verticalGradient(listOf(light, base), 14f, 86f)
+    val body = Path().apply {
+        moveTo(28f, 14f); lineTo(72f, 14f); lineTo(72f, 24f); lineTo(54f, 48f); lineTo(54f, 52f)
+        lineTo(72f, 76f); lineTo(72f, 86f); lineTo(28f, 86f); lineTo(28f, 76f); lineTo(46f, 52f); lineTo(46f, 48f); lineTo(28f, 24f); close()
+    }
+    drawPath(body, glass)
+    drawPath(body, dark.copy(alpha = 0.6f), style = Stroke(width = 3f, join = StrokeJoin.Round))
+    // arena: baja arriba y sube abajo despacio
+    val fall = (t * 2f) % 1f
+    drawRoundRect(Gold2, Offset(35f, 26f + 14f * fall), Size(30f, 12f * (1f - fall)), CornerRadius(3f))
+    drawLine(Gold2, Offset(50f, 48f), Offset(50f, 74f), strokeWidth = 2.2f, cap = StrokeCap.Round)
+    val pile = Path().apply { moveTo(32f, 84f); quadraticTo(50f, 66f - 10f * fall, 68f, 84f); close() }
+    drawPath(pile, Gold2)
+    drawRoundRect(dark, Offset(24f, 8f), Size(52f, 7f), CornerRadius(3f))
+    drawRoundRect(dark, Offset(24f, 85f), Size(52f, 7f), CornerRadius(3f))
+    if (enabled) {
+        sparkle(Offset(84f, 24f), 5f * tw(t, 0.2f), Gold2)
+        sparkle(Offset(14f, 70f), 4.5f * tw(t, 0.6f), light)
+    }
+}
 
 private fun DrawScope.drawLink(base: Color, light: Color, dark: Color, t: Float, enabled: Boolean) {
     val shift = 3f * tw(t, 0f)

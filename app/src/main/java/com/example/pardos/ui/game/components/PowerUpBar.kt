@@ -73,9 +73,9 @@ fun PowerUpBar(
     val adUndo = undos == 0 && viewModel.canUndo && viewModel.adUndoAllowed &&
             viewModel.adUndosUsed < com.korkoor.pardos.domain.shop.AdRewards.UNDO_ADS_PER_LEVEL
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-      val columns = if (showUndo) 5 else 4
+      val columns = if (showUndo) 6 else 5
       val baseWidth = 64.dp * columns.toFloat() + 6.dp * (columns - 1).toFloat() + 8.dp
-      val widthLimit = (maxWidth / baseWidth).coerceIn(0.8f, 1.1f)
+      val widthLimit = (maxWidth / baseWidth).coerceIn(0.68f, 1.1f)
       val controlScale = minOf(uiScale.coerceIn(0.8f, 1.1f), widthLimit)
       Row(
         modifier = Modifier.fillMaxWidth().padding(
@@ -113,6 +113,17 @@ fun PowerUpBar(
             compact = compact,
             uiScale = controlScale,
             onClick = onMergeClick
+        )
+        PowerUpButton(
+            label = stringResource(R.string.calm_powerup),
+            glyph = PowerGlyph.CALM,
+            color = Color(0xFF4AA3C7),
+            lastUseTime = viewModel.lastCalmTime,
+            viewModel = viewModel,
+            labelColor = labelColor,
+            compact = compact,
+            uiScale = controlScale,
+            onClick = { viewModel.useCalmPowerUp() }
         )
         PowerUpButton(
             label = stringResource(R.string.powerup_clean_manual),

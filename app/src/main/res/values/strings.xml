@@ -424,4 +424,5 @@
     <string name="ach_secret_boss_chain_desc">Vence a un jefe con un combo de 6 o más.</string>
     <string name="ach_secret_hidden_title">Logro secreto</string>
     <string name="ach_secret_hidden_desc">Descúbrelo jugando.</string>
+    <string name="calm_powerup">CALMA</string>
 </resources>
