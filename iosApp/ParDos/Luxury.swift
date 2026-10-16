@@ -273,3 +273,29 @@ struct SheetEntrance: ViewModifier {
             }
     }
 }
+
+/// Altura del contenido de la partida: si cabe en pantalla no se desplaza (así deslizar el tablero nunca mueve la pantalla).
+struct ContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// Fondo de botón redondo: marfil con borde de luz y sombra suave.
+struct LuxCircle: View {
+    var body: some View {
+        Circle()
+            .fill(LinearGradient(colors: [Color.white, Theme.cream], startPoint: .top, endPoint: .bottom))
+            .overlay(Circle().strokeBorder(LinearGradient(colors: [Color.white, Theme.ink.opacity(0.10)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
+            .shadow(color: Theme.ink.opacity(0.10), radius: 6, x: 0, y: 3)
+    }
+}
+
+/// Fondo de píldora (etiquetas, chips) con el mismo acabado.
+struct LuxCapsule: View {
+    var body: some View {
+        Capsule()
+            .fill(LinearGradient(colors: [Color.white, Theme.cream], startPoint: .top, endPoint: .bottom))
+            .overlay(Capsule().strokeBorder(LinearGradient(colors: [Color.white, Theme.ink.opacity(0.09)], startPoint: .top, endPoint: .bottom), lineWidth: 1))
+            .shadow(color: Theme.ink.opacity(0.07), radius: 4, x: 0, y: 2)
+    }
+}

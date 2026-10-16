@@ -56,7 +56,7 @@ struct MapView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(Color.white))
+                .background(LuxCapsule())
             }
             HStack(spacing: 8) {
                 CurrencyBar()
@@ -87,7 +87,7 @@ struct MapView: View {
                     .foregroundColor(Theme.ink)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(Color.white))
+                    .background(LuxCapsule())
                 }
             }
         }

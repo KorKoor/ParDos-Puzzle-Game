@@ -183,7 +183,7 @@ struct WatchAdButton: View {
                         .foregroundColor(color)
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(Color.white))
+                        .background(LuxCapsule())
                 }
             }
             .padding(.horizontal, 14)

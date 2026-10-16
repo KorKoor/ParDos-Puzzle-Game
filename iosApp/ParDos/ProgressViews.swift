@@ -32,7 +32,7 @@ struct AchievementBanner: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(rarityColor(ach.rarity))
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(Color.white))
+                        .background(LuxCircle())
                     VStack(alignment: .leading, spacing: 2) {
                         Text("LOGRO DESBLOQUEADO")
                             .font(.system(size: 9, weight: .heavy))

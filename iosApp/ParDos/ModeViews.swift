@@ -6,43 +6,102 @@ import SwiftUI
 struct PowerBar: View {
     @EnvironmentObject var model: AppModel
     @State private var now = Date()
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
     var body: some View {
+        let total = max(1, model.powerCooldownMs)
         let cleanLeft = model.powerRemaining(model.lastClean, now: now)
         let mergeLeft = model.powerRemaining(model.lastMerge, now: now)
         let calmLeft = model.powerRemaining(model.lastCalm, now: now)
         let calmOn = model.snap?.calm ?? 0
         let price = model.eco?.powerPrice ?? 80
-        return HStack(spacing: 8) {
-            power("sparkles", "Limpiar", Theme.accent, cleanLeft > 0 ? formatClock(ms: cleanLeft) : nil) { model.useClean() }
-            power("leaf.fill", "Calma", Color(hex: 0x4F8F72), calmOn > 0 ? "\(calmOn) jugadas" : (calmLeft > 0 ? formatClock(ms: calmLeft) : nil)) { model.useCalm() }
-            power("arrow.triangle.merge", "Fusión", Theme.gold, mergeLeft > 0 ? formatClock(ms: mergeLeft) : nil) { model.useMerge() }
-            power("trash.fill", "Escoba", Theme.energy, "\(price)") { model.beginSelect("BROOM") }
-            power("link", "Unir", Color(hex: 0x4E8FA6), "\(price)") { model.beginSelect("LINK") }
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        return HStack(spacing: 4) {
+            PowerButton(symbol: "sparkles", title: "Limpiar", tint: Theme.accent, left: cleanLeft, total: total) { model.useClean() }
+            PowerButton(symbol: "leaf.fill", title: "Calma", tint: Color(hex: 0x4F8F72), left: calmLeft, total: total, activeText: calmOn > 0 ? "\(calmOn) jugadas" : nil) { model.useCalm() }
+            PowerButton(symbol: "arrow.triangle.merge", title: "Fusión", tint: Theme.gold, left: mergeLeft, total: total) { model.useMerge() }
+            PowerButton(symbol: "trash.fill", title: "Escoba", tint: Theme.energy, price: price) { model.beginSelect("BROOM") }
+            PowerButton(symbol: "link", title: "Unir", tint: Color(hex: 0x4E8FA6), price: price) { model.beginSelect("LINK") }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 10)
+        .background(
+            ZStack {
+                shape.fill(Color.white.opacity(0.82))
+                shape.fill(LinearGradient(colors: [Color.white.opacity(0.7), Color.white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.4)))
+                shape.strokeBorder(LinearGradient(colors: [Color.white, Theme.ink.opacity(0.10)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+            }
+        )
+        .shadow(color: Theme.ink.opacity(0.10), radius: 14, x: 0, y: 8)
+        .padding(.horizontal, 14)
         .onReceive(timer) { value in now = value }
     }
+}
 
-    private func power(_ symbol: String, _ title: String, _ color: Color, _ detail: String?, action: @escaping () -> Void) -> some View {
+/// Un poder: botón redondo con degradado, anillo que se llena mientras se recarga, brillo cuando está listo y su precio o estado debajo.
+struct PowerButton: View {
+    let symbol: String
+    let title: String
+    let tint: Color
+    var left: Int = 0
+    var total: Int = 1
+    var price: Int? = nil
+    var activeText: String? = nil
+    let action: () -> Void
+
+    private var ready: Bool { left <= 0 }
+    private var progress: CGFloat { CGFloat(max(0, min(1, 1 - Double(left) / Double(max(1, total))))) }
+
+    var body: some View {
         Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: symbol)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 38, height: 38)
-                    .background(Circle().fill(color))
+            VStack(spacing: 5) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(colors: ready ? [tint.shade(0.2), tint] : [Color(hex: 0xC9CCD6), Color(hex: 0xA9ADBA)], startPoint: .top, endPoint: .bottom))
+                    Circle()
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.45), Color.white.opacity(0)], startPoint: .top, endPoint: .center))
+                        .padding(2)
+                    Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1)
+                    Image(systemName: symbol)
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundColor(.white)
+                        .shadow(color: Color.black.opacity(0.2), radius: 1, y: 1)
+                    if !ready {
+                        Circle()
+                            .trim(from: 0, to: progress)
+                            .stroke(Color.white.opacity(0.95), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .padding(3)
+                    }
+                }
+                .frame(width: 50, height: 50)
+                .shadow(color: ready ? tint.opacity(0.45) : Color.clear, radius: 8, x: 0, y: 4)
                 Text(loc(title))
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .foregroundColor(Theme.ink)
-                Text(detail ?? "listo")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(Theme.ink.opacity(0.45))
+                    .foregroundColor(Theme.ink.opacity(ready ? 0.9 : 0.45))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                footer
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(ToyPressStyle())
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        if let active = activeText {
+            Text(active).font(.system(size: 9, weight: .heavy)).foregroundColor(tint)
+        } else if !ready {
+            Text(formatClock(ms: left)).font(.system(size: 9, weight: .bold)).foregroundColor(Theme.ink.opacity(0.45)).monospacedDigit()
+        } else if let price = price {
+            HStack(spacing: 2) {
+                CoinIcon(size: 11)
+                Text("\(price)").font(.system(size: 9, weight: .heavy, design: .rounded)).foregroundColor(Theme.ink.opacity(0.7))
+            }
+        } else {
+            Text(loc("listo")).font(.system(size: 9, weight: .heavy)).foregroundColor(tint)
+        }
     }
 }
 

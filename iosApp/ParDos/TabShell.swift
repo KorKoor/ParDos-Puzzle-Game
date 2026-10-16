@@ -138,7 +138,7 @@ struct StateErrorCard: View {
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundColor(Theme.ink)
                         .padding(.horizontal, 16).padding(.vertical, 9)
-                        .background(Capsule().fill(Color.white))
+                        .background(LuxCapsule())
                 }
             }
         }

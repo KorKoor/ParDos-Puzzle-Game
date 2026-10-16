@@ -5,6 +5,7 @@ import SwiftUI
 struct GameView: View {
     @EnvironmentObject var model: AppModel
     @State private var confirmExit = false
+    @State private var contentHeight: CGFloat = 0
     @AppStorage("dpad_on") private var dpadOn = false
     private let clock = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
 
@@ -18,26 +19,15 @@ struct GameView: View {
             if let snap = model.snap {
                 GeometryReader { geo in
                     let boardSide = min(geo.size.width - 28, max(220, geo.size.height * 0.42))
-                    ScrollView(.vertical) {
-                        VStack(spacing: 12) {
-                            topBar(snap, style)
-                            if model.mode == .tower { TowerHearts() }
-                            GoalCard(snap: snap)
-                            if model.mode == .campaign, let title = snap.questTitle { QuestPill(title: title, hint: snap.questHint ?? "", coins: snap.questCoins ?? 0, done: snap.questDone == true) }
-                            RuleChips(snap: snap)
-                            BoardView(snap: snap, hint: currentGuide(snap))
-                                .frame(height: boardSide)
-                                .padding(.horizontal, 14)
-                            StatsRow(snap: snap)
-                            if dpadOn || UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning {
-                                DirectionPad()
-                            }
-                            if model.selectMode != nil { SelectBanner() }
-                            bottom(snap)
+                    let fits = contentHeight > 0 && contentHeight <= geo.size.height
+                    Group {
+                        if fits {
+                            gameColumn(snap, style, boardSide).frame(maxHeight: .infinity, alignment: .top)
+                        } else {
+                            ScrollView(.vertical) { gameColumn(snap, style, boardSide) }
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 6)
                     }
+                    .onPreferenceChange(ContentHeightKey.self) { contentHeight = $0 }
                 }
                 if snap.status != "playing" {
                     if model.mode == .campaign || model.mode == .daily {
@@ -102,6 +92,29 @@ struct GameView: View {
         }
     }
 
+    @ViewBuilder
+    private func gameColumn(_ snap: BoardSnap, _ style: BoardStyle, _ boardSide: CGFloat) -> some View {
+        VStack(spacing: 12) {
+                            topBar(snap, style)
+                            if model.mode == .tower { TowerHearts() }
+                            GoalCard(snap: snap)
+                            if model.mode == .campaign, let title = snap.questTitle { QuestPill(title: title, hint: snap.questHint ?? "", coins: snap.questCoins ?? 0, done: snap.questDone == true) }
+                            RuleChips(snap: snap)
+                            BoardView(snap: snap, hint: currentGuide(snap))
+                                .frame(height: boardSide)
+                                .padding(.horizontal, 14)
+                            StatsRow(snap: snap)
+                            if dpadOn || UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning {
+                                DirectionPad()
+                            }
+                            if model.selectMode != nil { SelectBanner() }
+                            bottom(snap)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
+        .background(GeometryReader { g in Color.clear.preference(key: ContentHeightKey.self, value: g.size.height) })
+    }
+
     private func leave(_ snap: BoardSnap) {
         if snap.status == "playing" && snap.moves > 0 {
             confirmExit = true
@@ -125,7 +138,7 @@ struct GameView: View {
                     .font(.system(size: 17, weight: .bold))
                     .foregroundColor(Theme.ink)
                     .frame(width: 42, height: 42)
-                    .background(Circle().fill(Color.white))
+                    .background(LuxCircle())
             }
             .accessibilityLabel("Salir del nivel")
             VStack(alignment: .leading, spacing: 1) {
@@ -143,7 +156,7 @@ struct GameView: View {
                     .font(.system(size: 17, weight: .bold))
                     .foregroundColor(Theme.ink)
                     .frame(width: 42, height: 42)
-                    .background(Circle().fill(Color.white))
+                    .background(LuxCircle())
             }
             .accessibilityLabel("Reiniciar el nivel")
         }
@@ -195,23 +208,28 @@ struct GameView: View {
 
     private func actionButton(_ symbol: String, _ title: String, count: Int?, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: symbol)
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(LinearGradient(colors: enabled ? [Theme.accent.shade(0.16), Theme.accent] : [Color(hex: 0xD2D4DC), Color(hex: 0xB9BCC8)], startPoint: .top, endPoint: .bottom))
+                    Image(systemName: symbol).font(.system(size: 13, weight: .bold)).foregroundColor(.white)
+                }
+                .frame(width: 30, height: 30)
                 Text(loc(title)).font(.system(size: 14, weight: .heavy, design: .rounded))
                 if let count = count {
                     Text("\(count)")
                         .font(.system(size: 11, weight: .black, design: .rounded))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 7)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(count > 0 ? Theme.accent : Color.gray.opacity(0.6)))
+                        .background(Capsule().fill(count > 0 ? Theme.gold : Color.gray.opacity(0.55)))
                 }
             }
             .foregroundColor(enabled ? Theme.ink : Theme.ink.opacity(0.3))
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+            .frame(height: 52)
+            .card(radius: 18)
         }
+        .buttonStyle(ToyPressStyle())
         .disabled(!enabled)
     }
 }
@@ -253,9 +271,7 @@ struct GoalCard: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.1))
-                    Capsule()
-                        .fill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(8, geo.size.width * CGFloat(min(1, max(0, snap.progress)))))
+                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(min(1, max(0, snap.progress)))))
                 }
             }
             .frame(height: 8)
@@ -274,7 +290,7 @@ struct GoalCard: View {
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Color.white))
+        .card(radius: 20)
         .padding(.horizontal, 16)
     }
 }
@@ -336,7 +352,7 @@ struct StatsRow: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+        .card(radius: 18)
     }
 
     private func clock(_ ms: Int) -> String {
@@ -375,7 +391,7 @@ struct CoachCard: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color.white))
+        .card(radius: 24)
         .padding(.horizontal, 16)
     }
 }
@@ -619,7 +635,7 @@ struct ResultOverlay: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Color.white))
+        .background(LuxCapsule())
     }
 
     private func goalLine(_ goal: NextGoalInfo) -> some View {
@@ -632,7 +648,7 @@ struct ResultOverlay: View {
             Spacer()
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color.white))
+        .card(radius: 12)
     }
 
     // MARK: Botones

@@ -60,7 +60,7 @@ struct AlbumView: View {
                 .foregroundColor(Theme.ink)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(Color.white))
+                .background(LuxCapsule())
             }
             Button(action: { onlyMissing.toggle() }) {
                 HStack(spacing: 4) {
