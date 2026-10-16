@@ -299,3 +299,137 @@ struct LuxCapsule: View {
             .shadow(color: Theme.ink.opacity(0.07), radius: 4, x: 0, y: 2)
     }
 }
+
+// MARK: - Fondo del mapa
+
+/// Mezcla de dos colores (t de 0 a 1).
+func lerpColor(_ a: Color, _ b: Color, _ t: Double) -> Color {
+    let x = ArtColor.from(a).resolve([:], [:])
+    let y = ArtColor.from(b).resolve([:], [:])
+    let k = max(0, min(1, t))
+    return Color(.sRGB, red: x.r + (y.r - x.r) * k, green: x.g + (y.g - x.g) * k, blue: x.b + (y.b - x.b) * k, opacity: 1)
+}
+
+/// Número "al azar" repetible: el mismo nivel y el mismo índice dan siempre lo mismo (así el fondo no salta al recargar).
+func mapNoise(_ i: Int, _ level: Int) -> Double {
+    let v = sin(Double(i * 127 + level * 311) * 12.9898) * 43758.5453
+    return v - floor(v)
+}
+
+/// Fondo de cada tramo del mapa: el cielo se va convirtiendo en suelo a lo largo del capítulo (sin cortes entre filas),
+/// con bordes más oscuros y partículas propias de cada mundo (pétalos, luciérnagas, nieve, arena, estrellas, luces).
+struct MapBackdropRow: View {
+    let level: Int
+    let theme: ChapterTheme
+
+    var body: some View {
+        let pos = Double((level - 1) % Chapters.size)
+        let n = Double(Chapters.size)
+        let sky: Color = theme.night ? theme.color.shade(-0.5) : theme.color.shade(0.34)
+        let ground: Color = theme.night ? theme.color.shade(-0.2) : theme.color.shade(-0.12)
+        let top: Color = lerpColor(sky, ground, pos / n)
+        let bottom: Color = lerpColor(sky, ground, (pos + 1) / n)
+        return ZStack {
+            LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [Color.black.opacity(0.14), Color.clear, Color.clear, Color.black.opacity(0.14)], startPoint: .leading, endPoint: .trailing)
+            MapAmbience(level: level, scenery: theme.scenery, night: theme.night)
+        }
+    }
+}
+
+/// Partículas suaves de cada mundo. Quietas con "Reducir movimiento" o con el ahorro de energía.
+struct MapAmbience: View {
+    let level: Int
+    let scenery: String
+    let night: Bool
+
+    var body: some View {
+        if UIAccessibility.isReduceMotionEnabled || !PowerMonitor.shared.heavyEffects {
+            Canvas { ctx, size in
+                var c = ctx
+                MapAmbience.draw(&c, size, 0, level, scenery, night)
+            }
+            .allowsHitTesting(false)
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 12.0)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                Canvas { ctx, size in
+                    var c = ctx
+                    MapAmbience.draw(&c, size, t, level, scenery, night)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    static func draw(_ ctx: inout GraphicsContext, _ size: CGSize, _ t: Double, _ level: Int, _ scenery: String, _ night: Bool) {
+        let w = size.width
+        let h = size.height
+        // bruma que cruza despacio
+        let mistX = CGFloat(((t * 6 + mapNoise(1, level) * Double(w)).truncatingRemainder(dividingBy: Double(w) * 1.6))) - w * 0.3
+        let mist = Path(ellipseIn: CGRect(x: mistX - w * 0.35, y: h * 0.55, width: w * 0.7, height: h * 0.45))
+        ctx.fill(mist, with: .color(Color.white.opacity(night ? 0.05 : 0.10)))
+
+        switch scenery {
+        case "cherry":
+            for i in 0..<9 {
+                let speed = 9.0 + mapNoise(i, level + 3) * 11.0
+                let y = CGFloat((mapNoise(i, level + 5) * Double(h) + t * speed).truncatingRemainder(dividingBy: Double(h) + 24)) - 12
+                let x = CGFloat(mapNoise(i, level + 7)) * w + CGFloat(sin(t * 0.8 + Double(i))) * 14
+                var c = ctx
+                c.translateBy(x: x, y: y)
+                c.rotate(by: .radians(t * 0.9 + Double(i)))
+                c.fill(Path(ellipseIn: CGRect(x: -4.5, y: -2.5, width: 9, height: 5)), with: .color(Color(hex: 0xFFC2D4).opacity(0.85)))
+            }
+        case "pines", "bamboo", "lavender", "hills":
+            for i in 0..<9 {
+                let bx = CGFloat(mapNoise(i, level + 11)) * w
+                let by = CGFloat(mapNoise(i, level + 13)) * h
+                let x = bx + CGFloat(sin(t * 0.4 + Double(i) * 2.0)) * 18
+                let y = by + CGFloat(cos(t * 0.35 + Double(i) * 1.3)) * 12
+                let glow = 0.25 + 0.75 * max(0, sin(t * 1.4 + Double(i) * 1.7))
+                let r: CGFloat = 11
+                ctx.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
+                         with: .radialGradient(Gradient(colors: [Color(hex: 0xFFF3A8).opacity(0.5 * glow), .clear]), center: CGPoint(x: x, y: y), startRadius: 0, endRadius: r))
+                ctx.fill(Path(ellipseIn: CGRect(x: x - 1.8, y: y - 1.8, width: 3.6, height: 3.6)), with: .color(Color(hex: 0xFFFBD0).opacity(0.4 + 0.6 * glow)))
+            }
+        case "mountains", "clouds":
+            for i in 0..<12 {
+                let speed = 12.0 + mapNoise(i, level + 3) * 14.0
+                let y = CGFloat((mapNoise(i, level + 5) * Double(h) + t * speed).truncatingRemainder(dividingBy: Double(h) + 10)) - 5
+                let x = CGFloat(mapNoise(i, level + 7)) * w + CGFloat(sin(t * 0.6 + Double(i))) * 8
+                let r = CGFloat(1.2 + mapNoise(i, level + 9) * 2.2)
+                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(Color.white.opacity(0.8)))
+            }
+        case "dunes", "gold_dunes", "river":
+            for i in 0..<10 {
+                let speed = 10.0 + mapNoise(i, level + 3) * 16.0
+                let x = CGFloat((mapNoise(i, level + 5) * Double(w) + t * speed).truncatingRemainder(dividingBy: Double(w) + 20)) - 10
+                let y = CGFloat(mapNoise(i, level + 7)) * h + CGFloat(sin(t * 0.9 + Double(i))) * 5
+                let a = 0.25 + 0.5 * max(0, sin(t * 1.6 + Double(i) * 2.1))
+                ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: 3, height: 3)), with: .color(Color(hex: 0xFFE9A8).opacity(a)))
+            }
+        case "moon", "lanterns":
+            for i in 0..<10 {
+                let x = CGFloat(mapNoise(i, level + 11)) * w
+                let y = CGFloat(mapNoise(i, level + 13)) * h
+                let a = 0.25 + 0.75 * max(0, sin(t * 1.1 + Double(i) * 1.9))
+                let r = CGFloat(2.0 + mapNoise(i, level + 17) * 3.0)
+                var p = Path()
+                p.move(to: CGPoint(x: x - r, y: y)); p.addLine(to: CGPoint(x: x + r, y: y))
+                p.move(to: CGPoint(x: x, y: y - r)); p.addLine(to: CGPoint(x: x, y: y + r))
+                ctx.stroke(p, with: .color(Color.white.opacity(a)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
+            }
+        default:
+            for i in 0..<7 {
+                let bx = CGFloat(mapNoise(i, level + 11)) * w
+                let by = CGFloat(mapNoise(i, level + 13)) * h
+                let x = bx + CGFloat(sin(t * 0.25 + Double(i))) * 16
+                let y = by + CGFloat(cos(t * 0.2 + Double(i) * 1.4)) * 10
+                let r = CGFloat(8 + mapNoise(i, level + 17) * 16)
+                ctx.fill(Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
+                         with: .radialGradient(Gradient(colors: [Color.white.opacity(0.22), .clear]), center: CGPoint(x: x, y: y), startRadius: 0, endRadius: r))
+            }
+        }
+    }
+}

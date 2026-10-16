@@ -26,6 +26,7 @@ struct MapView: View {
                             VStack(spacing: 0) {
                                 if (level - 1) % Chapters.size == 0 {
                                     ChapterBanner(chapter: Chapters.index(of: level))
+                                        .background(MapBackdropRow(level: level, theme: Chapters.theme(Chapters.index(of: level))))
                                 }
                                 LevelRow(level: level)
                             }
@@ -270,7 +271,7 @@ struct LevelRow: View {
             .frame(maxWidth: .infinity)
             .background(
                 ZStack {
-                    LinearGradient(colors: [theme.color.opacity(0.10), theme.color.opacity(0.16)], startPoint: .top, endPoint: .bottom)
+                    MapBackdropRow(level: level, theme: theme)
                     MapRoad(level: level, tint: tint, locked: locked, done: level < model.unlocked)
                 }
             )
