@@ -54,6 +54,22 @@ struct BossEmblemView: View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             Canvas { ctx, sz in
+                EmblemPainter.paint(&ctx, sz, motif, t, locked, pal)
+            }
+            .frame(width: size, height: size)
+            .background(
+                Circle().fill(LinearGradient(colors: [pal.bg, pal.bg.opacity(0.85)], startPoint: .top, endPoint: .bottom))
+            )
+            .clipShape(Circle())
+            .overlay(Circle().stroke((locked ? Color.gray : pal.main).opacity(0.55), lineWidth: 2))
+            .shadow(color: (locked ? Color.clear : pal.main).opacity(0.35), radius: 10, y: 4)
+        }
+    }
+}
+
+/// Dibuja cada escena de jefe. Va en una función aparte para que el compilador no tarde una eternidad en revisar un cierre gigante.
+enum EmblemPainter {
+    static func paint(_ ctx: inout GraphicsContext, _ sz: CGSize, _ motif: String, _ t: Double, _ locked: Bool, _ pal: (bg: Color, main: Color, glow: Color)) {
                 let w = sz.width, h = sz.height
                 let c = CGPoint(x: w / 2, y: h / 2)
                 let main = locked ? Color(hex: 0x4A4A55) : pal.main
@@ -138,7 +154,9 @@ struct BossEmblemView: View {
                     ctx.fill(lid, with: .color(main.opacity(0.25)))
                     ctx.stroke(lid, with: .color(main), style: style)
                     let look = sin(t * 0.9) * w * 0.07
-                    let blink = max(0.08, 1 - 0.92 * max(0, sin(t * 1.3 - 1.2) - 0.96) * 25)
+                    let blinkWave: Double = sin(t * 1.3 - 1.2) - 0.96
+                    let blinkAmount: Double = max(0.0, blinkWave) * 25.0
+                    let blink: Double = max(0.08, 1.0 - 0.92 * blinkAmount)
                     let ir = w * 0.15
                     ctx.fill(Path(ellipseIn: CGRect(x: c.x - ir + look, y: c.y - ir * blink, width: ir * 2, height: ir * 2 * blink)), with: .color(glow))
                     ctx.fill(Path(ellipseIn: CGRect(x: c.x - ir * 0.4 + look, y: c.y - ir * 0.4 * blink, width: ir * 0.8, height: ir * 0.8 * blink)), with: .color(pal.bg))
@@ -170,7 +188,10 @@ struct BossEmblemView: View {
                         ctx.stroke(hz, with: .color(main.opacity(0.8)), style: StrokeStyle(lineWidth: lw * 0.6, lineCap: .round))
                     }
                     let k = (t * 0.6).truncatingRemainder(dividingBy: 1)
-                    ctx.fill(Path(ellipseIn: CGRect(x: ox + cell * (0.35 + 3.0 * k), y: oy + cell * (0.35 + 1.0 * abs(sin(k * .pi * 2))), width: cell * 0.3, height: cell * 0.3)), with: .color(glow))
+                    let ballX: CGFloat = ox + cell * CGFloat(0.35 + 3.0 * k)
+                    let ballY: CGFloat = oy + cell * CGFloat(0.35 + abs(sin(k * Double.pi * 2)))
+                    let ball = CGRect(x: ballX, y: ballY, width: cell * 0.3, height: cell * 0.3)
+                    ctx.fill(Path(ellipseIn: ball), with: .color(glow))
                 case "FIRE":
                     for k in 0..<3 {
                         let sway = sin(t * 3 + Double(k) * 1.7) * w * 0.03
@@ -193,15 +214,6 @@ struct BossEmblemView: View {
                     let shake = sin(t * 8) * (sin(t * 0.7) > 0.9 ? 2 : 0)
                     ctx.stroke(Path(roundedRect: CGRect(x: w * 0.12 + CGFloat(shake), y: h * 0.20, width: w * 0.78, height: h * 0.60), cornerRadius: 6), with: .color(glow.opacity(0.7)), style: StrokeStyle(lineWidth: lw * 0.5))
                 }
-            }
-            .frame(width: size, height: size)
-            .background(
-                Circle().fill(LinearGradient(colors: [pal.bg, pal.bg.opacity(0.85)], startPoint: .top, endPoint: .bottom))
-            )
-            .clipShape(Circle())
-            .overlay(Circle().stroke((locked ? Color.gray : pal.main).opacity(0.55), lineWidth: 2))
-            .shadow(color: (locked ? Color.clear : pal.main).opacity(0.35), radius: 10, y: 4)
-        }
     }
 }
 

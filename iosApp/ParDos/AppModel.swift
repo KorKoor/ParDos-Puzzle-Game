@@ -929,7 +929,10 @@ final class AppModel: ObservableObject {
             }
             reward = decodeJSON(WinReward.self, json)
             if !s.daily, let wb = decodeJSON(ActionResult.self, act { $0.weeklyBossWon(level: Int32(s.level)) }), wb.ok { showToast("Jefe de la semana vencido") }
-            if s.questDone == true, let coins = s.questCoins, coins > 0, !s.daily { _ = act { $0.grantCoins(n: Int32(coins)) } }
+            if s.questDone == true, let coins = s.questCoins, coins > 0, !s.daily { _ = act { m in
+                    m.grantCoins(n: Int32(coins))
+                    return "{}"
+                } }
             if s.tutorialDone { defaults.set(true, forKey: "tutorial_done") }
             if s.daily {
                 defaults.set(true, forKey: "daily_done_\(localDay())")
