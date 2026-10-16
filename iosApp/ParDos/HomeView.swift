@@ -96,7 +96,7 @@ struct HomeView: View {
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     Capsule().fill(Color.black.opacity(0.18))
-                                    Capsule().fill(Theme.gold).frame(width: max(6, geo.size.width * CGFloat(fraction)))
+                                    LuxFill(Theme.gold, width: max(6, geo.size.width * CGFloat(fraction)))
                                 }
                             }
                             .frame(height: 7)

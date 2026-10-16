@@ -325,7 +325,7 @@ struct SectionTitle: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Capsule().fill(Theme.accent).frame(width: 4, height: 13)
+            Capsule().fill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .top, endPoint: .bottom)).frame(width: 4, height: 13)
             Text(loc(text).uppercased())
                 .font(.system(size: 11, weight: .heavy))
                 .kerning(2.5)

@@ -110,8 +110,7 @@ struct AlbumView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.08))
-                    Capsule().fill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(8, geo.size.width * CGFloat(fraction)))
+                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(fraction)))
                 }
             }
             .frame(height: 10)

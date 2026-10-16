@@ -229,8 +229,7 @@ struct SeasonSheet: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.1))
-                    Capsule().fill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(8, geo.size.width * CGFloat(fraction)))
+                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(fraction)))
                 }
             }
             .frame(height: 10)
@@ -401,7 +400,7 @@ struct LeagueSheet: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.08))
-                    Capsule().fill(Theme.gold).frame(width: max(8, geo.size.width * CGFloat(fraction)))
+                    LuxFill(Theme.gold, width: max(8, geo.size.width * CGFloat(fraction)))
                     Rectangle().fill(Color(hex: 0xE0475B)).frame(width: 2, height: 14)
                         .offset(x: geo.size.width * CGFloat(min(1.0, Double(league.keep) / Double(max(1, league.promote)))))
                 }

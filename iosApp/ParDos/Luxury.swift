@@ -175,3 +175,23 @@ struct LightRays: View {
         .allowsHitTesting(false)
     }
 }
+
+/// Relleno de barra de progreso: crece con muelle cuando cambia el valor y lleva un brillo de cristal arriba.
+struct LuxFill<S: ShapeStyle>: View {
+    let style: S
+    let width: CGFloat
+
+    init(_ style: S, width: CGFloat) {
+        self.style = style
+        self.width = width
+    }
+
+    var body: some View {
+        Capsule().fill(style)
+            .overlay(
+                Capsule().fill(LinearGradient(colors: [Color.white.opacity(0.38), Color.white.opacity(0)], startPoint: .top, endPoint: .center))
+            )
+            .frame(width: width)
+            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: width)
+    }
+}

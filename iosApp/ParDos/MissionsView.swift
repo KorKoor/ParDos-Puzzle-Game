@@ -64,8 +64,7 @@ struct MissionRow: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.ink.opacity(0.08))
-                        Capsule().fill(mission.done ? Theme.accent : Theme.gold)
-                            .frame(width: max(5, geo.size.width * CGFloat(fraction)))
+                        LuxFill(mission.done ? Theme.accent : Theme.gold, width: max(5, geo.size.width * CGFloat(fraction)))
                     }
                 }
                 .frame(height: 6)
@@ -121,8 +120,7 @@ struct WeeklyRow: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.ink.opacity(0.08))
-                        Capsule().fill(item.done ? Theme.accent : Color(hex: 0x4E8FA6))
-                            .frame(width: max(5, geo.size.width * CGFloat(fraction)))
+                        LuxFill(item.done ? Theme.accent : Color(hex: 0x4E8FA6), width: max(5, geo.size.width * CGFloat(fraction)))
                     }
                 }
                 .frame(height: 6)

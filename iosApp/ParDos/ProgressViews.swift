@@ -122,8 +122,7 @@ struct AchievementsSheet: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.08))
-                    Capsule().fill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(8, geo.size.width * CGFloat(fraction)))
+                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(fraction)))
                 }
             }
             .frame(height: 9)
@@ -232,8 +231,7 @@ struct PrestigeSheet: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.08))
-                    Capsule().fill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(8, geo.size.width * CGFloat(data.progress)))
+                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(data.progress)))
                 }
             }
             .frame(height: 10)
@@ -328,7 +326,7 @@ struct PrestigeSheet: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.ink.opacity(0.08))
-                    Capsule().fill(Color(hex: 0x9AA3B5)).frame(width: max(8, geo.size.width * CGFloat(fraction)))
+                    LuxFill(Color(hex: 0x9AA3B5), width: max(8, geo.size.width * CGFloat(fraction)))
                 }
             }
             .frame(height: 8)
@@ -390,7 +388,7 @@ struct PrestigeSheet: View {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule().fill(Theme.ink.opacity(0.08))
-                        Capsule().fill(item.done ? Theme.accent : Theme.gold).frame(width: max(4, geo.size.width * CGFloat(fraction)))
+                        LuxFill(item.done ? Theme.accent : Theme.gold, width: max(4, geo.size.width * CGFloat(fraction)))
                     }
                 }
                 .frame(height: 5)
