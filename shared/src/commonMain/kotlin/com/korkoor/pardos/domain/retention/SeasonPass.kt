@@ -102,6 +102,9 @@ object SeasonPass {
     const val POINTS_PER_TIER = Economy.SEASON_POINTS_PER_TIER
     const val TOTAL_POINTS = TIERS * POINTS_PER_TIER
 
+    /** El pase llegaba hasta aquí antes de ampliarse a 80 niveles: su gran final (skin incluida) se queda en este nivel para no quitarle nada a nadie. */
+    const val CLASSIC_FINAL = 30
+
     /** Niveles completados con [points] puntos (0..30). */
     fun tierFor(points: Int): Int = (points / POINTS_PER_TIER).coerceIn(0, TIERS)
 
@@ -161,21 +164,21 @@ object SeasonPass {
     fun freeReward(tier: Int, seasonId: Int = 0): SeasonReward {
         require(tier in 1..TIERS)
         val chest = when {
-            tier == TIERS -> ChestType.RARE
+            tier == CLASSIC_FINAL || tier == TIERS -> ChestType.RARE
             tier == 20 -> ChestType.RARE
             tier % 5 == 0 -> ChestType.COMMON
             else -> null
         }
         return SeasonReward(
             coins = 25 + 4 * tier,
-            gems = if (tier == TIERS) 10 else if (tier % 5 == 0) 3 else 0,
+            gems = if (tier == CLASSIC_FINAL || tier == TIERS) 10 else if (tier % 5 == 0) 3 else 0,
             chest = chest,
             freezes = if (tier == 10 || tier == 20) 1 else 0,
             undos = if (tier == 7 || tier == 17 || tier == 27) 2 else 0,
             avatar = freeAvatar(tier, seasonId),
             banner = freeBanner(tier, seasonId),
             fx = if (tier == FREE_FX_TIER) FREE_FX else null,
-            tokens = if (tier == TIERS) 2 else if (tier % 10 == 5) 1 else 0
+            tokens = if (tier == CLASSIC_FINAL || tier == TIERS) 2 else if (tier % 10 == 5) 1 else 0
         )
     }
 
@@ -183,25 +186,25 @@ object SeasonPass {
     fun premiumReward(tier: Int, seasonId: Int): SeasonReward {
         require(tier in 1..TIERS)
         val chest = when {
-            tier == TIERS || tier == 20 || tier == 10 || tier == 25 -> ChestType.EPIC
+            tier == CLASSIC_FINAL || tier == TIERS || tier == 20 || tier == 10 || tier == 25 || tier == 50 || tier == 65 -> ChestType.EPIC
             tier % 5 == 0 -> ChestType.RARE
             else -> null
         }
         return SeasonReward(
             coins = 60 + 9 * tier,
-            gems = (if (tier % 3 == 0) 5 else 0) + (if (tier % 5 == 0) 6 else 0) + (if (tier == TIERS) 25 else 0),
+            gems = (if (tier % 3 == 0) 5 else 0) + (if (tier % 5 == 0) 6 else 0) + (if (tier == CLASSIC_FINAL || tier == TIERS) 25 else 0),
             chest = chest,
             freezes = if (tier == 8 || tier == 18 || tier == 28) 1 else 0,
             undos = if (tier == 4 || tier == 14 || tier == 24 || tier == 9 || tier == 19 || tier == 29) 3 else 0,
-            skin = if (tier == TIERS) SeasonCalendar.skinFor(seasonId) else null,
+            skin = if (tier == CLASSIC_FINAL) SeasonCalendar.skinFor(seasonId) else null,
             avatar = premiumAvatar(tier, seasonId),
             banner = premiumBanner(tier, seasonId),
             fx = if (tier == PREMIUM_FX_TIER) PREMIUM_FX else null,
-            tokens = if (tier == TIERS) 3 else if (tier % 5 == 0) 1 else 0
+            tokens = if (tier == CLASSIC_FINAL || tier == TIERS) 3 else if (tier % 5 == 0) 1 else 0
         )
     }
 
-    fun totalFree(seasonId: Int = 0): SeasonReward = sum((1..TIERS).map { freeReward(it, seasonId) })
+    fun totalFree(seasonId: Int = 0, upTo: Int = TIERS): SeasonReward = sum((1..upTo).map { freeReward(it, seasonId) })
     fun totalPremium(seasonId: Int): SeasonReward = sum((1..TIERS).map { premiumReward(it, seasonId) })
 
     private fun sum(list: List<SeasonReward>) = SeasonReward(

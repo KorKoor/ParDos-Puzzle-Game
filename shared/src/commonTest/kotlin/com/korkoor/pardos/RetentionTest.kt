@@ -129,7 +129,9 @@ class RetentionTest {
         assertEquals(0, SeasonPass.tierFor(0))
         assertEquals(0, SeasonPass.tierFor(99))
         assertEquals(1, SeasonPass.tierFor(100))
-        assertEquals(30, SeasonPass.tierFor(100_000))
+        assertEquals(80, SeasonPass.tierFor(100_000))
+        // Quien ya tenía el pase completo (3000 puntos) sigue en el nivel 30 y puede seguir subiendo
+        assertEquals(30, SeasonPass.tierFor(3000))
         assertEquals(37, SeasonPass.pointsInTier(237))
         assertEquals(0, SeasonPass.pointsInTier(SeasonPass.TOTAL_POINTS))
     }
@@ -144,7 +146,7 @@ class RetentionTest {
 
     @Test fun premiumTrackEndsWithTheSeasonSkinAndIsRicherThanFree() {
         val season = 2026 * 12 + 9
-        assertEquals(SeasonCalendar.skinFor(season), SeasonPass.premiumReward(SeasonPass.TIERS, season).skin)
+        assertEquals(SeasonCalendar.skinFor(season), SeasonPass.premiumReward(SeasonPass.CLASSIC_FINAL, season).skin)
         assertNull(SeasonPass.freeReward(SeasonPass.TIERS).skin)
         val free = (1..SeasonPass.TIERS).sumOf { SeasonPass.freeReward(it).coinValue }
         val premium = (1..SeasonPass.TIERS).sumOf { SeasonPass.premiumReward(it, season).coinValue }
@@ -152,7 +154,7 @@ class RetentionTest {
     }
 
     @Test fun freeTrackIsGenerousButNotInflationary() {
-        val total = SeasonPass.totalFree()
+        val total = SeasonPass.totalFree(upTo = SeasonPass.CLASSIC_FINAL)
         assertTrue(total.coins in 1_200..3_000, "monedas gratis: ${total.coins}")
         assertTrue(total.gems in 10..40, "gemas gratis: ${total.gems}")
     }

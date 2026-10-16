@@ -129,7 +129,7 @@ object Economy {
     const val DAILY_MISSIONS_BONUS_GEMS = 1
 
     // Pase de temporada
-    const val SEASON_TIERS = 30
+    const val SEASON_TIERS = 80
     const val SEASON_POINTS_PER_TIER = 100
     /** Gemas por saltar un nivel del pase. */
     const val SEASON_TIER_SKIP_GEMS = 60

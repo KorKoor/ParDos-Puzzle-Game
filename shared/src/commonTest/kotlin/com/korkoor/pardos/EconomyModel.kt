@@ -56,7 +56,8 @@ object EconomyModel {
 
     fun casual(): Daily {
         val (wheelCoins, wheelGems) = wheelSpin()
-        val free = SeasonPass.totalFree()
+        // Un jugador casual completa los primeros 30 niveles del pase cada mes; el resto es para quien juega más
+        val free = SeasonPass.totalFree(upTo = SeasonPass.CLASSIC_FINAL)
         val coins = WINS_PER_DAY * coinsPerWin() +
             Economy.FIRST_WIN_BONUS_COINS +
             DailyRewards.cycle.map { it.coins }.average() +
@@ -65,12 +66,12 @@ object EconomyModel {
             weeklyCoinsPerDay() +
             LEVEL_UPS_PER_DAY * levelUpCoins() +
             CHAPTERS_PER_DAY * ChapterRewards.forChapter(3).coins +
-            free.coins / SeasonPass.TIERS.toDouble()
+            free.coins / SeasonPass.CLASSIC_FINAL.toDouble()
         val gems = DailyRewards.cycle.map { it.gems }.average() +
             PERFECT_MISSION_DAYS * Economy.DAILY_MISSIONS_BONUS_GEMS +
             wheelGems +
             PERFECT_MISSION_DAYS * WeeklyMissions.COMPLETION_GEMS / 7.0 +
-            free.gems / SeasonPass.TIERS.toDouble() +
+            free.gems / SeasonPass.CLASSIC_FINAL.toDouble() +
             CHAPTERS_PER_DAY * ChapterRewards.forChapter(3).gems +
             LEVEL_UPS_PER_DAY * levelUpGems()
         return Daily(coins, gems)

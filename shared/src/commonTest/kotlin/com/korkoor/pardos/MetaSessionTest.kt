@@ -22,7 +22,7 @@ class MetaSessionTest {
         assertTrue(jsonArray(m.fxCatalog()).size >= 8)
         assertTrue(jsonArray(m.avatarCatalog()).size >= 100)
         assertTrue(jsonArray(m.bannerCatalog()).size >= 50)
-        assertEquals(30, jsonArray(m.seasonTiers()).size)
+        assertEquals(80, jsonArray(m.seasonTiers()).size)
         assertEquals(8, jsonArray(m.wheelSlices()).size)
         val album = jsonObject(m.albumCatalog())
         assertEquals(320, album.list("pieces").size)
