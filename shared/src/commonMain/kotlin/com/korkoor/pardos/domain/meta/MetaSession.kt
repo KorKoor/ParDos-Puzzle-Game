@@ -811,6 +811,34 @@ class MetaSession {
         return obj("packs" to packs, "specials" to specials)
     }
 
+    private fun weeklyBossLevel(): Int? {
+        val beaten = com.korkoor.pardos.domain.level.Bestiary.bosses.flatMap { it.levels }.filter { starsOf(it) > 0 }
+        return com.korkoor.pardos.domain.level.WeeklyBoss.levelFor(com.korkoor.pardos.domain.level.WeeklyBoss.weekOf(clock.today.toLong()), beaten)
+    }
+
+    /** Jefe de la semana (uno de los ya vencidos): null si aún no venció ninguno. */
+    fun weeklyBoss(): String {
+        val level = weeklyBossLevel() ?: return obj("active" to false)
+        val week = com.korkoor.pardos.domain.level.WeeklyBoss.weekOf(clock.today.toLong())
+        val spec = com.korkoor.pardos.domain.level.LevelCatalog.spec(level)
+        return obj(
+            "active" to true, "level" to level, "title" to spec.title,
+            "motif" to com.korkoor.pardos.domain.level.BossLore.motifOf(spec.title).name,
+            "taunt" to com.korkoor.pardos.domain.level.BossLore.tauntOf(spec.title).orEmpty(),
+            "claimed" to store.bool("weekly_boss_claimed_$week"), "coins" to com.korkoor.pardos.domain.level.WeeklyBoss.REWARD_COINS
+        )
+    }
+
+    /** Al ganar un nivel de campaña: si era el jefe de la semana y aún no estaba cobrado, entrega las monedas y el banner. */
+    fun weeklyBossWon(level: Int): String {
+        val week = com.korkoor.pardos.domain.level.WeeklyBoss.weekOf(clock.today.toLong())
+        if (store.bool("weekly_boss_claimed_$week") || weeklyBossLevel() != level) return no("")
+        store.setBool("weekly_boss_claimed_$week", true)
+        wallet.grantBanner(com.korkoor.pardos.domain.level.WeeklyBoss.bannerFor(week))
+        wallet.addCoins(com.korkoor.pardos.domain.level.WeeklyBoss.REWARD_COINS)
+        return ok("coins" to com.korkoor.pardos.domain.level.WeeklyBoss.REWARD_COINS)
+    }
+
     private fun offerLines(c: com.korkoor.pardos.domain.shop.OfferContents): List<String> = buildList {
         if (c.undos > 0) add("${c.undos} x Deshacer")
         if (c.extraTimes > 0) add("${c.extraTimes} x Tiempo extra")

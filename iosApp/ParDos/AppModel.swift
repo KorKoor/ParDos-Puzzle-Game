@@ -270,6 +270,10 @@ final class AppModel: ObservableObject {
         defaults.set(meta.save(), forKey: "meta_state_v1")
     }
 
+    func loadWeeklyBoss() -> WeeklyBossInfo? {
+        return decodeJSON(WeeklyBossInfo.self, meta.weeklyBoss())
+    }
+
     func loadTimedOffers() -> [TimedOfferInfo] {
         return decodeJSON(TimedOfferList.self, meta.timedOffers())?.offers ?? []
     }
@@ -916,6 +920,7 @@ final class AppModel: ObservableObject {
                 )
             }
             reward = decodeJSON(WinReward.self, json)
+            if !s.daily, let wb = decodeJSON(ActionResult.self, act { $0.weeklyBossWon(level: Int32(s.level)) }), wb.ok { showToast("Jefe de la semana vencido") }
             if s.questDone == true, let coins = s.questCoins, coins > 0, !s.daily { _ = act { $0.grantCoins(n: Int32(coins)) } }
             if s.tutorialDone { defaults.set(true, forKey: "tutorial_done") }
             if s.daily {

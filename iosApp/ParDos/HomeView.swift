@@ -13,6 +13,7 @@ struct HomeView: View {
                 profileCard
                 playButton
                 dailyCard
+                WeeklyBossCard()
                 todayStrip
                 if let state = model.state {
                     if let happy = state.happyHour {

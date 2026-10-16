@@ -83,3 +83,12 @@ Cuando pidas la build, si aparece un error de compilación se arregla en la sigu
 - **Icono de la app a elección:** clásico (salvia, el de Android) o Noche de brujas; en Automático cambia solo en octubre. Está en Ajustes. (`AppIconManager.swift`; el de Halloween es el icono alterno `AppIconHalloween`.)
 - **Botones de dirección** (Ajustes) para jugar con una mano; se muestran solos con VoiceOver o Control por botón y VoiceOver puede leer el tablero, como en Android.
 - `iosApp/tools/art/vd2png.py` dibuja los vectores de Android (VectorDrawable) como PNG: sirve para reutilizar iconos de Android en iPhone.
+
+## Ronda 5 (2026-10-16): lo nuevo de Android, ya en iPhone (sin compilar)
+
+- **Bestiario** (Perfil) con emblema animado por jefe (`BestiaryView.swift`) y la frase del jefe en su tarjeta.
+- **Ofertas de tiempo limitado** en la Tienda (`TimedOffersView.swift`): fin de semana y relámpago del miércoles, con gemas y reloj real.
+- **Frenesí** (cápsula `FrenzyBadge`) y **Calma** (poder nuevo en la barra de poderes) dentro de `GameSession`.
+- **Reto bonus por nivel** (`QuestPill`): opcional, da monedas al cumplirlo.
+- **Jefe de la semana** en Inicio (`WeeklyBossCard`): monedas + banner la primera vez que se vence cada semana.
+- **Packs nuevos** (`halloween_pack`, `boss_pack`, `treasure_pack`) y **pase de 80 niveles**: salen solos del módulo compartido. Hay que crear los 3 productos en App Store Connect (ver `APPSTORE_PRODUCTOS.md`).

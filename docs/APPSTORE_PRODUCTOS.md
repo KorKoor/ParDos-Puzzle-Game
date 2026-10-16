@@ -21,6 +21,9 @@ Crear en App Store Connect → *Monetización → Compras dentro de la app*, con
 | `season_pass` | Pase premium | Consumible (cada temporada) | $4.99 | vía premium del pase del mes |
 | `vip_forever` | VIP para siempre | No consumible | $6.99 | +20 % monedas, 5 gemas diarias |
 | `piggy_break` | Romper la hucha | Consumible | $2.99 | las gemas guardadas en la hucha |
+| `halloween_pack` | Pack Halloween | Consumible | $4.99 | 800 gemas + 4 cofres raros |
+| `boss_pack` | Pack del jefe | Consumible | $1.99 | 200 gemas + 1 cofre raro |
+| `treasure_pack` | Cofre del tesoro | Consumible | $9.99 | 1000 gemas + 6 cofres raros |
 
 ## Por qué es distinto a Android
 
