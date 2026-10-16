@@ -412,7 +412,10 @@ internal object LevelGenerator {
         Recipe("Doble tormenta", 22), Recipe("Gran cosecha", 18), Recipe("Torre de cristal", 24), Recipe("Ojo de la tormenta", 30),
         // Otra tanda (v3.3)
         Recipe("Coloso de hierro", 14), Recipe("Banquete de cuatros", 19), Recipe("Reloj roto", 21), Recipe("Maestro del eco", 28),
-        Recipe("Fuego fatuo", 32), Recipe("Guardián del abismo", 36), Recipe("Eclipse", 40), Recipe("El Último Jefe", 60)
+        Recipe("Fuego fatuo", 32), Recipe("Guardián del abismo", 36), Recipe("Eclipse", 40), Recipe("El Último Jefe", 60),
+        // Jefes de la recta final (v3.4)
+        Recipe("Segador", 44), Recipe("Coloso de cristal", 48), Recipe("Reina de espejos", 52), Recipe("Relámpago negro", 56),
+        Recipe("El Archivista", 64), Recipe("Mareas", 70), Recipe("Titán", 80), Recipe("Rey de los jefes", 100)
     )
 
     /** Nombres de todos los jefes (para las pruebas y la interfaz). */
@@ -448,6 +451,9 @@ internal object LevelGenerator {
             24, 29 -> B.withPhase(base, "¡Cae una tormenta!", storm = storm)
             25, 27 -> B.withPhase(base, "¡Llueven los 4!", spawn = SpawnStyle.FOURS)
             28, 30 -> B.withPhase(base, "¡Todo al revés!", twist = Twist.FLIP)
+            32, 36 -> B.withPhase(base, "¡Llueven los 4!", spawn = SpawnStyle.FOURS)
+            33, 35, 37, 38 -> B.withPhase(base, "¡Cae una tormenta!", storm = storm)
+            34 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_UP)
             22 -> B.withPhase(base, "¡Arriba y abajo se cambian!", twist = Twist.MIRROR_V)
             4 -> B.withPhase(base, "¡Una dirección se bloquea!", twist = Twist.NO_UP)
             7 -> B.withPhase(base, "¡Arriba y abajo se cambian!", twist = Twist.MIRROR_V)
@@ -514,7 +520,23 @@ internal object LevelGenerator {
             // Eclipse: tormenta de piedras con todo al revés
             30 -> boss(twisted(storm(level, tileOf((e - 2).coerceIn(7, 8)), 5, stormFor(chapter, false).let { it.copy(everyMoves = (it.everyMoves + 2).coerceAtMost(9)) }, StonePatterns.pick(5, 1, rnd)), Twist.FLIP), name)
             // El Último Jefe: maratón largo en 5x5 con piedras
-            else -> boss(marathon(level, ((180 + chapter).coerceAtMost(300)) / 10 * 10, 5, 1.3, StonePatterns.pick(5, 1, rnd)), name)
+            31 -> boss(marathon(level, ((180 + chapter).coerceAtMost(300)) / 10 * 10, 5, 1.3, StonePatterns.pick(5, 1, rnd)), name)
+            // Segador: cosecha grande de fichas de 128
+            32 -> boss(harvest(level, 128, (8 + chapter / 12).coerceAtMost(14), 5, StonePatterns.pick(5, 1, rnd)), name)
+            // Coloso de cristal: pieza pesada con controles girados
+            33 -> boss(twisted(heavy(level, tileOf((e - 2).coerceIn(7, 8)), 5, StonePatterns.pick(5, 1, rnd)).let { it.copy(moveLimit = LevelMath.moveLimit(it, 3.0)) }, Twist.MIRROR_H), name)
+            // Reina de espejos: arriba y abajo cambiados
+            34 -> boss(twisted(zen(level, tileOf((e - 2).coerceIn(7, 8)), 5), Twist.MIRROR_V), name)
+            // Relámpago negro: sprint de 5 con piedras
+            35 -> boss(sprint(level, tileOf((e - 1).coerceIn(7, 9)), 5, slack = sprintSlack(chapter) + 0.25, stones = StonePatterns.pick(5, 1, rnd)), name)
+            // El Archivista: dos veces cuatro pares a la vez
+            36 -> boss(combo(level, 4, 2, 5, 3.0), name)
+            // Mareas: reloj en 5x5 con el tablero girando
+            37 -> boss(twisted(clock(level, tileOf((e - 2).coerceIn(6, 8)), 5, secondsPerMove = clockSeconds(chapter) + 0.6, stones = StonePatterns.pick(5, 1, rnd)), Twist.SPIN), name)
+            // Titán: el maratón más largo
+            38 -> boss(marathon(level, ((220 + chapter).coerceAtMost(320)) / 10 * 10, 5, 1.35, StonePatterns.pick(5, 1, rnd)), name)
+            // Rey de los jefes: maratón con todo al revés
+            else -> boss(twisted(marathon(level, ((160 + chapter).coerceAtMost(280)) / 10 * 10, 5, 1.5, StonePatterns.pick(5, 1, rnd)), Twist.FLIP), name)
         }
     }
 }

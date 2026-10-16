@@ -39,7 +39,15 @@ object BossLore {
         "Fuego fatuo" to Entry(BossMotif.FIRE, "Sigue la luz. Siempre miente."),
         "Guardián del abismo" to Entry(BossMotif.EYE, "Abajo no hay fondo."),
         "Eclipse" to Entry(BossMotif.STORM, "Hasta la luz se pone al revés."),
-        "El Último Jefe" to Entry(BossMotif.FIRE, "Has llegado lejos. Aquí termina.")
+        "El Último Jefe" to Entry(BossMotif.FIRE, "Has llegado lejos. Aquí termina."),
+        "Segador" to Entry(BossMotif.GOLD, "Siembro fichas y cosecho jugadores."),
+        "Coloso de cristal" to Entry(BossMotif.CRYSTAL, "Pesado como el hierro, frágil como el vidrio."),
+        "Reina de espejos" to Entry(BossMotif.EYE, "Mírate: ya vas al revés."),
+        "Relámpago negro" to Entry(BossMotif.STORM, "Primero el rayo. Después, el trueno."),
+        "El Archivista" to Entry(BossMotif.GEARS, "Cada jugada queda archivada. Y juzgada."),
+        "Mareas" to Entry(BossMotif.CLOCK, "El tablero sube y baja con la luna."),
+        "Titán" to Entry(BossMotif.STONE, "Mi paciencia es de montaña."),
+        "Rey de los jefes" to Entry(BossMotif.FIRE, "Todos los jefes me sirven. ¿Y tú?")
     )
 
     val names: Set<String> get() = entries.keys
