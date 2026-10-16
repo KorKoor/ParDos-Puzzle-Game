@@ -18,6 +18,7 @@ struct ShopView: View {
                 header
                 if let state = model.state {
                     OfferCard(offer: state.offer)
+                    TimedOffersSection()
                     specials
                     gemsSection
                     chests

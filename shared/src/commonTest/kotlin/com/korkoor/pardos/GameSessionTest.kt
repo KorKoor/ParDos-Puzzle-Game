@@ -70,6 +70,25 @@ class GameSessionTest {
         assertNull(st["movesLeft"])
     }
 
+    @Test fun calmStopsNewTilesForTwoMoves() {
+        val session = GameSession(11L)
+        session.start(2)
+        assertTrue(session.powerCalm())
+        assertEquals(2, session.state().int("calm"))
+        assertTrue(!session.powerCalm(), "no se puede encender dos veces seguidas")
+        var moved = 0
+        for (d in 0..3) {
+            val before = (session.state().list("tiles")).size
+            if (session.move(d)) {
+                moved++
+                val after = (session.state().list("tiles")).size
+                assertTrue(after <= before, "con Calma no cae ficha nueva (antes $before, después $after)")
+                if (moved == 2) break
+            }
+        }
+        assertEquals(0, session.state().int("calm").coerceAtLeast(0).let { if (moved >= 2) it else 0 })
+    }
+
     @Test fun stonesAreExposedAndTilesNeverSitOnThem() {
         val session = GameSession(3L)
         session.start(7)

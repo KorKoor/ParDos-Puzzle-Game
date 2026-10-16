@@ -152,6 +152,7 @@ final class AppModel: ObservableObject {
     var freePowerPending = false
     @Published var firstPick: String?
     @Published var lastClean: Date?
+    @Published var lastCalm: Date?
     @Published var lastMerge: Date?
     @Published var remoteChallenge: RemoteChallengeInfo?
     @Published var remoteCreate: RemoteCreateInfo?
@@ -267,6 +268,14 @@ final class AppModel: ObservableObject {
 
     func persist() {
         defaults.set(meta.save(), forKey: "meta_state_v1")
+    }
+
+    func loadTimedOffers() -> [TimedOfferInfo] {
+        return decodeJSON(TimedOfferList.self, meta.timedOffers())?.offers ?? []
+    }
+
+    func buyTimedOffer(_ id: String) {
+        if run(sound: .purchase, { $0.buyTimedOffer(id: id) }) { Haptics.success() }
     }
 
     func refreshState() {

@@ -205,6 +205,21 @@ extension AppModel {
         }
     }
 
+    func useCalm() {
+        guard let current = snap, current.status == "playing", current.powers else { return }
+        if powerRemaining(lastCalm, now: Date()) > 0 {
+            showToast("Calma se está recargando")
+            return
+        }
+        if session.powerCalm() {
+            lastCalm = Date()
+            sounds.play(.power_extratime)
+            afterPower(silent: true)
+        } else {
+            showToast("La Calma ya está encendida")
+        }
+    }
+
     func useMerge() {
         guard let current = snap, current.status == "playing", current.powers else { return }
         if powerRemaining(lastMerge, now: Date()) > 0 {

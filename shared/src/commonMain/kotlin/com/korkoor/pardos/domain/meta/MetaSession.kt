@@ -811,6 +811,38 @@ class MetaSession {
         return obj("packs" to packs, "specials" to specials)
     }
 
+    private fun offerLines(c: com.korkoor.pardos.domain.shop.OfferContents): List<String> = buildList {
+        if (c.undos > 0) add("${c.undos} x Deshacer")
+        if (c.extraTimes > 0) add("${c.extraTimes} x Tiempo extra")
+        if (c.freezes > 0) add("${c.freezes} x Escudo de racha")
+        if (c.rareChests > 0) add(if (c.rareChests == 1) "1 cofre raro" else "${c.rareChests} cofres raros")
+    }
+
+    /** Ofertas de tiempo limitado de hoy (días fijos, se pagan con gemas, una compra por ventana). */
+    fun timedOffers(): String {
+        val offers = com.korkoor.pardos.domain.shop.TimedOffers.activeOn(clock.today.toLong()).map { o ->
+            robj(
+                "id" to o.id, "title" to o.title, "blurb" to o.blurb, "lines" to offerLines(o.contents),
+                "priceGems" to o.priceGems, "gemValue" to o.contents.gemValue, "saving" to o.savingPercent,
+                "bought" to store.bool("offer_bought_${o.windowId}"), "endDay" to (o.lastDay + 1)
+            )
+        }
+        return obj("offers" to offers)
+    }
+
+    fun buyTimedOffer(id: String): String {
+        val o = com.korkoor.pardos.domain.shop.TimedOffers.activeOn(clock.today.toLong()).firstOrNull { it.id == id }
+            ?: return no("Esa oferta ya terminó")
+        if (store.bool("offer_bought_${o.windowId}")) return no("Ya compraste esta oferta")
+        if (!wallet.spendGems(o.priceGems)) return no("Te faltan gemas")
+        wallet.addUndos(o.contents.undos)
+        wallet.addExtraTimes(o.contents.extraTimes)
+        wallet.addFreezes(o.contents.freezes)
+        if (o.contents.rareChests > 0) col.addChests(com.korkoor.pardos.domain.collection.ChestType.RARE, o.contents.rareChests)
+        store.setBool("offer_bought_${o.windowId}", true)
+        return ok()
+    }
+
     /** Bestiario: jefes y guardianes con su frase y si ya se vencieron (ganar cualquiera de sus niveles). */
     fun bestiary(): String {
         fun entry(e: com.korkoor.pardos.domain.level.Bestiary.Entry): Raw = robj(

@@ -11,9 +11,12 @@ struct PowerBar: View {
     var body: some View {
         let cleanLeft = model.powerRemaining(model.lastClean, now: now)
         let mergeLeft = model.powerRemaining(model.lastMerge, now: now)
+        let calmLeft = model.powerRemaining(model.lastCalm, now: now)
+        let calmOn = model.snap?.calm ?? 0
         let price = model.eco?.powerPrice ?? 80
         return HStack(spacing: 8) {
             power("sparkles", "Limpiar", Theme.accent, cleanLeft > 0 ? formatClock(ms: cleanLeft) : nil) { model.useClean() }
+            power("leaf.fill", "Calma", Color(hex: 0x4F8F72), calmOn > 0 ? "\(calmOn) jugadas" : (calmLeft > 0 ? formatClock(ms: calmLeft) : nil)) { model.useCalm() }
             power("arrow.triangle.merge", "Fusión", Theme.gold, mergeLeft > 0 ? formatClock(ms: mergeLeft) : nil) { model.useMerge() }
             power("trash.fill", "Escoba", Theme.energy, "\(price)") { model.beginSelect("BROOM") }
             power("link", "Unir", Color(hex: 0x4E8FA6), "\(price)") { model.beginSelect("LINK") }

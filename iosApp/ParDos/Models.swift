@@ -59,6 +59,8 @@ struct BoardSnap: Decodable {
     let stuck: Bool
     let canRevive: Bool
     let flowStreak: Int
+    let frenzy: Int?
+    let calm: Int?
     let nearMiss: String?
 }
 

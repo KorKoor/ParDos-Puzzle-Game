@@ -14,6 +14,7 @@ import com.korkoor.pardos.domain.level.StormStone
 import com.korkoor.pardos.domain.level.Twist
 import com.korkoor.pardos.domain.level.goalText
 import com.korkoor.pardos.domain.flow.FlowMeter
+import com.korkoor.pardos.domain.flow.Frenzy
 import com.korkoor.pardos.domain.flow.FlowTier
 import com.korkoor.pardos.domain.flow.NearMiss
 import com.korkoor.pardos.domain.logic.CoachStep
@@ -64,6 +65,9 @@ class GameSession(seed: Long) {
     private var extraTimeMs = 0L
     private var comboTimeBonus = true
     private var flowStreak = 0
+    /** Frenesí: jugadas que quedan con el doble de puntos. Calma: jugadas sin fichas nuevas. */
+    private var frenzyLeft = 0
+    private var calmMoves = 0
     private var reviveUsed = false
     private var peakFlowStreak = 0
     private var flowCallout = ""
@@ -175,6 +179,8 @@ class GameSession(seed: Long) {
         peakTile = 0
         extraTimeMs = 0L
         flowStreak = 0
+        frenzyLeft = 0
+        calmMoves = 0
         peakFlowStreak = 0
         flowCallout = ""
         reviveUsed = false
@@ -219,7 +225,9 @@ class GameSession(seed: Long) {
 
         // Fichas nuevas (1 o 2 por jugada) y la evolución espontánea de siempre
         val finalTiles = moved.toMutableList()
-        repeat(spec.dropsPerMove) {
+        val drops = if (calmMoves > 0) 0 else spec.dropsPerMove
+        if (calmMoves > 0) calmMoves--
+        repeat(drops) {
             engine.spawnTileWithSpecificValue(finalTiles, SpawnRules.pick(spawn, spec.scaleTile, rng), 1)?.let { finalTiles.add(it) }
         }
         if (rng.nextInt(1, 101) <= 15) {
@@ -231,7 +239,7 @@ class GameSession(seed: Long) {
             }
         }
 
-        score += gained
+        score += Frenzy.score(gained, frenzyLeft)
         moves += 1
         val harvested = if (spec.goal == LevelGoal.HARVEST) moved.count { it.isMerged && it.value == spec.goalValue } else 0
         stats = stats.after(pairs, if (spec.goal == LevelGoal.COMBO) spec.goalValue else 0, harvested)
@@ -241,6 +249,8 @@ class GameSession(seed: Long) {
         flowStreak = FlowMeter.next(flowStreak, pairs > 0)
         peakFlowStreak = maxOf(peakFlowStreak, flowStreak)
         flowCallout = FlowMeter.tierUp(flowBefore, flowStreak)?.callout ?: ""
+        frenzyLeft = Frenzy.afterMove(frenzyLeft)
+        if (Frenzy.triggeredBy(flowBefore, flowStreak)) frenzyLeft = Frenzy.MOVES
         peakTile = maxOf(peakTile, finalTiles.maxOfOrNull { it.value } ?: 0)
 
         // El reloj de los niveles contrarreloj regala segundos con las combinaciones
@@ -373,6 +383,13 @@ class GameSession(seed: Long) {
         return true
     }
 
+    /** Calma: las próximas 2 jugadas no cae ninguna ficha nueva (respiro para ordenar el tablero). */
+    fun powerCalm(): Boolean {
+        if (!powersAllowed || status != PLAYING || calmMoves > 0 || tiles.isEmpty()) return false
+        calmMoves = 2
+        return true
+    }
+
     /** Fusión: junta al azar una pareja de fichas iguales (la primera que encuentra). */
     fun powerMerge(): Boolean {
         if (!powersAllowed || status != PLAYING) return false
@@ -469,7 +486,7 @@ class GameSession(seed: Long) {
             "tutorialDone" to tutorialDone, "canUndo" to (undo != null && status == PLAYING),
             "merges" to mergePairs, "maxTile" to peakTile, "elapsedMs" to elapsedMs,
             "powers" to powersAllowed, "label" to customLabel, "assist" to assistPercent,
-            "canRevive" to canRevive(), "flowStreak" to flowStreak,
+            "canRevive" to canRevive(), "flowStreak" to flowStreak, "frenzy" to frenzyLeft, "calm" to calmMoves,
             "nearMiss" to (if (status == LOST) NearMiss.message(spec.goal, spec.goalValue, spec.goalCount, tiles, score, stats, lostReason == OUT_OF_MOVES) else null), "combo" to peakFlowStreak, "flow" to FlowMeter.tierOf(peakFlowStreak).ordinal, "callout" to flowCallout,
             "empty" to (spec.freeCells - tiles.size).coerceAtLeast(0), "stuck" to engine.isGameOver(tiles)
         )

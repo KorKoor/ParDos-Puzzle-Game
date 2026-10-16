@@ -45,6 +45,14 @@ struct GameView: View {
                         ModeResultOverlay(snap: snap)
                     }
                 }
+                if let left = snap.frenzy, left > 0 {
+                    VStack {
+                        FrenzyBadge(left: left)
+                            .padding(.top, 8)
+                        Spacer()
+                    }
+                    .allowsHitTesting(false)
+                }
                 if !snap.callout.isEmpty {
                     Text(snap.callout)
                         .font(.system(size: 30, weight: .black, design: .rounded))
