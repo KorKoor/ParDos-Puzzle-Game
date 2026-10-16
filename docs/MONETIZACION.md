@@ -93,3 +93,11 @@ Se probó en el teléfono: resumen de victoria con DUPLICAR MONEDAS, intersticia
 - Ofertas por temporada (p. ej. paquete de Navidad) reutilizando `MenuPromo`.
 - Mediación de anuncios (AppLovin/Meta) cuando haya volumen, para subir el eCPM.
 - Medir conversión de la tarjeta del menú (hoy no hay analítica, por privacidad).
+
+## Ofertas de tiempo limitado y ayuda por nivel atascado (v3.6)
+
+Mismas reglas honestas de siempre: **sin cuentas atrás falsas ni falsa escasez**.
+
+- **Ofertas por tiempo limitado** (`TimedOffers`, tienda → Destacado): *Pack de fin de semana* (sábado y domingo: 5 Deshacer, 3 Tiempo extra, 1 Escudo y 1 cofre raro) y *Relámpago de mitad de semana* (miércoles: 10 Deshacer y 5 Tiempo extra). Días fijos del calendario (no se reinician al volver a entrar), reloj con el final real, precio en **gemas** (un 20 % menos que comprar todo por separado, calculado con los precios normales) y una sola compra por ventana. Con pruebas en `TimedOffersTest`.
+- **Ayuda por nivel atascado** (`StruggleHelp`): tras 3 derrotas seguidas en el mismo nivel de campaña, al llegar a la pantalla de derrota se ofrece, **una vez por nivel y 2 veces al día como máximo**, un paquete pequeño (2 Deshacer + 1 Tiempo extra) **al precio normal, sin descuento inventado**. El texto dice que no hace falta y que el anuncio de "continuar" sigue siendo gratis; hay botón "No, gracias".
+- Qué NO se hace, a propósito: ofertas que se reabren, descuentos inflados, precios en dinero real por sorpresa o mensajes que culpan al jugador.

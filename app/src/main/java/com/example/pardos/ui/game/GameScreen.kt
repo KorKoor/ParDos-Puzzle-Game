@@ -680,6 +680,14 @@ fun GameScreen(
                         reason = state.gameOverReason(),
                         onReview = if (viewModel.lastReplay != null) ({ showReplayDialog = true }) else null
                     )
+                    // Ayuda opcional si el nivel de campaña lleva varias derrotas seguidas (una vez por nivel, con tope diario)
+                    val helpLevel = state.currentLevel
+                    val helpStore = remember { com.korkoor.pardos.data.local.TimedOfferStore(context) }
+                    val losses = remember(helpLevel, state.isGameOver) { context.getSharedPreferences("pardos_storage", android.content.Context.MODE_PRIVATE).getInt("attempts_fail_level_$helpLevel", 0) }
+                    var helpClosed by remember(helpLevel, state.isGameOver) { mutableStateOf(false) }
+                    if (!helpClosed && state.gameMode == GameMode.CLASICO && !viewModel.towerActive && helpStore.shouldOfferHelp(helpLevel, losses)) {
+                        com.korkoor.pardos.ui.shop.StruggleHelpDialog(helpLevel, gemsNow, onDismiss = { helpClosed = true }, onMessage = { android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show() })
+                    }
                 }
             }
 

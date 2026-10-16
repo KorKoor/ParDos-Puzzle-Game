@@ -155,6 +155,9 @@ fun ShopScreen(
                 when (tab) {
                     ShopTab.FEATURED -> {
                         Spacer(Modifier.height(8.dp))
+                        // --- Ofertas de tiempo limitado (días fijos, reloj real, pagadas con gemas) ---
+                        com.korkoor.pardos.ui.shop.TimedOfferCards(gems = gems, onMessage = { localMessage = it })
+                        Spacer(Modifier.height(10.dp))
                         // --- Oferta del día ---
                         DailyOfferCard(
                             offer = offer,
