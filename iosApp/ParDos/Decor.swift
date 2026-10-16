@@ -253,6 +253,7 @@ struct SplashView: View {
 struct RuleIntroView: View {
     let card: LevelCard
     let onStart: () -> Void
+    @State private var shown = false
 
     var body: some View {
         ZStack {
@@ -329,7 +330,15 @@ struct RuleIntroView: View {
             .padding(22)
             .frame(maxWidth: 340)
             .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream))
+            .shimmer(radius: 30, period: 4.5)
             .padding(24)
+            .scaleEffect(shown ? 1 : 0.86)
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 24)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.72)) { shown = true }
+            if card.boss { Haptics.warning() }
         }
     }
 }

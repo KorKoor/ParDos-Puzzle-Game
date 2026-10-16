@@ -404,6 +404,7 @@ struct ResultOverlay: View {
     @EnvironmentObject var model: AppModel
     let snap: BoardSnap
     @State private var sharing: ShareItem?
+    @State private var starsShown = 0
     @State private var countdown = 6
     @State private var autoActive = true
     @AppStorage("auto_next") private var autoNext = true
@@ -460,9 +461,23 @@ struct ResultOverlay: View {
             if won {
                 HStack(spacing: 8) {
                     ForEach(0..<3, id: \.self) { i in
+                        let lit = i < snap.stars
                         Image(systemName: "star.fill")
                             .font(.system(size: 38))
-                            .foregroundColor(i < snap.stars ? Theme.gold : Theme.ink.opacity(0.12))
+                            .foregroundColor(lit ? Theme.gold : Theme.ink.opacity(0.12))
+                            .shadow(color: lit && i < starsShown ? Theme.gold.opacity(0.6) : .clear, radius: 8)
+                            .scaleEffect(lit ? (i < starsShown ? 1 : 0.2) : 1)
+                            .opacity(lit ? (i < starsShown ? 1 : 0) : 1)
+                            .rotationEffect(.degrees(lit && i >= starsShown ? -40 : 0))
+                    }
+                }
+                .onAppear {
+                    starsShown = 0
+                    for i in 1...3 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25 + 0.28 * Double(i)) {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.5)) { starsShown = i }
+                            if i <= snap.stars { Haptics.tap() }
+                        }
                     }
                 }
                 Text("\(snap.moves) movimientos · \(snap.score) puntos")

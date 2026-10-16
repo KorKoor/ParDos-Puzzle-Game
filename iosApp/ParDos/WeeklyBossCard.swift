@@ -54,6 +54,7 @@ struct WeeklyBossCard: View {
                             .stroke(pal.main.opacity(0.6), lineWidth: 1.5)
                     }
                 )
+                .shimmer(radius: 24)
                 .shadow(color: pal.bg.opacity(0.4), radius: 14, y: 8)
             }
             .buttonStyle(PlainButtonStyle())

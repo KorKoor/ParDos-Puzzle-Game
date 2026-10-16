@@ -79,7 +79,19 @@ object Guardians {
         G("Salamandra", BossMotif.FIRE, "Cuidado: hoy estoy de mal humor."),
         G("Nube gruñona", BossMotif.STORM, "Si llueve, es culpa tuya."),
         G("Autómata", BossMotif.GEARS, "Mis movimientos están calculados."),
-        G("Espectro", BossMotif.MAZE, "Ya has estado aquí. ¿O no?")
+        G("Espectro", BossMotif.MAZE, "Ya has estado aquí. ¿O no?"),
+        G("Bruja del té", BossMotif.CRYSTAL, "Una gota de té y todo cambia de color."),
+        G("Murciélago bibliotecario", BossMotif.EYE, "Shhh. Aquí se juega en silencio."),
+        G("Momia perezosa", BossMotif.CLOCK, "Mañana te envuelvo. O pasado."),
+        G("Fantasma tímido", BossMotif.MAZE, "¿Me ves? Qué vergüenza."),
+        G("Gato de ceniza", BossMotif.FIRE, "Siete vidas. Ninguna para ti."),
+        G("Golem de musgo", BossMotif.STONE, "Crezco despacio. ¿Y tú, cuánto aguantas?"),
+        G("Hada del hielo", BossMotif.CRYSTAL, "Un soplido y se congela la jugada."),
+        G("Marioneta", BossMotif.GEARS, "Hilos por todas partes. ¿Quién mueve a quién?"),
+        G("Faro errante", BossMotif.STORM, "Te guío… hacia las rocas."),
+        G("Mapache ladrón", BossMotif.GOLD, "Esa ficha brillante ya es mía."),
+        G("Cangrejo ermitaño", BossMotif.WALL, "Mi casa es mi tablero."),
+        G("Sombra de la luna", BossMotif.EYE, "Solo existo cuando miras hacia otro lado.")
     )
 
     private fun find(name: String?) = all.firstOrNull { it.name == name }

@@ -121,6 +121,7 @@ struct TimedOfferCard: View {
                     .stroke(LinearGradient(colors: [gilt.opacity(0.9), gilt.opacity(0.15)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
             }
         )
+        .shimmer(radius: 24)
         .shadow(color: night.opacity(0.35), radius: 14, y: 8)
     }
 }
