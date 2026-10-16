@@ -725,6 +725,37 @@ object gameAchievements {
                 val fib = listOf(2, 8, 32, 128, 512, 2048)
                 it.tiles.any { tile -> tile.value in fib }
             }
+        ),
+        // ========== LOGROS SECRETOS (se descubren jugando) ==========
+        Achievement(
+            id = "secret_last_move", titleResId = R.string.ach_secret_last_move_title, descriptionResId = R.string.ach_secret_last_move_desc,
+            icon = Icons.Default.Timer, color = Color(0xFFE07A5F), hidden = true,
+            condition = { it.isLevelCompleted && it.moveLimit != null && it.movesLeft == 0 }
+        ),
+        Achievement(
+            id = "secret_buzzer", titleResId = R.string.ach_secret_buzzer_title, descriptionResId = R.string.ach_secret_buzzer_desc,
+            icon = Icons.Default.Bolt, color = Color(0xFFD9A400), hidden = true,
+            condition = { it.isLevelCompleted && it.maxTime != null && (it.timeLeft ?: 0L) in 1L..3000L }
+        ),
+        Achievement(
+            id = "secret_boss_slayer", titleResId = R.string.ach_secret_boss_slayer_title, descriptionResId = R.string.ach_secret_boss_slayer_desc,
+            icon = Icons.Default.Shield, color = Color(0xFFB4413C), hidden = true,
+            condition = { it.isLevelCompleted && it.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS }
+        ),
+        Achievement(
+            id = "secret_phase_two", titleResId = R.string.ach_secret_phase_two_title, descriptionResId = R.string.ach_secret_phase_two_desc,
+            icon = Icons.Default.Visibility, color = Color(0xFF7B4FB3), hidden = true,
+            condition = { it.isLevelCompleted && it.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS && it.phase >= 2 }
+        ),
+        Achievement(
+            id = "secret_full_house", titleResId = R.string.ach_secret_full_house_title, descriptionResId = R.string.ach_secret_full_house_desc,
+            icon = Icons.Default.Star, color = Color(0xFF3FA7C7), hidden = true,
+            condition = { it.isLevelCompleted && it.emptySpaces == 0 }
+        ),
+        Achievement(
+            id = "secret_boss_chain", titleResId = R.string.ach_secret_boss_chain_title, descriptionResId = R.string.ach_secret_boss_chain_desc,
+            icon = Icons.Default.LocalFireDepartment, color = Color(0xFFE0603A), hidden = true,
+            condition = { it.isLevelCompleted && it.levelKind == com.korkoor.pardos.domain.level.LevelKind.BOSS && it.combo >= 6 }
         )
     )
 }

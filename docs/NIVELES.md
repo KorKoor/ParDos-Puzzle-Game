@@ -74,3 +74,9 @@ Hay 24 recetas de jefe. Las 8 nuevas llegan por capítulo: El Laberinto (5), Fá
 ### Más jefes y emblemas animados (v3.3)
 
 Son 40 recetas (los 8 de la recta final: Segador 44, Coloso de cristal 48, Reina de espejos 52, Relámpago negro 56, El Archivista 64, Mareas 70, Titán 80 y Rey de los jefes 100). Nuevos: Coloso de hierro (14), Banquete de cuatros (19), Reloj roto (21), Maestro del eco (28), Fuego fatuo (32), Guardián del abismo (36), Eclipse (40) y El Último Jefe (60). Cada jefe tiene un motivo (`BossLore`: muro, tormenta, reloj, oro, piedra, cristal, ojo, engranajes, laberinto o fuego) y una frase. La tarjeta del jefe dibuja su emblema animado (`BossEmblem.kt`, todo con Canvas, sin imágenes) con su color propio. Las pruebas exigen que cada jefe tenga motivo y frase y que haya al menos 9 motivos distintos.
+
+## Guardianes, bestiario y logros secretos (v3.5)
+
+- **Guardianes:** 12 mini jefes (`Guardians` en `BossLore.kt`) vigilan los niveles 5 y 15 de cada capítulo desde el capítulo 3. No cambian las reglas del nivel: le dan nombre, emblema animado y una frase en una tarjeta propia (una vez por nivel).
+- **Bestiario:** tarjeta en la pantalla de Logros con todas las fichas de jefes y guardianes. Cada una se desbloquea al ganar un nivel donde aparece (`Bestiary` en shared, `BestiaryUi.kt` en Android).
+- **Logros secretos:** 6 logros con `hidden = true` (nombre y descripción ocultos hasta lograrlos; valen como logro raro): último movimiento, sobre la campana, cazajefes, segunda fase, casa llena y cadena de jefe.

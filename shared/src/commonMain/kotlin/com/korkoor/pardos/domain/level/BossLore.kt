@@ -47,12 +47,74 @@ object BossLore {
         "El Archivista" to Entry(BossMotif.GEARS, "Cada jugada queda archivada. Y juzgada."),
         "Mareas" to Entry(BossMotif.CLOCK, "El tablero sube y baja con la luna."),
         "Titán" to Entry(BossMotif.STONE, "Mi paciencia es de montaña."),
-        "Rey de los jefes" to Entry(BossMotif.FIRE, "Todos los jefes me sirven. ¿Y tú?")
+        "Rey de los jefes" to Entry(BossMotif.FIRE, "Todos los jefes me sirven. ¿Y tú?"),
+        // Jefes de los primeros capítulos, hechos a mano
+        "Rincón apurado" to Entry(BossMotif.CLOCK, "Cuatro esquinas y ni un segundo de sobra."),
+        "Cuatro rincones" to Entry(BossMotif.WALL, "Cada esquina guarda una sorpresa.")
     )
 
     val names: Set<String> get() = entries.keys
 
-    fun motifOf(name: String?): BossMotif = entries[name]?.motif ?: BossMotif.WALL
+    fun motifOf(name: String?): BossMotif = entries[name]?.motif ?: Guardians.motifOf(name)
 
-    fun tauntOf(name: String?): String? = entries[name]?.taunt
+    fun tauntOf(name: String?): String? = entries[name]?.taunt ?: Guardians.tauntOf(name)
+}
+
+/**
+ * Guardianes: mini jefes que vigilan los niveles 5 y 15 de cada capítulo (desde el capítulo 3). No cambian las reglas del nivel:
+ * le ponen cara, nombre y una frase, y cuentan en el bestiario.
+ */
+object Guardians {
+    private data class G(val name: String, val motif: BossMotif, val taunt: String)
+
+    private val all = listOf(
+        G("Vigía", BossMotif.EYE, "Te vi llegar hace tres niveles."),
+        G("Centinela", BossMotif.WALL, "Por aquí no se pasa sin permiso."),
+        G("Aprendiz de brujo", BossMotif.FIRE, "Esto lo practiqué ayer. ¡Casi sale!"),
+        G("Gárgola", BossMotif.STONE, "Llevo siglos aquí. Puedo esperar."),
+        G("Duende del reloj", BossMotif.CLOCK, "Te robé un segundo. Y otro."),
+        G("Topo de piedra", BossMotif.STONE, "Cavo más rápido de lo que juegas."),
+        G("Cuervo", BossMotif.EYE, "Tengo ojo para las fichas brillantes."),
+        G("Medusa de vidrio", BossMotif.CRYSTAL, "No me mires fijamente."),
+        G("Salamandra", BossMotif.FIRE, "Cuidado: hoy estoy de mal humor."),
+        G("Nube gruñona", BossMotif.STORM, "Si llueve, es culpa tuya."),
+        G("Autómata", BossMotif.GEARS, "Mis movimientos están calculados."),
+        G("Espectro", BossMotif.MAZE, "Ya has estado aquí. ¿O no?")
+    )
+
+    private fun find(name: String?) = all.firstOrNull { it.name == name }
+
+    /** Guardián de un nivel de campaña, o null si ese nivel no tiene. */
+    fun forLevel(level: Int): String? {
+        val idx = (level - 1) % LevelCatalog.LEVELS_PER_CHAPTER
+        val chapter = (level - 1) / LevelCatalog.LEVELS_PER_CHAPTER
+        if (chapter < 2 || (idx != 4 && idx != 14)) return null
+        return all[(chapter * 7 + idx) % all.size].name
+    }
+
+    val names: List<String> get() = all.map { it.name }
+    fun motifOf(name: String?): BossMotif = find(name)?.motif ?: BossMotif.WALL
+    fun tauntOf(name: String?): String? = find(name)?.taunt
+}
+
+/** Bestiario: todos los jefes y guardianes, con los niveles donde se les enfrenta. Se vencen al ganar cualquiera de esos niveles. */
+object Bestiary {
+    data class Entry(val name: String, val motif: BossMotif, val taunt: String, val levels: List<Int>, val guardian: Boolean) {
+        val firstLevel: Int get() = levels.first()
+        fun defeated(stars: (Int) -> Int): Boolean = levels.any { stars(it) > 0 }
+    }
+
+    val bosses: List<Entry> by lazy {
+        (10..LevelCatalog.TOTAL_LEVELS step 10).map { it to LevelCatalog.spec(it) }.filter { it.second.isBoss }
+            .groupBy({ it.second.title }, { it.first })
+            .map { (name, levels) -> Entry(name, BossLore.motifOf(name), BossLore.tauntOf(name).orEmpty(), levels.sorted(), false) }
+            .sortedBy { it.firstLevel }
+    }
+
+    val guardians: List<Entry> by lazy {
+        (1..LevelCatalog.TOTAL_LEVELS).mapNotNull { lv -> Guardians.forLevel(lv)?.let { it to lv } }
+            .groupBy({ it.first }, { it.second })
+            .map { (name, levels) -> Entry(name, Guardians.motifOf(name), Guardians.tauntOf(name).orEmpty(), levels.sorted(), true) }
+            .sortedBy { it.firstLevel }
+    }
 }

@@ -407,4 +407,18 @@
     <string name="duel_rematch">REMATCH</string>
     <string name="duel_exit">EXIT</string>
     <string name="ad_not_ready">The ad is not ready yet. Try again in a few seconds.</string>
+    <string name="ach_secret_last_move_title">Right on the last one</string>
+    <string name="ach_secret_last_move_desc">Win a level on your very last available move.</string>
+    <string name="ach_secret_buzzer_title">Beat the buzzer</string>
+    <string name="ach_secret_buzzer_desc">Win a level with less than 3 seconds on the clock.</string>
+    <string name="ach_secret_boss_slayer_title">Boss slayer</string>
+    <string name="ach_secret_boss_slayer_desc">Defeat a boss.</string>
+    <string name="ach_secret_phase_two_title">The second phase</string>
+    <string name="ach_secret_phase_two_desc">Defeat a boss after the rules change.</string>
+    <string name="ach_secret_full_house_title">Full house</string>
+    <string name="ach_secret_full_house_desc">Win a level with the board completely full.</string>
+    <string name="ach_secret_boss_chain_title">Boss chain</string>
+    <string name="ach_secret_boss_chain_desc">Defeat a boss with a combo of 6 or more.</string>
+    <string name="ach_secret_hidden_title">Secret achievement</string>
+    <string name="ach_secret_hidden_desc">Discover it by playing.</string>
 </resources>

@@ -410,4 +410,18 @@
     <string name="duel_exit">SALIR</string>
     <string name="ad_not_ready">El anuncio todavía no está listo. Prueba otra vez en unos segundos.</string>
     <string name="game_services_project_id" translatable="false">547423992451</string>
+    <string name="ach_secret_last_move_title">Justo en el último</string>
+    <string name="ach_secret_last_move_desc">Gana un nivel con el último movimiento disponible.</string>
+    <string name="ach_secret_buzzer_title">Sobre la campana</string>
+    <string name="ach_secret_buzzer_desc">Gana un nivel con menos de 3 segundos en el reloj.</string>
+    <string name="ach_secret_boss_slayer_title">Cazajefes</string>
+    <string name="ach_secret_boss_slayer_desc">Vence a un jefe.</string>
+    <string name="ach_secret_phase_two_title">La segunda fase</string>
+    <string name="ach_secret_phase_two_desc">Vence a un jefe después de que cambien las reglas.</string>
+    <string name="ach_secret_full_house_title">Casa llena</string>
+    <string name="ach_secret_full_house_desc">Gana un nivel con el tablero completamente lleno.</string>
+    <string name="ach_secret_boss_chain_title">Cadena de jefe</string>
+    <string name="ach_secret_boss_chain_desc">Vence a un jefe con un combo de 6 o más.</string>
+    <string name="ach_secret_hidden_title">Logro secreto</string>
+    <string name="ach_secret_hidden_desc">Descúbrelo jugando.</string>
 </resources>

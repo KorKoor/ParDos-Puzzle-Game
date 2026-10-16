@@ -87,6 +87,7 @@ fun AchievementsScreen(
     }
     val unlocked = all.count { it.id in unlockedIds }
 
+    var showBestiary by remember { mutableStateOf(false) }
     var category by remember { mutableStateOf(AchCategory.ALL) }
     var status by remember { mutableStateOf(StatusFilter.ALL) }
 
@@ -102,6 +103,8 @@ fun AchievementsScreen(
             // Primero los logrados, así el jugador ve lo que ya tiene
             .sortedByDescending { it.id in unlockedIds }
     }
+
+    if (showBestiary) BestiaryDialog { showBestiary = false }
 
     Box(modifier = Modifier.fillMaxSize().pardosBackdrop()) {
 
@@ -119,6 +122,7 @@ fun AchievementsScreen(
             ) {
                 item { PlatinumBanner(unlocked, total, onPrestige) }
                 item { SummaryCard(unlocked, total, all, unlockedIds) }
+                item { BestiaryCard(onClick = { showBestiary = true }) }
 
                 backfill?.let { (coins, gems) ->
                     item {
@@ -330,14 +334,15 @@ private fun AchievementRow(
         Spacer(Modifier.width(14.dp))
 
         Column(modifier = Modifier.weight(1f)) {
+            val secret = achievement.hidden && !unlocked
             Text(
-                stringResource(achievement.titleResId),
+                stringResource(if (secret) com.korkoor.pardos.R.string.ach_secret_hidden_title else achievement.titleResId),
                 fontSize = 15.sp, fontWeight = FontWeight.Black,
                 color = if (unlocked) Navy else Navy.copy(alpha = 0.55f)
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                stringResource(achievement.descriptionResId),
+                stringResource(if (secret) com.korkoor.pardos.R.string.ach_secret_hidden_desc else achievement.descriptionResId),
                 fontSize = 12.sp, lineHeight = 16.sp,
                 color = if (unlocked) InkSecondary else InkTertiary
             )

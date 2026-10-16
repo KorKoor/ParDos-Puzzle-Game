@@ -199,9 +199,22 @@ class NewMechanicsTest {
         assertTrue(withPhase.map { it.phase2!!.title }.toSet().size >= 5, "las fases son variadas")
     }
 
+    @Test fun guardiansAndBestiaryCoverEveryBossAndGuardian() {
+        val guardians = com.korkoor.pardos.domain.level.Bestiary.guardians
+        assertEquals(com.korkoor.pardos.domain.level.Guardians.names.toSet(), guardians.map { it.name }.toSet())
+        assertTrue(com.korkoor.pardos.domain.level.Guardians.forLevel(5) == null, "los dos primeros capítulos no tienen guardianes")
+        assertTrue(com.korkoor.pardos.domain.level.Guardians.forLevel(45) != null && com.korkoor.pardos.domain.level.Guardians.forLevel(55) != null)
+        assertTrue(com.korkoor.pardos.domain.level.Guardians.forLevel(46) == null)
+        val bosses = com.korkoor.pardos.domain.level.Bestiary.bosses
+        assertTrue(bosses.all { it.name in com.korkoor.pardos.domain.level.BossLore.names }, "cada jefe del catálogo tiene ficha; faltan: ${bosses.map { it.name }.filter { it !in com.korkoor.pardos.domain.level.BossLore.names }}")
+        assertTrue(bosses.size >= 30, "en la campaña salen al menos 30 jefes distintos: ${bosses.size}")
+        assertEquals(bosses.sortedBy { it.firstLevel }, bosses)
+        assertTrue(bosses.first().defeated { 1 } && !bosses.first().defeated { 0 })
+    }
+
     @Test fun thereAreFortyBossRecipesWithLore() {
         assertEquals(40, LevelGenerator.bossNames.size)
-        assertEquals(LevelGenerator.bossNames.toSet(), com.korkoor.pardos.domain.level.BossLore.names, "cada jefe tiene motivo y frase")
+        assertTrue(com.korkoor.pardos.domain.level.BossLore.names.containsAll(LevelGenerator.bossNames), "cada jefe tiene motivo y frase")
         assertTrue(LevelGenerator.bossNames.map { com.korkoor.pardos.domain.level.BossLore.motifOf(it) }.toSet().size >= 9)
         assertTrue(LevelCatalog.all().filter { it.isBoss }.map { it.title }.toSet().size >= 14)
     }

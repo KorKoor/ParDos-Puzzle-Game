@@ -28,7 +28,9 @@ class RewardsManager(context: Context) {
         }
     }
 
-    fun rarityOf(achievementId: String): Rarity = achievementRarity[achievementId] ?: Rarity.COMMON
+    /** Los logros secretos siempre valen como un logro raro (descubrirlos ya es el premio principal). */
+    fun rarityOf(achievementId: String): Rarity =
+        if (achievementId.startsWith("secret_")) Rarity.RARE else achievementRarity[achievementId] ?: Rarity.COMMON
 
     fun rewardFor(achievementId: String): Economy.AchievementReward =
         Economy.achievementReward(rarityOf(achievementId))

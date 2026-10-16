@@ -22,5 +22,7 @@ data class Achievement(
     val icon: ImageVector,
     val color: Color,
     val isUnlocked: Boolean = false,
+    /** Logro secreto: su nombre y su descripción no se ven hasta lograrlo. */
+    val hidden: Boolean = false,
     val condition: (BoardState) -> Boolean
 )

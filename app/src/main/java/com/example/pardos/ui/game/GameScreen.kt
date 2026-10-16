@@ -134,6 +134,7 @@ fun GameScreen(
     val ruleKey = state.levelKind?.let {
         when {
             it == com.korkoor.pardos.domain.level.LevelKind.BOSS -> "boss_${state.currentLevel}"
+            com.korkoor.pardos.domain.level.Guardians.forLevel(state.currentLevel) != null -> "guardian_${state.currentLevel}"
             it == com.korkoor.pardos.domain.level.LevelKind.TWIST -> "twist_${state.twist.name}"
             else -> "kind_${it.name}"
         }
