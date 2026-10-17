@@ -226,13 +226,16 @@ struct PrestigeSheet: View {
 
     private func rankCard(_ data: PrestigeData) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 34))
-                .foregroundColor(Theme.gold)
+            ZStack {
+                LightRays(color: Theme.gold).frame(width: 190, height: 190)
+                LuxIcon("crown.fill", tint: Theme.gold, size: 66)
+            }
+            .frame(height: 120)
             Text(data.rank.uppercased())
-                .font(.system(size: 26, weight: .black, design: .rounded))
-                .kerning(2)
-                .foregroundColor(Theme.ink)
+                .font(.system(size: 28, weight: .black, design: .serif))
+                .kerning(3)
+                .foregroundStyle(LinearGradient(colors: [Color(hex: 0xB07A1E), Color(hex: 0xE9B949), Color(hex: 0xB07A1E)], startPoint: .top, endPoint: .bottom))
+                .shadow(color: Theme.gold.opacity(0.35), radius: 6)
             Text("\(data.score) puntos de prestigio")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundColor(Theme.ink.opacity(0.55))
@@ -270,7 +273,11 @@ struct PrestigeSheet: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
-                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(row.title == data.rank ? Theme.accent : Theme.ink.opacity(0.06)))
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(row.title == data.rank ? LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom) : LinearGradient(colors: [Theme.ink.opacity(0.06), Theme.ink.opacity(0.06)], startPoint: .top, endPoint: .bottom))
+                                .shadow(color: row.title == data.rank ? Theme.accent.opacity(0.4) : Color.clear, radius: 7, y: 3)
+                        )
                     }
                 }
             }
@@ -295,7 +302,7 @@ struct PrestigeSheet: View {
             HStack(spacing: 8) {
                 ForEach(data.tiers) { tier in
                     VStack(spacing: 3) {
-                        Image(systemName: "trophy.fill").foregroundColor(tierColor(tier.tier))
+                        LuxIcon("trophy.fill", tint: tierColor(tier.tier), size: 30)
                         Text("\(tier.count)")
                             .font(.system(size: 18, weight: .black, design: .rounded))
                             .foregroundColor(Theme.ink)
@@ -320,7 +327,7 @@ struct PrestigeSheet: View {
         let fraction = Double(data.platDone) / Double(max(1, data.platTotal))
         return VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "star.circle.fill").font(.system(size: 26)).foregroundColor(Color(hex: 0x9AA3B5))
+                LuxIcon("star.fill", tint: Color(hex: 0x9AA3B5), size: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(data.platinum ? "¡PLATINO CONSEGUIDO!" : "El Platino")
                         .font(.system(size: 15, weight: .black, design: .rounded))

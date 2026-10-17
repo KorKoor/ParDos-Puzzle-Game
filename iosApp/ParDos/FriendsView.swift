@@ -93,8 +93,7 @@ struct FriendsSheet: View {
     private var shareCard: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                Image(systemName: "paperplane.fill").font(.system(size: 18, weight: .bold)).foregroundColor(.white)
-                    .frame(width: 40, height: 40).background(Circle().fill(Theme.energy))
+                LuxIcon("paperplane.fill", tint: Theme.energy, size: 42)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Tu tarjeta").font(.system(size: 16, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                     Text("Tu nombre, avatar, nivel, prestigio y estrellas de hoy").font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
@@ -112,8 +111,7 @@ struct FriendsSheet: View {
     private var addCard: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
-                Image(systemName: "person.badge.plus").font(.system(size: 18, weight: .bold)).foregroundColor(.white)
-                    .frame(width: 40, height: 40).background(Circle().fill(Theme.accent))
+                LuxIcon("person.badge.plus", tint: Theme.accent, size: 42)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Agregar un amigo").font(.system(size: 16, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                     Text("Pega el mensaje con su tarjeta (PF1-...)").font(.system(size: 11, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
@@ -125,22 +123,29 @@ struct FriendsSheet: View {
                 .autocapitalization(.allCharacters)
                 .disableAutocorrection(true)
                 .padding(10)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.ink.opacity(0.06)))
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Theme.ink.opacity(0.05))
+                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.ink.opacity(0.12), lineWidth: 1))
+                )
             HStack(spacing: 10) {
                 Button(action: { pasted = UIPasteboard.general.string ?? "" }) {
                     Text("Pegar")
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundColor(Theme.accent)
                         .padding(.horizontal, 16).padding(.vertical, 9)
-                        .background(Capsule().fill(Theme.accent.opacity(0.14)))
+                        .background(LuxCapsule())
                 }
+                .buttonStyle(ToyPressStyle())
                 Button(action: add) {
                     Text("Agregar")
                         .font(.system(size: 13, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                         .padding(.horizontal, 16).padding(.vertical, 9)
-                        .background(Capsule().fill(Theme.accent))
+                        .background(Capsule().fill(LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom)))
+                        .shadow(color: Theme.accent.opacity(0.4), radius: 6, y: 3)
                 }
+                .buttonStyle(ToyPressStyle())
                 Spacer()
             }
             if let message = message {
@@ -192,10 +197,14 @@ struct FriendsSheet: View {
 
     private func friendRow(_ row: FriendRow) -> some View {
         HStack(spacing: 10) {
-            Text("\(row.position)")
-                .font(.system(size: 14, weight: .black, design: .rounded))
-                .foregroundColor(row.position == 1 ? Theme.gold : Theme.ink.opacity(0.5))
-                .frame(width: 22)
+            if row.position <= 3 {
+                LuxIcon("medal.fill", tint: row.position == 1 ? Theme.gold : (row.position == 2 ? Color(hex: 0xA9B0BE) : Color(hex: 0xB5733A)), size: 26)
+            } else {
+                Text("\(row.position)")
+                    .font(.system(size: 14, weight: .black, design: .rounded))
+                    .foregroundColor(Theme.ink.opacity(0.5))
+                    .frame(width: 26)
+            }
             AvatarView(id: row.avatar, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.me ? row.name + " (tú)" : row.name)
@@ -227,6 +236,10 @@ struct FriendsSheet: View {
             }
         }
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(row.me ? Theme.gold.opacity(0.14) : Color.clear))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(row.me ? Theme.gold.opacity(0.14) : Color.clear)
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(row.me ? Theme.gold.opacity(0.6) : Color.clear, lineWidth: 1.3))
+        )
     }
 }
