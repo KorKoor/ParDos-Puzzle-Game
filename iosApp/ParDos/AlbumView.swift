@@ -71,7 +71,16 @@ struct AlbumView: View {
                 .foregroundColor(onlyMissing ? .white : Theme.ink)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(Capsule().fill(onlyMissing ? Theme.accent : Color.white))
+                .background(
+                    Group {
+                        if onlyMissing {
+                            Capsule().fill(LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom))
+                                .shadow(color: Theme.accent.opacity(0.4), radius: 6, y: 3)
+                        } else {
+                            LuxCapsule()
+                        }
+                    }
+                )
             }
             Spacer()
         }
@@ -100,7 +109,7 @@ struct AlbumView: View {
         return VStack(spacing: 10) {
             HStack {
                 Text("\(album.owned) / \(album.total) piezas")
-                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .font(.system(size: 22, weight: .black, design: .serif))
                     .foregroundColor(Theme.ink)
                 Spacer()
                 Text("+\(album.coinPercent)% monedas")
@@ -145,9 +154,17 @@ struct AlbumView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Theme.ink.opacity(0.05)))
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(colors: [rarityColor(type).opacity(count > 0 ? 0.20 : 0.06), rarityColor(type).opacity(count > 0 ? 0.08 : 0.03)], startPoint: .top, endPoint: .bottom))
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(rarityColor(type).opacity(count > 0 ? 0.55 : 0.15), lineWidth: 1.2)
+                }
+            )
+            .shadow(color: count > 0 ? rarityColor(type).opacity(0.3) : Color.clear, radius: 8, y: 3)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(ToyPressStyle())
     }
 
     private func perks(_ album: AlbumStateData) -> some View {
@@ -187,7 +204,7 @@ struct AlbumView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(spares > 0 ? Theme.accent : Color.gray.opacity(0.5)))
+                    .background(Capsule().fill(spares > 0 ? LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom) : LinearGradient(colors: [Color.gray.opacity(0.5), Color.gray.opacity(0.5)], startPoint: .top, endPoint: .bottom)))
             }
             .disabled(spares == 0)
             Button(action: { model.sellAll("RARE") }) {
@@ -196,7 +213,7 @@ struct AlbumView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(spares > 0 ? Color(hex: 0x3F8FE0) : Color.gray.opacity(0.5)))
+                    .background(Capsule().fill(spares > 0 ? LinearGradient(colors: [Color(hex: 0x6FB0F0), Color(hex: 0x3F8FE0)], startPoint: .top, endPoint: .bottom) : LinearGradient(colors: [Color.gray.opacity(0.5), Color.gray.opacity(0.5)], startPoint: .top, endPoint: .bottom)))
             }
             .disabled(spares == 0)
         }

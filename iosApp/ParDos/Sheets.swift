@@ -533,8 +533,13 @@ struct LeagueSheet: View {
         default: title = "Te quedas en \(pending.to)"
         }
         return VStack(spacing: 8) {
+            ZStack {
+                LightRays(color: Theme.gold).frame(width: 130, height: 130)
+                LuxIcon("trophy.fill", tint: Theme.gold, size: 54)
+            }
+            .frame(height: 96)
             Text(loc(title))
-                .font(.system(size: 17, weight: .black, design: .rounded))
+                .font(.system(size: 20, weight: .black, design: .serif))
                 .foregroundColor(Theme.ink)
             Text("Semana pasada: \(pending.stars) estrellas")
                 .font(.system(size: 12, weight: .semibold))
@@ -568,7 +573,7 @@ struct LeagueSheet: View {
             HStack(spacing: 6) {
                 Image(systemName: "star.fill").foregroundColor(Theme.gold)
                 Text("\(league.weekStars) / \(league.promote)")
-                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .font(.system(size: 26, weight: .black, design: .serif))
                     .foregroundColor(Theme.ink)
                 Spacer()
                 if let next = league.next {
@@ -596,14 +601,26 @@ struct LeagueSheet: View {
         .card()
     }
 
+    private func leagueColor(_ name: String) -> Color {
+        switch name {
+        case "Bronce": return Color(hex: 0xB5733A)
+        case "Plata": return Color(hex: 0xA9B0BE)
+        case "Oro": return Color(hex: 0xE0A93B)
+        case "Zafiro": return Color(hex: 0x3F6FE0)
+        case "Rubí": return Color(hex: 0xD6366B)
+        default: return Color(hex: 0x5FD0E8)
+        }
+    }
+
     private func ladderCard(_ league: LeagueInfo) -> some View {
         VStack(spacing: 6) {
             ForEach(0..<ladder.count, id: \.self) { i in
                 let row = ladder[ladder.count - 1 - i]
                 let current = row.0 == league.name
-                HStack {
-                    Image(systemName: current ? "chevron.right.circle.fill" : "circle")
-                        .foregroundColor(current ? Theme.accent : Theme.ink.opacity(0.2))
+                let tint = leagueColor(row.0)
+                HStack(spacing: 10) {
+                    LuxIcon("shield.fill", tint: tint, size: current ? 32 : 26)
+                        .opacity(current ? 1 : 0.7)
                     Text(row.0)
                         .font(.system(size: 14, weight: current ? .black : .bold, design: .rounded))
                         .foregroundColor(Theme.ink.opacity(current ? 1 : 0.55))
@@ -612,6 +629,13 @@ struct LeagueSheet: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(Theme.ink.opacity(0.4))
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(current ? tint.opacity(0.14) : Color.clear)
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(current ? tint.opacity(0.5) : Color.clear, lineWidth: 1.2))
+                )
             }
         }
         .padding(14)
