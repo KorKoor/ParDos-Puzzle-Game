@@ -15,6 +15,7 @@ struct GameView: View {
             if style.changesTheme {
                 style.background.ignoresSafeArea()
             }
+            LivingBackdrop()
             ParticlesView(kind: style.particles, tint: style.particleTint)
             if let snap = model.snap {
                 GeometryReader { geo in
@@ -104,6 +105,7 @@ struct GameView: View {
                                 .frame(height: boardSide)
                                 .padding(.horizontal, 14)
                             StatsRow(snap: snap)
+                            FlowBar(streak: snap.flowStreak)
                             if dpadOn || UIAccessibility.isVoiceOverRunning || UIAccessibility.isSwitchControlRunning {
                                 DirectionPad()
                             }

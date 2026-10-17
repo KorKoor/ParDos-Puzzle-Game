@@ -5,12 +5,16 @@ struct BoardView: View {
     @EnvironmentObject var model: AppModel
     let snap: BoardSnap
     let hint: GuideHint?
+    @State private var drag: CGSize = .zero
 
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
             BoardCanvas(snap: snap, hint: hint, side: side, style: model.boardStyle, selecting: model.selectMode != nil, fx: model.state?.equippedFx ?? "classic", picked: model.firstPick, onTap: { id in model.tapTile(id) })
                 .frame(width: side, height: side)
+                .offset(x: drag.width, y: drag.height)
+                .rotation3DEffect(.degrees(Double(-drag.height) * 0.55), axis: (x: 1, y: 0, z: 0), perspective: 0.7)
+                .rotation3DEffect(.degrees(Double(drag.width) * 0.55), axis: (x: 0, y: 1, z: 0), perspective: 0.7)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
                 .accessibilityElement(children: .ignore)
@@ -22,8 +26,18 @@ struct BoardView: View {
                 .accessibilityAction(named: "Deslizar a la derecha") { model.swipe(3) }
                 // El gesto del juego debe ganar al desplazamiento vertical de la pantalla.
                 .highPriorityGesture(
-                    DragGesture(minimumDistance: 18)
-                        .onEnded { value in handleSwipe(value.translation) }
+                    DragGesture(minimumDistance: 6)
+                        .onChanged { value in
+                            let cap: CGFloat = 14
+                            let w = max(-cap, min(cap, value.translation.width * 0.25))
+                            let h = max(-cap, min(cap, value.translation.height * 0.25))
+                            drag = CGSize(width: w, height: h)
+                        }
+                        .onEnded { value in
+                            withAnimation(.spring(response: 0.38, dampingFraction: 0.5)) { drag = .zero }
+                            let t = value.translation
+                            if max(abs(t.width), abs(t.height)) >= 18 { handleSwipe(t) }
+                        }
                 )
         }
         .aspectRatio(1, contentMode: .fit)
@@ -118,6 +132,18 @@ struct BoardCanvas: View {
     }
 
     private var tileViews: some View {
+        Group {
+            if UIAccessibility.isReduceMotionEnabled || !PowerMonitor.shared.heavyEffects {
+                tileLayer(0)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
+                    tileLayer(timeline.date.timeIntervalSinceReferenceDate)
+                }
+            }
+        }
+    }
+
+    private func tileLayer(_ t: Double) -> some View {
         ZStack {
             ForEach(snap.tiles.filter { $0.merged }) { tile in
                 MergeBurst(fx: fx, size: cell, value: tile.v)
@@ -128,7 +154,7 @@ struct BoardCanvas: View {
                     .position(x: x(tile.c), y: y(tile.r))
             }
             ForEach(snap.tiles) { tile in
-                TileView(tile: tile, size: cell, style: style)
+                TileView(tile: tile, size: cell, style: style, time: t)
                     .overlay(selectRing(tile))
                     .contentShape(Rectangle())
                     .onTapGesture { if selecting { onTap(tile.id) } }
@@ -189,9 +215,16 @@ struct TileView: View {
     let tile: TileSnap
     let size: CGFloat
     let style: BoardStyle
+    var time: Double = 0
     @State private var pop: CGFloat = 1
+    @State private var ring: CGFloat = 1
 
     private var corner: CGFloat { size * 0.2 }
+    private var breathPhase: Double { Double(abs(tile.id.hashValue) % 628) / 100.0 }
+    private var breathe: CGFloat {
+        let wave: Double = sin(time * 1.7 + breathPhase)
+        return CGFloat(1.0 + 0.011 * wave)
+    }
     private var fillColor: Color { style.fill(tile.v) }
     private var isNeon: Bool { style.finish == "NEON" }
 
@@ -208,11 +241,19 @@ struct TileView: View {
         .frame(width: size, height: size)
         .shadow(color: Color.black.opacity(style.finish == "FLAT" ? 0 : 0.12), radius: 0, x: 0, y: 3)
         .shadow(color: fillColor.opacity(tile.v >= 512 ? 0.65 : (tile.v >= 128 ? 0.4 : 0)), radius: tile.v >= 512 ? 14 : 9, x: 0, y: 0)
-        .scaleEffect(pop)
+        .scaleEffect(pop * breathe)
+        .overlay(
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.white.opacity(Double(1 - ring) * 0.85), lineWidth: 3)
+                .scaleEffect(1 + ring * 0.28)
+                .allowsHitTesting(false)
+        )
         .onAppear {
             if tile.new {
                 pop = 0.3
+                ring = 0
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) { pop = 1 }
+                withAnimation(.easeOut(duration: 0.55)) { ring = 1 }
             }
         }
         .onChange(of: tile.v) { _ in

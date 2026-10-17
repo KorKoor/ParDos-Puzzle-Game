@@ -513,3 +513,35 @@ struct RollingNumber: View {
             }
     }
 }
+
+/// Barra de ímpetu: se llena con las jugadas seguidas que fusionan y cambia de color; siempre ocupa su sitio para que nada se mueva.
+struct FlowBar: View {
+    let streak: Int
+
+    var body: some View {
+        let fraction = min(1.0, Double(streak) / 20.0)
+        let on = streak >= 2
+        return HStack(spacing: 8) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFE27A), Color(hex: 0xFF7A1F)], startPoint: .top, endPoint: .bottom))
+                .shadow(color: Color(hex: 0xFF7A1F).opacity(0.3 + 0.6 * fraction), radius: 4 + 6 * CGFloat(fraction))
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.ink.opacity(0.10))
+                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold, Color(hex: 0xFF7A1F)], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(fraction)))
+                }
+            }
+            .frame(height: 8)
+            Text("\(streak)")
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .foregroundColor(Theme.ink.opacity(0.7))
+                .monospacedDigit()
+                .frame(minWidth: 22, alignment: .trailing)
+        }
+        .padding(.horizontal, 20)
+        .frame(height: 20)
+        .opacity(on ? 1 : 0)
+        .animation(.easeOut(duration: 0.25), value: on)
+    }
+}
