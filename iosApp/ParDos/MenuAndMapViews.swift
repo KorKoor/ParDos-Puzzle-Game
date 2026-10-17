@@ -315,11 +315,16 @@ struct LevelRow: View {
 
     /// Flecha dorada que rebota encima del nivel actual.
     private var marker: some View {
-        Image(systemName: "arrowtriangle.down.fill")
-            .font(.system(size: 14))
-            .foregroundColor(Color(hex: 0xE9B949))
-            .shadow(color: Color(hex: 0xE9B949).opacity(0.8), radius: 6)
-            .offset(y: bob ? -48 : -42)
+        let gold = Color(hex: 0xE9B949)
+        return VStack(spacing: -2) {
+            AvatarView(id: model.state?.avatar ?? 1, size: 38, mine: true)
+                .overlay(Circle().stroke(LinearGradient(colors: [Color(hex: 0xFFF1B5), gold, Color(hex: 0xB07A1E)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 2.5))
+                .shadow(color: gold.opacity(0.7), radius: 8, y: 2)
+            Image(systemName: "arrowtriangle.down.fill")
+                .font(.system(size: 10))
+                .foregroundColor(gold)
+        }
+        .offset(y: bob ? -58 : -52)
     }
 
     /// El nivel como una joya: aro metálico (dorado con 3 estrellas), cuerpo con degradado y brillo de cristal.

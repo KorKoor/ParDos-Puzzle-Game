@@ -147,7 +147,7 @@ struct GameView: View {
                     .kerning(2)
                     .foregroundColor(model.mode == .campaign ? kindColor(snap.kind) : Theme.accent)
                 Text(headerTitle(snap))
-                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .font(.system(size: 26, weight: .black, design: .serif))
                     .foregroundColor(style.ink ?? Theme.ink)
             }
             Spacer()
@@ -340,18 +340,36 @@ struct StatsRow: View {
         .padding(.horizontal, 16)
     }
 
+    private func statIcon(_ title: String) -> String {
+        switch title {
+        case "MOVIMIENTOS": return "arrow.left.and.right"
+        case "PUNTOS": return "sparkles"
+        default: return "timer"
+        }
+    }
+
     private func stat(_ title: String, _ value: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 20, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
-            Text(loc(title))
-                .font(.system(size: 9, weight: .heavy))
-                .kerning(1.5)
-                .foregroundColor(Theme.ink.opacity(0.4))
+        HStack(spacing: 8) {
+            LuxIcon(statIcon(title), tint: title == "TIEMPO" ? Theme.energy : (title == "PUNTOS" ? Theme.gold : Theme.accent), size: 26)
+            VStack(alignment: .leading, spacing: 1) {
+                if let number = Int(value) {
+                    RollingNumber(value: number)
+                        .font(.system(size: 20, weight: .black, design: .serif))
+                        .foregroundColor(Theme.ink)
+                } else {
+                    Text(value)
+                        .font(.system(size: 20, weight: .black, design: .serif))
+                        .foregroundColor(Theme.ink)
+                        .monospacedDigit()
+                }
+                Text(loc(title))
+                    .font(.system(size: 8, weight: .heavy))
+                    .kerning(1.2)
+                    .foregroundColor(Theme.ink.opacity(0.4))
+            }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, 9)
         .card(radius: 18)
     }
 

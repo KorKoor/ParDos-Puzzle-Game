@@ -47,6 +47,7 @@ struct BoardCanvas: View {
     var fx: String = "classic"
     var picked: String? = nil
     var onTap: (String) -> Void = { _ in }
+    @State private var kick = false
 
     /// Brillo alrededor del tablero que crece con las jugadas seguidas que fusionan (llena a las 20).
     private var aura: Double { min(1.0, Double(snap.flowStreak) / 20.0) * 0.85 }
@@ -59,8 +60,7 @@ struct BoardCanvas: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill((style.ink ?? Theme.ink).opacity(0.12))
+            tray
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Theme.energy.opacity(aura), lineWidth: 4)
                 .shadow(color: Theme.energy.opacity(aura), radius: 10, x: 0, y: 0)
@@ -71,14 +71,36 @@ struct BoardCanvas: View {
             guide
         }
         .frame(width: side, height: side)
+        .scaleEffect(kick ? 1.014 : 1)
+        .onChange(of: snap.moves) { _ in
+            kick = true
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.45)) { kick = false }
+            }
+        }
+    }
+
+    /// La bandeja del tablero: hundida, con luz arriba y sombra interior, y un filete dorado muy fino.
+    private var tray: some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        let ink = style.ink ?? Theme.ink
+        return ZStack {
+            shape.fill(LinearGradient(colors: [ink.opacity(0.20), ink.opacity(0.11)], startPoint: .top, endPoint: .bottom))
+            shape.strokeBorder(LinearGradient(colors: [Color.black.opacity(0.18), Color.white.opacity(0.35)], startPoint: .top, endPoint: .bottom), lineWidth: 2)
+            shape.strokeBorder(Color(hex: 0xE9B949).opacity(0.28), lineWidth: 0.8).padding(2)
+        }
+        .shadow(color: Color.white.opacity(0.5), radius: 1, x: 0, y: 1)
     }
 
     private var emptyCells: some View {
         ForEach(0..<(snap.size * snap.size), id: \.self) { index in
-            RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
-                .fill((style.surface ?? Color.white).opacity(0.55))
-                .frame(width: cell, height: cell)
-                .position(x: x(index % snap.size), y: y(index / snap.size))
+            let r = RoundedRectangle(cornerRadius: cell * 0.2, style: .continuous)
+            ZStack {
+                r.fill((style.surface ?? Color.white).opacity(0.55))
+                r.strokeBorder(LinearGradient(colors: [Color.black.opacity(0.10), Color.white.opacity(0.35)], startPoint: .top, endPoint: .bottom), lineWidth: 1.2)
+            }
+            .frame(width: cell, height: cell)
+            .position(x: x(index % snap.size), y: y(index / snap.size))
         }
     }
 
@@ -215,15 +237,24 @@ struct TileView: View {
                 .fill(LinearGradient(colors: [fillColor.opacity(0.75), fillColor, fillColor.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing))
         } else {
             RoundedRectangle(cornerRadius: corner, style: .continuous)
-                .fill(fillColor)
+                .fill(LinearGradient(colors: [fillColor.shade(0.13), fillColor, fillColor.shade(-0.09)], startPoint: .top, endPoint: .bottom))
+                .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous).strokeBorder(Color.white.opacity(0.28), lineWidth: 1))
         }
     }
 
     @ViewBuilder
     private var finishOverlay: some View {
         if style.finish == "JELLY" || style.finish == "PORCELAIN" {
-            RoundedRectangle(cornerRadius: corner, style: .continuous)
-                .fill(LinearGradient(colors: [Color.white.opacity(0.30), Color.clear], startPoint: .top, endPoint: .center))
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .fill(LinearGradient(colors: [Color.white.opacity(0.34), Color.clear], startPoint: .top, endPoint: .center))
+                Ellipse()
+                    .fill(Color.white.opacity(style.finish == "JELLY" ? 0.55 : 0.3))
+                    .frame(width: size * 0.26, height: size * 0.12)
+                    .rotationEffect(.degrees(-24))
+                    .offset(x: size * 0.14, y: size * 0.11)
+                    .blur(radius: 0.8)
+            }
         } else if style.finish == "WOOD" {
             VStack(spacing: size * 0.12) {
                 ForEach(0..<4, id: \.self) { _ in

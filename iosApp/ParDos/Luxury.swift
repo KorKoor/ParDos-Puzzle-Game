@@ -485,3 +485,31 @@ struct LuxIcon: View {
         .shadow(color: tint.opacity(0.4), radius: 5, x: 0, y: 3)
     }
 }
+
+/// Número que "rueda" hasta su nuevo valor en un instante (puntos y movimientos de la partida).
+struct RollingNumber: View {
+    let value: Int
+    @State private var shown: Int = 0
+    @State private var started = false
+
+    var body: some View {
+        Text("\(shown)")
+            .monospacedDigit()
+            .onAppear {
+                shown = value
+                started = true
+            }
+            .onChange(of: value) { newValue in
+                if UIAccessibility.isReduceMotionEnabled || abs(newValue - shown) > 4000 { shown = newValue; return }
+                let from = shown
+                let steps = 8
+                for i in 1...steps {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05 * Double(i)) {
+                        let p = Double(i) / Double(steps)
+                        shown = from + Int(Double(newValue - from) * (1 - pow(1 - p, 2)))
+                        if i == steps { shown = newValue }
+                    }
+                }
+            }
+    }
+}
