@@ -184,36 +184,102 @@ struct RewardChips: View {
 
 struct SeasonSheet: View {
     @EnvironmentObject var model: AppModel
+    private let gold = Color(hex: 0xE9B949)
+
+    private var total: Int { max(1, model.tiers.count > 0 ? model.tiers.count : 80) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            sheetHandle()
-            if let season = model.state?.season {
-                header(season)
-                ScrollView(showsIndicators: false) {
-                    LazyVStack(spacing: 8) {
-                        ForEach(model.tiers) { tier in
-                            tierRow(tier, season)
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                sheetHandle()
+                if let season = model.state?.season {
+                    header(season, proxy)
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(model.tiers) { tier in
+                                VStack(spacing: 0) {
+                                    if (tier.tier - 1) % 10 == 0 { groupHeader(tier.tier) }
+                                    tierRow(tier, season)
+                                        .id(tier.tier)
+                                }
+                            }
+                            finale
                         }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 28)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 24)
                 }
             }
+            .background(LuxSheetBackground())
+            .onAppear {
+                model.loadTiers()
+                scrollToMine(proxy, delay: 0.4)
+            }
         }
-        .background(LuxSheetBackground())
-        .onAppear { model.loadTiers() }
     }
 
-    private func header(_ season: SeasonInfo) -> some View {
-        let fraction = Double(season.pointsInTier) / Double(max(1, model.eco?.pointsPerTier ?? 100))
-        return VStack(spacing: 10) {
-            Text("Pase de \(season.name)")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
-            Text("Quedan \(season.daysLeft) días · Nivel \(season.tier) de 30")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(Theme.ink.opacity(0.55))
+    private func scrollToMine(_ proxy: ScrollViewProxy, delay: Double) {
+        let target = max(1, (model.state?.season.tier ?? 1))
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            withAnimation(.easeInOut(duration: 0.5)) { proxy.scrollTo(target, anchor: .center) }
+        }
+    }
+
+    // MARK: Cabecera
+
+    private func header(_ season: SeasonInfo, _ proxy: ScrollViewProxy) -> some View {
+        let perTier = Double(max(1, model.eco?.pointsPerTier ?? 100))
+        let within = Double(season.pointsInTier) / perTier
+        let overall = min(1.0, (Double(season.tier) + within) / Double(total))
+        return VStack(spacing: 12) {
+            SheetTitle("Pase de \(season.name)", symbol: "crown.fill")
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle().stroke(Theme.ink.opacity(0.08), lineWidth: 10)
+                    Circle()
+                        .trim(from: 0, to: CGFloat(overall))
+                        .stroke(LinearGradient(colors: [Theme.accent, gold], startPoint: .topLeading, endPoint: .bottomTrailing), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(.spring(response: 0.8, dampingFraction: 0.8), value: overall)
+                    VStack(spacing: 0) {
+                        Text("\(season.tier)")
+                            .font(.system(size: 36, weight: .black, design: .serif))
+                            .foregroundColor(Theme.ink)
+                        Text("\(loc("de")) \(total)")
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundColor(Theme.ink.opacity(0.5))
+                    }
+                }
+                .frame(width: 108, height: 108)
+                .shadow(color: gold.opacity(0.35), radius: 14)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(loc("Quedan")) \(season.daysLeft) \(loc("días"))")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Theme.ink.opacity(0.1))
+                            LuxFill(LinearGradient(colors: [Theme.accent, gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(within)))
+                        }
+                    }
+                    .frame(height: 10)
+                    Text("\(season.pointsInTier)/\(Int(perTier)) \(loc("puntos para el siguiente nivel"))")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Theme.ink.opacity(0.5))
+                    Button(action: { scrollToMine(proxy, delay: 0) }) {
+                        HStack(spacing: 5) {
+                            Image(systemName: "location.fill")
+                            Text(loc("Ir a mi nivel"))
+                        }
+                        .font(.system(size: 11, weight: .heavy, design: .rounded))
+                        .foregroundColor(Theme.ink)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(LuxCapsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
             if let ads = model.state?.ads, ads.season > 0 {
                 WatchAdButton(
                     title: "IMPULSO DE TEMPORADA",
@@ -224,22 +290,11 @@ struct SeasonSheet: View {
                     model.adSeasonBoost()
                 }
             }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.ink.opacity(0.1))
-                    LuxFill(LinearGradient(colors: [Theme.accent, Theme.gold], startPoint: .leading, endPoint: .trailing), width: max(8, geo.size.width * CGFloat(fraction)))
-                }
-            }
-            .frame(height: 10)
-            Text("\(season.pointsInTier)/\(model.eco?.pointsPerTier ?? 100) puntos para el siguiente nivel · ganas puntos jugando, con misiones, ruleta y cofres")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundColor(Theme.ink.opacity(0.45))
-                .multilineTextAlignment(.center)
             HStack(spacing: 10) {
                 BigButton(title: season.claimable > 0 ? "COBRAR TODO (\(season.claimable))" : "NADA POR COBRAR", enabled: season.claimable > 0) {
                     model.claimAllTiers()
                 }
-                if season.tier < 30 {
+                if season.tier < total {
                     BigButton(title: "SUBIR · \(season.skipCost) GEMAS", color: Theme.energy, enabled: model.gems >= season.skipCost) {
                         model.buySeasonTier()
                     }
@@ -249,31 +304,102 @@ struct SeasonSheet: View {
                 Button(action: { model.buyProduct("season_pass") }) {
                     HStack(spacing: 8) {
                         SpriteImage(name: "ico_crown", size: 26)
-                        Text("Pase premium · " + model.priceLabel("season_pass", model.store?.specials.first(where: { $0.id == "season_pass" })?.price ?? "$4.99") + (model.storeIsLive ? "" : " (prueba: gratis)"))
-                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                        Text("Pase premium · " + model.priceLabel("season_pass", model.store?.specials.first(where: { $0.id == "season_pass" })?.price ?? "$4.99"))
+                            .font(.system(size: 13, weight: .heavy, design: .rounded))
                     }
-                    .foregroundColor(Theme.ink)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.gold.opacity(0.3)))
+                    .foregroundColor(Color(hex: 0x4A3208))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        ZStack {
+                            Capsule().fill(LinearGradient(colors: [Color(hex: 0xFFF1B5), gold, Color(hex: 0xC48A22)], startPoint: .top, endPoint: .bottom))
+                            Capsule().strokeBorder(Color.white.opacity(0.6), lineWidth: 1)
+                        }
+                    )
+                    .shimmer(radius: 24, period: 3.6)
+                    .pulsingGlow(gold, radius: 12, strength: 0.8)
                 }
+                .buttonStyle(ToyPressStyle())
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
+    }
+
+    // MARK: Pista de niveles
+
+    private func groupHeader(_ first: Int) -> some View {
+        let last = min(total, first + 9)
+        return HStack(spacing: 10) {
+            Rectangle().fill(LinearGradient(colors: [.clear, gold.opacity(0.7)], startPoint: .leading, endPoint: .trailing)).frame(height: 1)
+            Text("\(loc("NIVELES")) \(first)–\(last)")
+                .font(.system(size: 10, weight: .heavy))
+                .kerning(3)
+                .foregroundColor(Theme.ink.opacity(0.5))
+            Rectangle().fill(LinearGradient(colors: [gold.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing)).frame(height: 1)
+        }
+        .padding(.vertical, 14)
+    }
+
+    private var finale: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "crown.fill").font(.system(size: 26)).foregroundColor(gold)
+                .shadow(color: gold.opacity(0.7), radius: 10)
+            Text(loc("GRAN FINAL"))
+                .font(.system(size: 12, weight: .heavy))
+                .kerning(4)
+                .foregroundColor(Theme.ink.opacity(0.55))
+            Text("\(loc("Llegaste al nivel")) \(total)")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(Theme.ink.opacity(0.4))
+        }
+        .padding(.top, 18)
     }
 
     private func tierRow(_ tier: SeasonTierInfo, _ season: SeasonInfo) -> some View {
         let reached = tier.tier <= season.tier
-        return HStack(spacing: 8) {
-            Text("\(tier.tier)")
-                .font(.system(size: 15, weight: .black, design: .rounded))
-                .foregroundColor(reached ? .white : Theme.ink.opacity(0.4))
-                .frame(width: 34, height: 34)
-                .background(Circle().fill(reached ? Theme.accent : Theme.ink.opacity(0.08)))
+        let isCurrent = tier.tier == season.tier + 1
+        let milestone = tier.tier % 5 == 0
+        let big = tier.tier == 30 || tier.tier == total
+        return HStack(alignment: .center, spacing: 6) {
             rewardCell(tier.free, tier: tier.tier, premium: false, season: season, reached: reached)
+            spine(tier.tier, reached: reached, current: isCurrent, milestone: milestone, big: big)
             rewardCell(tier.premium, tier: tier.tier, premium: true, season: season, reached: reached)
         }
+        .padding(.vertical, 4)
+    }
+
+    /// Columna central: la línea dorada que se enciende hasta tu nivel y el nodo de cada nivel (más grande cada 5, corona en 30 y en el final).
+    private func spine(_ tier: Int, reached: Bool, current: Bool, milestone: Bool, big: Bool) -> some View {
+        let size: CGFloat = big ? 50 : (milestone ? 42 : 34)
+        let lineColor: LinearGradient = reached
+            ? LinearGradient(colors: [gold, Color(hex: 0xC48A22)], startPoint: .top, endPoint: .bottom)
+            : LinearGradient(colors: [Theme.ink.opacity(0.12), Theme.ink.opacity(0.12)], startPoint: .top, endPoint: .bottom)
+        let fill: LinearGradient = reached
+            ? LinearGradient(colors: [Theme.accent.shade(0.2), Theme.accent, Theme.accentDark], startPoint: .top, endPoint: .bottom)
+            : LinearGradient(colors: [Color.white, Theme.paper], startPoint: .top, endPoint: .bottom)
+        return ZStack {
+            Rectangle().fill(lineColor).frame(width: 4).frame(maxHeight: .infinity)
+            ZStack {
+                Circle().fill(fill)
+                Circle().strokeBorder(reached ? gold : Theme.ink.opacity(0.15), lineWidth: milestone ? 3 : 2)
+                if big {
+                    Image(systemName: "crown.fill").font(.system(size: 20, weight: .bold)).foregroundColor(reached ? .white : gold)
+                } else {
+                    Text("\(tier)")
+                        .font(.system(size: milestone ? 16 : 14, weight: .black, design: .serif))
+                        .foregroundColor(reached ? .white : Theme.ink.opacity(0.45))
+                }
+            }
+            .frame(width: size, height: size)
+            .shadow(color: reached ? gold.opacity(0.45) : Color.clear, radius: milestone ? 10 : 6)
+            .overlay(
+                Circle()
+                    .stroke(Theme.accent.opacity(current ? 0.6 : 0), lineWidth: 3)
+                    .frame(width: size + 10, height: size + 10)
+            )
+        }
+        .frame(width: 52)
     }
 
     private func rewardCell(_ reward: SeasonRewardInfo, tier: Int, premium: Bool, season: SeasonInfo, reached: Bool) -> some View {
@@ -281,31 +407,42 @@ struct SeasonSheet: View {
         let claimed = season.claimed.contains(key)
         let locked = premium && !season.premium
         let canClaim = reached && !claimed && !locked
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
         return Button(action: { if canClaim { model.claimTier(tier, premium: premium) } }) {
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 HStack(spacing: 4) {
+                    if premium { Image(systemName: "crown.fill").font(.system(size: 8)).foregroundColor(gold) }
                     Text(premium ? "PREMIUM" : "GRATIS")
                         .font(.system(size: 8, weight: .heavy))
-                        .kerning(1)
-                        .foregroundColor(premium ? Theme.gold : Theme.ink.opacity(0.4))
+                        .kerning(1.5)
+                        .foregroundColor(premium ? Color(hex: 0xB07A1E) : Theme.ink.opacity(0.4))
                     if locked { Image(systemName: "lock.fill").font(.system(size: 8)).foregroundColor(Theme.ink.opacity(0.4)) }
                     if claimed { Image(systemName: "checkmark.circle.fill").font(.system(size: 10)).foregroundColor(Theme.accent) }
                 }
                 RewardChips(reward: reward)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(cellFill(premium: premium, canClaim: canClaim, claimed: claimed)))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(canClaim ? Theme.accent : Color.clear, lineWidth: 2))
-            .opacity(claimed ? 0.55 : (locked ? 0.7 : 1))
+            .padding(.vertical, 9)
+            .padding(.horizontal, 4)
+            .background(
+                ZStack {
+                    shape.fill(LinearGradient(colors: cellColors(premium: premium, canClaim: canClaim), startPoint: .top, endPoint: .bottom))
+                    shape.strokeBorder(
+                        LinearGradient(colors: [canClaim ? Theme.accent : (premium ? gold.opacity(0.7) : Color.white.opacity(0.9)), Theme.ink.opacity(0.06)], startPoint: .top, endPoint: .bottom),
+                        lineWidth: canClaim ? 2 : 1
+                    )
+                }
+            )
+            .shadow(color: canClaim ? Theme.accent.opacity(0.4) : Theme.ink.opacity(0.06), radius: canClaim ? 10 : 4, x: 0, y: 3)
+            .opacity(claimed ? 0.5 : (locked ? 0.72 : 1))
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(ToyPressStyle())
     }
 
-    private func cellFill(premium: Bool, canClaim: Bool, claimed: Bool) -> Color {
-        if canClaim { return Theme.accent.opacity(0.14) }
-        if premium { return Theme.gold.opacity(0.12) }
-        return Color.white
+    private func cellColors(premium: Bool, canClaim: Bool) -> [Color] {
+        if canClaim { return [Theme.accent.opacity(0.22), Theme.accent.opacity(0.10)] }
+        if premium { return [Color(hex: 0xFFF6DC), Color(hex: 0xFBEBC2)] }
+        return [Color.white, Theme.cream]
     }
 }
 

@@ -200,7 +200,8 @@ struct ShopView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Capsule().fill(Theme.accent))
+                    .background(Capsule().fill(LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom)))
+                    .shadow(color: Theme.accent.opacity(0.4), radius: 6, y: 3)
             }
             .padding(12)
             .card()
@@ -401,7 +402,12 @@ struct ShopView: View {
         case "starter_pack": SpriteImage(name: "ico_gift", size: 40)
         case "season_pass": SpriteImage(name: "ico_crown", size: 40)
         case "vip_forever": SpriteImage(name: "ico_star", size: 40)
-        default: Image(systemName: "dollarsign.circle.fill").font(.system(size: 34)).foregroundColor(Color(hex: 0xF29BB5))
+        case "halloween_pack": LuxIcon("moon.stars.fill", tint: Color(hex: 0x7A4FC9), size: 42)
+        case "boss_pack": LuxIcon("flame.fill", tint: Color(hex: 0xE0782F), size: 42)
+        case "treasure_pack": LuxIcon("shippingbox.fill", tint: Color(hex: 0xE0A93B), size: 42)
+        case "skin_studio": LuxIcon("paintpalette.fill", tint: Color(hex: 0x8E6BD6), size: 42)
+        case "piggy_break": LuxIcon("dollarsign", tint: Color(hex: 0xE57A9A), size: 42)
+        default: LuxIcon("bag.fill", tint: Color(hex: 0xE57A9A), size: 42)
         }
     }
 
@@ -411,7 +417,7 @@ struct ShopView: View {
             if let eco = model.eco {
                 VStack(spacing: 0) {
                     HStack(spacing: 12) {
-                        Image(systemName: "sparkle").font(.system(size: 20, weight: .bold)).foregroundColor(Color(hex: 0xB57CF0)).frame(width: 38)
+                        LuxIcon("sparkle", tint: Color(hex: 0xB57CF0), size: 38)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Pack de esencia ×\(eco.shardPackShards)").font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                             Text("Sirve para crear piezas que te faltan · hoy \(model.album?.shardPacksToday ?? 0)/\(eco.shardPacksPerDay)").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
@@ -422,7 +428,7 @@ struct ShopView: View {
                     .padding(.vertical, 10)
                     Divider()
                     HStack(spacing: 12) {
-                        Image(systemName: "arrow.left.arrow.right.circle.fill").font(.system(size: 20, weight: .bold)).foregroundColor(Color(hex: 0x2E9E8F)).frame(width: 38)
+                        LuxIcon("arrow.left.arrow.right", tint: Color(hex: 0x2E9E8F), size: 38)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Ficha de intercambio").font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                             Text("Para cambiar repetidas con amigos · hoy \(model.album?.tokensToday ?? 0)/\(eco.tokensPerDay)").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
@@ -440,7 +446,7 @@ struct ShopView: View {
 
     private func piggy(_ state: MetaState) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: "dollarsign.circle.fill").font(.system(size: 28)).foregroundColor(Color(hex: 0xF29BB5))
+            LuxIcon("dollarsign", tint: Color(hex: 0xE57A9A), size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Hucha de gemas").font(.system(size: 14, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                 Text("Guarda gemas cada vez que ganas (\(state.piggy)/300). Se rompe en «Ofertas especiales».").font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5))
@@ -486,10 +492,13 @@ struct SkinCard: View {
     @ViewBuilder
     private func action(owned: Bool, equipped: Bool) -> some View {
         if equipped {
-            Text("PUESTA")
-                .font(.system(size: 11, weight: .heavy))
-                .foregroundColor(Theme.accent)
-                .frame(height: 30)
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.seal.fill")
+                Text("PUESTA")
+            }
+            .font(.system(size: 11, weight: .heavy))
+            .foregroundColor(Theme.accent)
+            .frame(height: 30)
         } else if owned {
             Button(action: { model.equipSkin(skin.id) }) {
                 Text("USAR")
