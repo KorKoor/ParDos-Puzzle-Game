@@ -109,7 +109,7 @@ struct AchievementsSheet: View {
         return VStack(spacing: 8) {
             HStack {
                 Text("\(data.done) / \(data.total)")
-                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .font(.system(size: 26, weight: .black, design: .serif))
                     .foregroundColor(Theme.ink)
                 Spacer()
                 Text("Cada logro paga monedas; los épicos y legendarios, también un cofre")
@@ -139,8 +139,18 @@ struct AchievementsSheet: View {
                         .foregroundColor(filter == item.0 ? .white : Theme.ink.opacity(0.55))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 7)
-                        .background(Capsule().fill(filter == item.0 ? Theme.accent : Color.white))
+                        .background(
+                            Group {
+                                if filter == item.0 {
+                                    Capsule().fill(LinearGradient(colors: [Theme.accent.shade(0.16), Theme.accent], startPoint: .top, endPoint: .bottom))
+                                        .shadow(color: Theme.accent.opacity(0.4), radius: 6, y: 3)
+                                } else {
+                                    LuxCapsule()
+                                }
+                            }
+                        )
                 }
+                .buttonStyle(ToyPressStyle())
             }
             Spacer()
         }
@@ -148,11 +158,11 @@ struct AchievementsSheet: View {
 
     private func row(_ item: AchItem) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: item.unlocked ? "trophy.fill" : "lock.fill")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(item.unlocked ? tierColor(item.tier) : Theme.ink.opacity(0.25))
-                .frame(width: 42, height: 42)
-                .background(Circle().fill(item.unlocked ? tierColor(item.tier).opacity(0.16) : Theme.ink.opacity(0.06)))
+            if item.unlocked {
+                LuxIcon("trophy.fill", tint: tierColor(item.tier), size: 44)
+            } else {
+                LuxIcon("lock.fill", tint: Color(hex: 0xB9BCC8), size: 44).opacity(0.65)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
                     .font(.system(size: 14, weight: .black, design: .rounded))
@@ -180,6 +190,8 @@ struct AchievementsSheet: View {
         }
         .padding(12)
         .card(radius: 18)
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(item.unlocked ? tierColor(item.tier).opacity(0.5) : Color.clear, lineWidth: 1.3))
+        .shadow(color: item.unlocked ? tierColor(item.tier).opacity(0.22) : Color.clear, radius: 10, y: 4)
     }
 }
 

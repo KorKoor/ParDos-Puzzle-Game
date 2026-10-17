@@ -222,6 +222,7 @@ struct CalendarChip: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(cell.status == "today" ? Color.white : Color.white.opacity(0.25), lineWidth: cell.status == "today" ? 2.5 : 1)
         )
+        .shadow(color: cell.status == "today" ? Color(hex: 0xE9B949).opacity(0.85) : Color.black.opacity(0.08), radius: cell.status == "today" ? 10 : 3, x: 0, y: 2)
         .overlay(
             Group {
                 if cell.big {
@@ -251,9 +252,7 @@ struct CalendarSheet: View {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
             if let info = info, !info.frozen {
                 let month = (info.month ?? 1) - 1
-                Text("Calendario de \(monthNames[max(0, min(11, month))])")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Calendario de \(monthNames[max(0, min(11, month))])", symbol: "calendar")
                 Text("Cobra tu casilla cada día. Si faltas, puedes recuperar un día perdido: el primero del mes es gratis y después cuesta \(cost) gemas.")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.6))
