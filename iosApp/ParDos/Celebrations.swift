@@ -48,6 +48,7 @@ struct CelebrationOverlay: View {
 struct PopupFrame<Content: View>: View {
     let title: String
     let content: Content
+    @State private var shown = false
 
     init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
@@ -57,15 +58,33 @@ struct PopupFrame<Content: View>: View {
     var body: some View {
         VStack(spacing: 14) {
             Text(loc(title))
-                .font(.system(size: 24, weight: .black, design: .rounded))
+                .font(.system(size: 26, weight: .black, design: .serif))
                 .foregroundColor(Theme.ink)
                 .multilineTextAlignment(.center)
+            Rectangle()
+                .fill(LinearGradient(colors: [.clear, Theme.gold.opacity(0.8), .clear], startPoint: .leading, endPoint: .trailing))
+                .frame(height: 1)
+                .padding(.horizontal, 30)
             content
         }
         .padding(22)
         .frame(maxWidth: 340)
-        .background(RoundedRectangle(cornerRadius: 30, style: .continuous).fill(Theme.cream))
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(LinearGradient(colors: [Theme.cream, Theme.paper], startPoint: .top, endPoint: .bottom))
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .strokeBorder(LinearGradient(colors: [Theme.gold.opacity(0.85), Color.white.opacity(0.3), Theme.gold.opacity(0.4)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
+            }
+        )
+        .shimmer(radius: 30, period: 5)
+        .shadow(color: Color.black.opacity(0.3), radius: 28, x: 0, y: 14)
         .padding(24)
+        .scaleEffect(shown ? 1 : 0.86)
+        .opacity(shown ? 1 : 0)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) { shown = true }
+        }
     }
 }
 
@@ -77,9 +96,11 @@ struct InfoPopup: View {
 
     var body: some View {
         PopupFrame(title: title) {
-            Image(systemName: symbol)
-                .font(.system(size: 44, weight: .bold))
-                .foregroundColor(Theme.gold)
+            ZStack {
+                LightRays(color: Theme.gold).frame(width: 150, height: 150)
+                LuxIcon(symbol, tint: Theme.gold, size: 66)
+            }
+            .frame(height: 110)
             Text(loc(text))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(Theme.ink.opacity(0.7))

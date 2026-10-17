@@ -32,6 +32,8 @@ struct WheelSheet: View {
     @State private var rotation: Double = 0
     @State private var spinning = false
     @State private var resultText: String = ""
+    @State private var showConfetti = false
+    @State private var prizeShown = false
 
     private let colors: [Color] = [
         Color(hex: 0xFFB347), Color(hex: 0xB27BFF), Color(hex: 0x7DE0A6), Color(hex: 0xFF7A59),
@@ -41,22 +43,32 @@ struct WheelSheet: View {
     var body: some View {
         let slices = model.wheelSlices
         let freeLeft = model.state?.wheel.freeLeft ?? 0
-        return VStack(spacing: 16) {
+        return ZStack {
+        VStack(spacing: 16) {
             sheetHandle()
             SheetTitle("Ruleta diaria", symbol: "sparkles")
             ZStack(alignment: .top) {
+                Circle()
+                    .fill(RadialGradient(colors: [Color(hex: 0xE9B949).opacity(0.35), .clear], center: .center, startRadius: 100, endRadius: 190))
+                    .frame(width: 380, height: 380)
+                    .allowsHitTesting(false)
                 wheel(slices)
                     .rotationEffect(.degrees(rotation))
+                    .shadow(color: Color.black.opacity(0.25), radius: 16, y: 10)
                 Image(systemName: "arrowtriangle.down.fill")
-                    .font(.system(size: 34))
-                    .foregroundColor(Theme.ink)
-                    .offset(y: -18)
+                    .font(.system(size: 36))
+                    .foregroundStyle(LinearGradient(colors: [Color(hex: 0xFFF1B5), Color(hex: 0xE9B949), Color(hex: 0xB07A1E)], startPoint: .top, endPoint: .bottom))
+                    .shadow(color: Color.black.opacity(0.35), radius: 4, y: 3)
+                    .offset(y: -20)
             }
             .padding(.top, 20)
             if !resultText.isEmpty {
                 Text(resultText)
-                    .font(.system(size: 18, weight: .black, design: .rounded))
+                    .font(.system(size: 22, weight: .black, design: .serif))
                     .foregroundColor(Theme.accent)
+                    .shadow(color: Theme.accent.opacity(0.4), radius: 8)
+                    .scaleEffect(prizeShown ? 1 : 0.4)
+                    .opacity(prizeShown ? 1 : 0)
             }
             BigButton(title: spinning ? "GIRANDO…" : (freeLeft > 0 ? "GIRAR GRATIS" : "VUELVE MAÑANA"), enabled: freeLeft > 0 && !spinning) {
                 spin(slices)
@@ -80,28 +92,51 @@ struct WheelSheet: View {
                 .padding(.horizontal, 30)
             Spacer(minLength: 0)
         }
+            if showConfetti { ConfettiView().allowsHitTesting(false) }
+        }
         .background(LuxSheetBackground())
     }
 
     private func wheel(_ slices: [WheelSliceInfo]) -> some View {
         let size: CGFloat = 270
+        let rim: CGFloat = size + 30
         let count = max(1, slices.count)
+        let gold = LinearGradient(colors: [Color(hex: 0xFFF1B5), Color(hex: 0xE9B949), Color(hex: 0xB07A1E)], startPoint: .topLeading, endPoint: .bottomTrailing)
         return ZStack {
-            ForEach(0..<slices.count, id: \.self) { i in
-                WheelSlicePath(index: i, count: count)
-                    .fill(colors[i % colors.count])
-                WheelSlicePath(index: i, count: count)
-                    .stroke(Color.white, lineWidth: 2)
+            Circle().fill(gold).frame(width: rim, height: rim)
+            Circle().strokeBorder(Color.white.opacity(0.55), lineWidth: 1.5).frame(width: rim, height: rim)
+            ForEach(0..<18, id: \.self) { i in
+                let a = Double(i) / 18.0 * 2.0 * Double.pi
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 7, height: 7)
+                    .shadow(color: Color(hex: 0xFFE27A), radius: 3)
+                    .offset(x: CGFloat(cos(a)) * (rim / 2 - 8), y: CGFloat(sin(a)) * (rim / 2 - 8))
             }
-            ForEach(0..<slices.count, id: \.self) { i in
-                sliceLabel(slices[i], size: size)
-                    .rotationEffect(.degrees((Double(i) + 0.5) * 360.0 / Double(count)))
+            ZStack {
+                ForEach(0..<slices.count, id: \.self) { i in
+                    WheelSlicePath(index: i, count: count)
+                        .fill(LinearGradient(colors: [colors[i % colors.count].shade(0.2), colors[i % colors.count].shade(-0.08)], startPoint: .top, endPoint: .bottom))
+                    WheelSlicePath(index: i, count: count)
+                        .stroke(Color.white.opacity(0.9), lineWidth: 2)
+                }
+                ForEach(0..<slices.count, id: \.self) { i in
+                    sliceLabel(slices[i], size: size)
+                        .rotationEffect(.degrees((Double(i) + 0.5) * 360.0 / Double(count)))
+                }
             }
-            Circle().fill(Color.white).frame(width: 44, height: 44)
-            Circle().stroke(Theme.ink.opacity(0.2), lineWidth: 3).frame(width: 44, height: 44)
+            .frame(width: size, height: size)
+            ZStack {
+                Circle().fill(gold)
+                Circle().fill(LinearGradient(colors: [Color.white.opacity(0.5), Color.white.opacity(0)], startPoint: .top, endPoint: .center)).padding(2)
+                Circle().strokeBorder(Color.white.opacity(0.7), lineWidth: 2)
+                Image(systemName: "star.fill").font(.system(size: 18, weight: .black)).foregroundColor(.white)
+                    .shadow(color: Color.black.opacity(0.25), radius: 1, y: 1)
+            }
+            .frame(width: 56, height: 56)
+            .shadow(color: Color.black.opacity(0.3), radius: 5, y: 3)
         }
-        .frame(width: size, height: size)
-        .overlay(Circle().stroke(Theme.ink, lineWidth: 6))
+        .frame(width: rim, height: rim)
     }
 
     private func sliceLabel(_ slice: WheelSliceInfo, size: CGFloat) -> some View {
@@ -130,6 +165,14 @@ struct WheelSheet: View {
         guard !spinning, let index = model.spinWheel(ad: ad), index < slices.count else { return }
         spinning = true
         resultText = ""
+        prizeShown = false
+        showConfetti = false
+        // clics de la ruleta: muchos al principio y cada vez más espaciados al frenar
+        for i in 1...22 {
+            let u = Double(i) / 22.0
+            let when = 4.0 * (1.0 - pow(1.0 - u, 1.0 / 3.0))
+            DispatchQueue.main.asyncAfter(deadline: .now() + when) { Haptics.tap() }
+        }
         let count = Double(max(1, slices.count))
         let centerAngle = (Double(index) + 0.5) * 360.0 / count
         let current = rotation.truncatingRemainder(dividingBy: 360.0)
@@ -140,6 +183,10 @@ struct WheelSheet: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 4.2) {
             spinning = false
             resultText = prizeText(slices[index])
+            Haptics.success()
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.55)) { prizeShown = true }
+            showConfetti = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { showConfetti = false }
         }
     }
 
