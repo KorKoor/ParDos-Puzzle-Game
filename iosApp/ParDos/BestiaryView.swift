@@ -225,9 +225,7 @@ struct BestiarySheet: View {
         return ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Bestiario")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Bestiario", symbol: "eye.fill")
                 if let d = data {
                     Text("\(d.defeated) de \(d.total) vencidos")
                         .font(.system(size: 12, weight: .bold))

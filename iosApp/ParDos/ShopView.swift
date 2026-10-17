@@ -49,7 +49,7 @@ struct ShopView: View {
         VStack(spacing: 10) {
             HStack {
                 Text("Tienda")
-                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .font(.system(size: 28, weight: .black, design: .serif))
                     .foregroundColor(Theme.ink)
                 Spacer()
             }

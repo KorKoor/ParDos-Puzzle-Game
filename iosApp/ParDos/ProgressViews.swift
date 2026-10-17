@@ -77,9 +77,7 @@ struct AchievementsSheet: View {
     var body: some View {
         VStack(spacing: 12) {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-            Text("Logros")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
+            SheetTitle("Logros", symbol: "trophy.fill")
             if let data = data {
                 summary(data)
                 filterRow
@@ -198,9 +196,7 @@ struct PrestigeSheet: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Prestigio")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Prestigio", symbol: "crown.fill")
                 if let data = data {
                     rankCard(data)
                     trophyCard(data)

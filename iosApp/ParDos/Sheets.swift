@@ -43,9 +43,7 @@ struct WheelSheet: View {
         let freeLeft = model.state?.wheel.freeLeft ?? 0
         return VStack(spacing: 16) {
             sheetHandle()
-            Text("Ruleta diaria")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
+            SheetTitle("Ruleta diaria", symbol: "sparkles")
             ZStack(alignment: .top) {
                 wheel(slices)
                     .rotationEffect(.degrees(rotation))
@@ -445,9 +443,7 @@ struct LowFundsSheet: View {
     var body: some View {
         VStack(spacing: 14) {
             sheetHandle()
-            Text("Más ayudas")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
+            SheetTitle("Más ayudas", symbol: "bag.fill")
             CurrencyBar().padding(.horizontal, 20)
             if let eco = model.eco {
                 helpRow("arrow.uturn.backward", "Deshacer ×3", "Vuelve a la jugada anterior", eco.undoPrice * 3, "tienes \(model.state?.undos ?? 0)") { model.buyUndos(3) }

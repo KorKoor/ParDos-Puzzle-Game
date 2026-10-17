@@ -368,11 +368,7 @@ struct ModesSection: View {
     private func modeCard(_ title: String, _ detail: String, _ symbol: String, _ color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 42, height: 42)
-                    .background(Circle().fill(color))
+                LuxIcon(symbol, tint: color, size: 44)
                 Text(loc(title))
                     .font(.system(size: 15, weight: .black, design: .rounded))
                     .foregroundColor(Theme.ink)
@@ -402,9 +398,7 @@ struct CustomGameSheet: View {
     var body: some View {
         VStack(spacing: 14) {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-            Text("Partida libre")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
+            SheetTitle("Partida libre", symbol: "slider.horizontal.3")
             HStack(spacing: 10) {
                 presetButton("Zen", "4×4 hasta 2048, sin reloj", "leaf.fill", Theme.accent) { model.startCustom(size: 4, target: 2048, timed: false) }
                 presetButton("Rápido", "3×3 hasta 64 en 60 s", "bolt.fill", Theme.gold) { model.startCustom(size: 3, target: 64, timed: true, fast: true) }
@@ -495,9 +489,7 @@ struct RecordsSheet: View {
         return ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-            Text("Récords")
-                .font(.system(size: 24, weight: .black, design: .rounded))
-                .foregroundColor(Theme.ink)
+            SheetTitle("Récords", symbol: "trophy.fill")
             if let r = r {
                 VStack(spacing: 0) {
                     line("building.2.fill", "Torre infinita", "piso \(r.tower)")

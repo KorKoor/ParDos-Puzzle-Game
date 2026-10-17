@@ -125,9 +125,7 @@ struct RemoteSheet: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Duelo a distancia")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Duelo a distancia", symbol: "paperplane.fill")
                 Text("Juega 60 segundos, comparte tu código por WhatsApp y tu amigo (en iPhone o Android) juega el mismo tablero.")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.55))

@@ -129,11 +129,7 @@ struct ProfileView: View {
     private func bigTile(_ symbol: String, _ color: Color, _ title: String, _ detail: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                Image(systemName: symbol)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 42, height: 42)
-                    .background(Circle().fill(color))
+                LuxIcon(symbol, tint: color, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(loc(title)).font(.system(size: 15, weight: .black, design: .rounded)).foregroundColor(Theme.ink)
                     Text(loc(detail)).font(.system(size: 10, weight: .semibold)).foregroundColor(Theme.ink.opacity(0.5)).lineLimit(1)

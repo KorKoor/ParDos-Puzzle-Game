@@ -389,13 +389,26 @@ struct LevelPreviewSheet: View {
         VStack(spacing: 14) {
             Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
             ZStack {
-                Circle().fill(kindColor(card.kind)).frame(width: 64, height: 64)
-                Image(systemName: kindSymbol(card.kind))
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
+                LightRays(color: kindColor(card.kind)).frame(width: 200, height: 200)
+                if card.boss, let motif = card.motif {
+                    BossEmblemView(motif: motif, size: 92)
+                } else {
+                    ZStack {
+                        Circle().fill(LinearGradient(colors: [kindColor(card.kind).shade(0.24), kindColor(card.kind), kindColor(card.kind).shade(-0.15)], startPoint: .top, endPoint: .bottom))
+                        Circle().fill(LinearGradient(colors: [Color.white.opacity(0.45), Color.white.opacity(0)], startPoint: .top, endPoint: .center)).padding(3)
+                        Circle().strokeBorder(Color.white.opacity(0.7), lineWidth: 3)
+                        Image(systemName: kindSymbol(card.kind))
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+                            .shadow(color: Color.black.opacity(0.22), radius: 1, y: 1)
+                    }
+                    .frame(width: 78, height: 78)
+                    .shadow(color: kindColor(card.kind).opacity(0.6), radius: 14, y: 4)
+                }
             }
+            .frame(height: 120)
             Text("Nivel \(card.id)")
-                .font(.system(size: 26, weight: .black, design: .rounded))
+                .font(.system(size: 30, weight: .black, design: .serif))
                 .foregroundColor(Theme.ink)
             Text(card.boss ? card.title.uppercased() : card.kindLabel.uppercased())
                 .font(.system(size: 12, weight: .heavy))
@@ -404,9 +417,17 @@ struct LevelPreviewSheet: View {
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { i in
                     Image(systemName: "star.fill")
-                        .font(.system(size: 22))
+                        .font(.system(size: 24))
                         .foregroundColor(i < model.stars(card.id) ? Theme.gold : Theme.ink.opacity(0.12))
+                        .shadow(color: i < model.stars(card.id) ? Theme.gold.opacity(0.7) : Color.clear, radius: 6)
                 }
+            }
+            if card.boss, let taunt = card.taunt, !taunt.isEmpty {
+                Text("\u{201C}\(taunt)\u{201D}")
+                    .font(.system(size: 14, weight: .semibold, design: .serif))
+                    .italic()
+                    .foregroundColor(kindColor(card.kind))
+                    .multilineTextAlignment(.center)
             }
             Text(loc(card.rule))
                 .font(.system(size: 14, weight: .semibold))
@@ -424,9 +445,21 @@ struct LevelPreviewSheet: View {
                     .kerning(2)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(kindColor(card.kind)))
+                    .frame(height: 58)
+                    .background(
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .fill(LinearGradient(colors: [kindColor(card.kind).shade(0.2), kindColor(card.kind), kindColor(card.kind).shade(-0.18)], startPoint: .top, endPoint: .bottom))
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .fill(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0)], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.5)))
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.45), lineWidth: 1.2)
+                        }
+                    )
+                    .shimmer(radius: 22, period: 3.8)
+                    .pulsingGlow(kindColor(card.kind), radius: 14)
             }
+            .buttonStyle(ToyPressStyle())
             Spacer(minLength: 4)
         }
         .padding(.horizontal, 24)
@@ -456,7 +489,12 @@ struct LevelPreviewSheet: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(kindColor(card.kind).opacity(0.12)))
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 20, style: .continuous).fill(kindColor(card.kind).opacity(0.10))
+                RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(kindColor(card.kind).opacity(0.35), lineWidth: 1)
+            }
+        )
     }
 }
 

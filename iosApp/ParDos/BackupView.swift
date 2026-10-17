@@ -13,9 +13,7 @@ struct BackupSheet: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 14) {
                 Capsule().fill(Theme.ink.opacity(0.15)).frame(width: 40, height: 4).padding(.top, 10)
-                Text("Copia de seguridad")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(Theme.ink)
+                SheetTitle("Copia de seguridad", symbol: "externaldrive.fill")
                 Text("Tu progreso vive solo en este iPhone. Guarda una copia (en Notas, WhatsApp, correo…) y pégala si reinstalas la app.")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Theme.ink.opacity(0.55))
